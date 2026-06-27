@@ -34,13 +34,17 @@ def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.Monke
 
 
 def test_base_exports_file_tools_without_crewai() -> None:
-    """The base package should re-export framework-neutral file tools."""
+    """The base package should re-export framework-neutral file tools and archetype helpers."""
     sys.modules.pop("agentic_fabric.tools.file_tools", None)
     sys.modules.pop("agentic_fabric.base", None)
 
     base = importlib.import_module("agentic_fabric.base")
 
-    assert base.__all__ == ["DirectoryListTool", "GameCodeReaderTool", "GameCodeWriterTool"]
+    assert "DirectoryListTool" in base.__all__
+    assert "GameCodeReaderTool" in base.__all__
+    assert "GameCodeWriterTool" in base.__all__
+    assert "resolve_archetype" in base.__all__
+    assert "resolve_agent_archetypes" in base.__all__
     assert base.DirectoryListTool.__name__ == "DirectoryListTool"
 
 

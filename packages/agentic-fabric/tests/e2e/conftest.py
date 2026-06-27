@@ -2,20 +2,13 @@
 
 Fixtures and CLI options are provided by pytest-agentic-fabric plugin.
 This file is kept for any project-specific customizations.
+
+E2E tests use the published pytest-agentic-fabric markers:
+- ``@pytest.mark.agentic_e2e`` — skip unless ``--agentic-e2e`` is passed
+- ``@pytest.mark.agentic_runtime("crewai")`` — skip unless framework is installed
+
+For backward compatibility, the local ``--e2e`` flag and ``e2e``/``crewai``/
+``langgraph``/``strands`` markers from ``tests/conftest.py`` are also supported.
 """
 
 from __future__ import annotations
-
-# All fixtures come from tests/conftest.py:
-# - check_api_key
-# - check_aws_credentials
-# - simple_agent_config
-# - simple_task_config
-# - simple_fabric_agent_config
-# - multi_agent_fabric_agent_config
-# - fabric_agent_with_knowledge
-# - temp_fabric_dir
-#
-# CLI options:
-# - --e2e: Enable E2E tests
-# - --framework=<name>: Filter by framework

@@ -115,7 +115,13 @@ def test_connector_builder_kickoff_returns_raw_result(
             self.kickoff_inputs = inputs
             return types.SimpleNamespace(raw="raw success")
 
-    monkeypatch.setattr(module, "Crew", RawCrew)
+    # Clear the cached classes and patch _load_crewai_classes to return RawCrew
+    module._load_crewai_classes.cache_clear()
+    monkeypatch.setattr(
+        module,
+        "_load_crewai_classes",
+        lambda: (FakeAgent, RawCrew, FakeTask),
+    )
     monkeypatch.setattr(module, "resolve_tools", lambda tools: [])
 
     fabric_agent_instance = module.ConnectorBuilderFabricAgent()
@@ -126,10 +132,9 @@ def test_connector_builder_kickoff_returns_raw_result(
 def test_connector_builder_reports_missing_crewai(monkeypatch: pytest.MonkeyPatch) -> None:
     """Connector builder should raise install guidance when CrewAI is absent."""
     module = import_connector_builder_with_fake_crewai(monkeypatch)
+    # Clear the cache so the import error path is exercised
+    module._load_crewai_classes.cache_clear()
     monkeypatch.delitem(sys.modules, "crewai", raising=False)
-    module.Agent = None
-    module.Crew = None
-    module.Task = None
 
     original_import = builtins.__import__
 

@@ -1,7 +1,8 @@
-"""LLM Configuration for CrewAI agents.
+"""LLM configuration shared by all runners.
 
 Uses Anthropic Claude directly via ANTHROPIC_API_KEY.
 Falls back to OpenRouter if OPENROUTER_API_KEY is set.
+Supports local Ollama via OLLAMA_BASE_URL / AGENTIC_FABRIC_LLM_PROVIDER=ollama.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ class LLMProvider(Enum):
 
     ANTHROPIC = "anthropic"
     OPENROUTER = "openrouter"
+    OLLAMA = "ollama"
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,9 @@ _CLAUDE_OPUS_4 = "claude-opus-4-20250514"
 # Default model - Claude Haiku 4.5 for fast, cost-effective operations
 DEFAULT_MODEL = _CLAUDE_HAIKU_45
 
+# Default Ollama model for local testing (small, fast, instruction-tuned)
+_DEFAULT_OLLAMA_MODEL = "qwen2.5:0.5b"
+
 # Alternative models
 MODELS = {
     "haiku": _CLAUDE_HAIKU_45,
@@ -53,6 +58,9 @@ MODELS = {
     # OpenRouter fallbacks
     "openrouter-auto": "openrouter/auto",
     "openrouter-haiku": "openrouter/anthropic/claude-haiku-4.5",
+    # Ollama
+    "ollama": _DEFAULT_OLLAMA_MODEL,
+    "ollama-coder": "codellama",
 }
 
 _OPENROUTER_MODEL_MAP = {
@@ -87,15 +95,33 @@ LLM_CONFIGS = {
 }
 
 
+def _is_ollama_mode() -> bool:
+    """Return whether Ollama is the configured LLM provider."""
+    return (
+        os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama"
+        or bool(os.getenv("OLLAMA_BASE_URL"))
+    )
+
+
+def _get_ollama_model() -> str:
+    """Return the configured Ollama model."""
+    return os.getenv("OLLAMA_MODEL", _DEFAULT_OLLAMA_MODEL)
+
+
+def _get_ollama_base_url() -> str:
+    """Return the Ollama server URL."""
+    return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+
 def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, provider: LLMProvider | None = None) -> LLM | None:
-    """Get configured LLM instance for CrewAI agents.
+    """Get configured LLM instance for agents.
 
     Args:
         model: Model identifier. Defaults to claude-haiku-4-5-20251001 (DEFAULT_MODEL)
         temperature: Sampling temperature (0.0-1.0). Lower = more focused,
                     higher = more creative.
-        provider: Force specific provider (ANTHROPIC or OPENROUTER).
-                 If None, auto-detects based on available API keys.
+        provider: Force specific provider (ANTHROPIC, OPENROUTER, or OLLAMA).
+                 If None, auto-detects based on available API keys and env vars.
 
     Available models:
         - claude-haiku-4-5-20251001 (default - fast, cost-effective)
@@ -103,42 +129,49 @@ def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, provider: LLMP
         - claude-sonnet-4-20250514 (capable general purpose)
         - claude-opus-4-20250514 (most capable)
         - openrouter/auto (fallback via OpenRouter)
+        - qwen2.5:0.5b (local Ollama, no API key needed)
 
     Returns:
         Configured LLM instance, or None if no API key set
 
     Note:
         Tries ANTHROPIC_API_KEY first, falls back to OPENROUTER_API_KEY.
-        Returns None if neither is set, allowing CrewAI to use its default.
+        When AGENTIC_FABRIC_LLM_PROVIDER=ollama or OLLAMA_BASE_URL is set,
+        routes to a local Ollama server (no API key needed).
+        Returns None if no provider is configured.
 
     Example:
         >>> llm = get_llm()  # Uses Claude Haiku 4.5
         >>> llm = get_llm("claude-opus-4-20250514", temperature=0.3)
         >>> llm = get_llm(provider=LLMProvider.OPENROUTER)
+        >>> llm = get_llm(provider=LLMProvider.OLLAMA)  # Local Ollama
     """
     if LLM is None:
         return None
 
-    # Determine provider
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    openrouter_key = os.getenv("OPENROUTER_API_KEY")
-
     # Force provider if specified
+    if provider == LLMProvider.OLLAMA or _is_ollama_mode():
+        return _create_ollama_llm(model if model != DEFAULT_MODEL else _get_ollama_model(), temperature)
+
     if provider == LLMProvider.ANTHROPIC:
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         if not anthropic_key:
             return None
         return _create_anthropic_llm(model, temperature, anthropic_key)
 
     if provider == LLMProvider.OPENROUTER:
+        openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if not openrouter_key:
             return None
         return _create_openrouter_llm(model, temperature, openrouter_key)
 
     # Auto-detect: Try Anthropic first for direct Claude models
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
     if anthropic_key and not model.startswith("openrouter/"):
         return _create_anthropic_llm(model, temperature, anthropic_key)
 
     # Fall back to OpenRouter
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
     if openrouter_key:
         return _create_openrouter_llm(model, temperature, openrouter_key)
 
@@ -168,6 +201,18 @@ def _create_openrouter_llm(model: str, temperature: float, api_key: str) -> LLM:
     )
 
 
+def _create_ollama_llm(model: str, temperature: float) -> LLM:
+    """Create Ollama LLM instance (local, no API key needed)."""
+    base_url = _get_ollama_base_url()
+    # litellm (used by CrewAI LLM) routes to Ollama via ollama_chat/ prefix
+    ollama_model = model if model.startswith("ollama") else f"ollama_chat/{model}"
+    return LLM(
+        model=ollama_model,
+        base_url=base_url,
+        temperature=temperature,
+    )
+
+
 def get_llm_or_raise(model: str = DEFAULT_MODEL, temperature: float = 0.7, provider: LLMProvider | None = None) -> LLM:
     """Get configured LLM instance, raising if API key not set.
 
@@ -182,14 +227,17 @@ def get_llm_or_raise(model: str = DEFAULT_MODEL, temperature: float = 0.7, provi
         Configured LLM instance
 
     Raises:
-        ValueError: If neither ANTHROPIC_API_KEY nor OPENROUTER_API_KEY is set
+        ValueError: If neither ANTHROPIC_API_KEY nor OPENROUTER_API_KEY is set,
+                    and Ollama mode is not enabled.
     """
     llm = get_llm(model, temperature, provider)
     if llm is None:
         raise ValueError(
-            "ANTHROPIC_API_KEY or OPENROUTER_API_KEY environment variable must be set. "
+            "ANTHROPIC_API_KEY or OPENROUTER_API_KEY environment variable must be set, "
+            "or AGENTIC_FABRIC_LLM_PROVIDER=ollama with OLLAMA_BASE_URL. "
             "Get Anthropic key at https://console.anthropic.com/ or "
-            "OpenRouter key at https://openrouter.ai/"
+            "OpenRouter key at https://openrouter.ai/ or "
+            "install Ollama from https://ollama.com/"
         )
     return llm
 

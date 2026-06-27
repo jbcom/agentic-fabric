@@ -44,6 +44,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from abc import ABC, abstractmethod
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +56,7 @@ from agentic_fabric.core.discovery import discover_packages, get_fabric_agent_co
 logger = logging.getLogger(__name__)
 
 
-class ManagerAgent:
+class ManagerAgent(ABC):
     """Base class for hierarchical manager agents.
 
     A manager agent orchestrates multiple specialized fabric agents to accomplish
@@ -71,6 +73,7 @@ class ManagerAgent:
         fabric_agents: dict[str, str],
         package_name: str | None = None,
         workspace_root: Path | None = None,
+        reviewer: Callable[[str, Any], tuple[bool, Any]] | None = None,
     ):
         """Initialize the manager agent.
 
@@ -78,10 +81,14 @@ class ManagerAgent:
             fabric_agents: Dict mapping role names to fabric agent names (e.g., {"design": "game_design"}).
             package_name: Optional package name if all fabric agents are in the same package.
             workspace_root: Optional workspace root for discovering packages.
+            reviewer: Optional callback for human-in-the-loop checkpoints.
+                Called as ``reviewer(message, result)`` and should return
+                ``(approved, result)``. If ``None``, checkpoints auto-approve.
         """
         self.fabric_agents = fabric_agents
         self.package_name = package_name
         self.workspace_root = workspace_root
+        self.reviewer = reviewer
         self._packages_cache: dict[str, Path] | None = None
         self._fabric_agent_config_cache: dict[str, dict[str, Any]] = {}
 
@@ -248,8 +255,10 @@ class ManagerAgent:
             Tuple of (approved, result). If not approved, result may be modified.
 
         Note:
-            In this base implementation, checkpoints are logged but auto-approved.
-            Subclasses can override to implement actual HITL workflows.
+            When a ``reviewer`` callback is set on the manager and
+            ``auto_approve`` is False, the reviewer is called with
+            ``(message, result)`` and its return value is used.
+            Without a reviewer, checkpoints are logged and auto-approved.
         """
         logger.info("=" * 60)
         logger.info("CHECKPOINT: %s", message)
@@ -262,14 +271,20 @@ class ManagerAgent:
             logger.info("Auto-approved (auto_approve=True)")
             return True, result
 
-        # Base implementation auto-approves
-        logger.info("Auto-approved (base implementation)")
+        if self.reviewer is not None:
+            approved, reviewed_result = self.reviewer(message, result)
+            logger.info("Reviewer: approved=%s", approved)
+            return approved, reviewed_result
+
+        # No reviewer configured; auto-approve with a log
+        logger.info("Auto-approved (no reviewer configured)")
         return True, result
 
+    @abstractmethod
     async def execute_workflow(self, task: str, **kwargs: Any) -> str:
         """Execute the manager's workflow.
 
-        This is the main entry point for the manager agent. Subclasses should
+        This is the main entry point for the manager agent. Subclasses must
         override this method to implement their specific orchestration logic.
 
         Args:
@@ -278,8 +293,4 @@ class ManagerAgent:
 
         Returns:
             Final result as a string.
-
-        Raises:
-            NotImplementedError: If not overridden by subclass.
         """
-        raise NotImplementedError("Subclasses must implement execute_workflow() to define their orchestration logic")

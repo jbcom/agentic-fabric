@@ -26,6 +26,8 @@ except ImportError:
 pytestmark = [
     pytest.mark.e2e,
     pytest.mark.crewai,
+    pytest.mark.agentic_e2e,
+    pytest.mark.agentic_runtime("crewai"),
     pytest.mark.skipif(not CREWAI_AVAILABLE, reason="crewai not installed"),
 ]
 

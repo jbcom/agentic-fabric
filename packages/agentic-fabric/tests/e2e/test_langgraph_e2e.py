@@ -26,6 +26,8 @@ except ImportError:
 pytestmark = [
     pytest.mark.e2e,
     pytest.mark.langgraph,
+    pytest.mark.agentic_e2e,
+    pytest.mark.agentic_runtime("langgraph"),
     pytest.mark.skipif(not LANGGRAPH_AVAILABLE, reason="langgraph not installed"),
 ]
 

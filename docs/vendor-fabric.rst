@@ -24,6 +24,10 @@ Vendor-backed tools use lazy references:
    tool = resolve_tool("vendor://github/get_file")
    result = tool(path="README.md")
 
+.. note:: Vendor-backed tools require ``vendor-fabric`` to be installed.
+   Without it, calling the tool raises an ``ImportError`` with install
+   guidance.
+
 Those wrappers route through ``AgenticData.call`` and ``VendorData``
 capabilities. Agent code should not import cloud SDKs or provider
 clients directly.

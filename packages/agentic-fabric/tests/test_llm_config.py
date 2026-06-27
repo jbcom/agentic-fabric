@@ -157,3 +157,65 @@ def test_task_helpers_use_declared_configs(monkeypatch: pytest.MonkeyPatch) -> N
 def test_get_llm_for_task_rejects_unknown_task() -> None:
     with pytest.raises(ValueError, match="Unknown task type: unknown"):
         llm_config.get_llm_for_task("unknown")
+
+
+class TestOllamaProvider:
+    """Tests for the Ollama LLM provider path."""
+
+    def test_is_ollama_mode_true_when_ollama_base_url_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """OLLAMA_BASE_URL should enable ollama mode."""
+        monkeypatch.delenv("AGENTIC_FABRIC_LLM_PROVIDER", raising=False)
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
+        assert llm_config._is_ollama_mode() is True
+
+    def test_is_ollama_mode_true_when_provider_env_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """AGENTIC_FABRIC_LLM_PROVIDER=ollama should enable ollama mode."""
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        monkeypatch.setenv("AGENTIC_FABRIC_LLM_PROVIDER", "ollama")
+
+        assert llm_config._is_ollama_mode() is True
+
+    def test_is_ollama_mode_false_by_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Without env config, ollama mode is off."""
+        monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+        monkeypatch.delenv("AGENTIC_FABRIC_LLM_PROVIDER", raising=False)
+
+        assert llm_config._is_ollama_mode() is False
+
+    def test_get_ollama_model_returns_env_when_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """OLLAMA_MODEL env var should override the default."""
+        monkeypatch.setenv("OLLAMA_MODEL", "llama3:8b")
+
+        assert llm_config._get_ollama_model() == "llama3:8b"
+
+    def test_get_ollama_model_returns_default_when_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Missing OLLAMA_MODEL should fall back to the bundled default."""
+        monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+
+        assert llm_config._get_ollama_model() == llm_config._DEFAULT_OLLAMA_MODEL
+
+
+def test_get_llm_with_explicit_ollama_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """provider=LLMProvider.OLLAMA should build an ollama LLM regardless of env."""
+    clear_llm_env(monkeypatch)
+    enable_fake_llm(monkeypatch)
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("AGENTIC_FABRIC_LLM_PROVIDER", raising=False)
+
+    result = llm_config.get_llm(provider=LLMProvider.OLLAMA)
+
+    assert isinstance(result, FakeLLM)
+    assert result.kwargs["model"].startswith("ollama_chat/")
+    assert "base_url" in result.kwargs
+
+
+def test_get_llm_or_raise_mentions_ollama_when_no_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The install-guidance error should mention Ollama as an alternative."""
+    clear_llm_env(monkeypatch)
+    enable_fake_llm(monkeypatch)
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("AGENTIC_FABRIC_LLM_PROVIDER", raising=False)
+
+    with pytest.raises(ValueError, match="ollama"):
+        llm_config.get_llm_or_raise()

@@ -1,7 +1,13 @@
 """Framework-neutral file manipulation tools for agents.
 
 These tools enable agents to read and write code to specific directories in
-workspace package codebases.
+workspace package codebases. Write restrictions are configurable via
+environment variables or the ``configure_write_restrictions`` function.
+
+Without CrewAI and Pydantic installed, the tool classes function as plain
+callables: ``_run`` methods are directly invocable but ``args_schema`` is
+``None``. Frameworks that require a Pydantic ``args_schema`` will need
+CrewAI (or at least Pydantic) installed.
 """
 
 from __future__ import annotations
@@ -88,7 +94,7 @@ def get_workspace_root(package_name: str | None = None) -> Path:
 
 
 # Allowed directories for writing relative to the selected package root.
-ALLOWED_WRITE_DIRS = [
+_DEFAULT_ALLOWED_WRITE_DIRS = [
     "src/ecs",  # ECS components, world, data
     "src/ecs/data",  # Species definitions, etc.
     "src/ecs/systems",  # ECS systems
@@ -101,7 +107,58 @@ ALLOWED_WRITE_DIRS = [
 ]
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS = {".ts", ".tsx", ".json", ".md"}
+_DEFAULT_ALLOWED_EXTENSIONS = {".ts", ".tsx", ".json", ".md"}
+
+
+def _env_dirs() -> list[str] | None:
+    """Load allowed write dirs from ``AGENTIC_FABRIC_WRITE_DIRS`` if set."""
+    raw = os.environ.get("AGENTIC_FABRIC_WRITE_DIRS")
+    if not raw:
+        return None
+    return [entry.strip() for entry in raw.split(",") if entry.strip()]
+
+
+def _env_extensions() -> set[str] | None:
+    """Load allowed extensions from ``AGENTIC_FABRIC_WRITE_EXTENSIONS`` if set."""
+    raw = os.environ.get("AGENTIC_FABRIC_WRITE_EXTENSIONS")
+    if not raw:
+        return None
+    return {ext.strip() for ext in raw.split(",") if ext.strip()}
+
+
+ALLOWED_WRITE_DIRS: list[str] = list(_DEFAULT_ALLOWED_WRITE_DIRS)
+ALLOWED_EXTENSIONS: set[str] = set(_DEFAULT_ALLOWED_EXTENSIONS)
+
+_env_initial_dirs = _env_dirs()
+if _env_initial_dirs is not None:
+    ALLOWED_WRITE_DIRS = list(_env_initial_dirs)
+_env_initial_extensions = _env_extensions()
+if _env_initial_extensions is not None:
+    ALLOWED_EXTENSIONS = set(_env_initial_extensions)
+
+
+def configure_write_restrictions(
+    allowed_dirs: list[str] | None = None,
+    allowed_extensions: set[str] | None = None,
+) -> None:
+    """Replace the module-level ``ALLOWED_WRITE_DIRS`` and ``ALLOWED_EXTENSIONS``.
+
+    Pass ``None`` for either argument to leave that restriction unchanged. This
+    is intended to be called once at application startup to customize write
+    restrictions for the host project.
+
+    Args:
+        allowed_dirs: New list of allowed write directories relative to the
+            selected package root. Replaces the existing list when provided.
+        allowed_extensions: New set of allowed file extensions (with leading
+            dots, e.g. ``{".py", ".toml"}``). Replaces the existing set when
+            provided.
+    """
+    global ALLOWED_WRITE_DIRS, ALLOWED_EXTENSIONS
+    if allowed_dirs is not None:
+        ALLOWED_WRITE_DIRS = list(allowed_dirs)
+    if allowed_extensions is not None:
+        ALLOWED_EXTENSIONS = set(allowed_extensions)
 
 
 def _clean_relative_path(path_value: str) -> str:

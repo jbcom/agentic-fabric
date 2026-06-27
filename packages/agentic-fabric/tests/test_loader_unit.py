@@ -184,7 +184,7 @@ def test_load_fabric_agent_from_config_resolves_tools_and_fallbacks(
     agents = fabric_agent.kwargs["agents"]
     assert [agent.kwargs["role"] for agent in agents] == ["Tool User", "Engineer", "Researcher"]
     assert agents[0].kwargs["tools"] == ["resolved-tool"]
-    assert len(agents[1].kwargs["tools"]) == 3
+    assert len(agents[1].kwargs["tools"]) == 2
     assert len(agents[2].kwargs["tools"]) == 2
     assert len(fabric_agent.kwargs["tasks"]) == 3
 
@@ -207,3 +207,39 @@ def test_load_fabric_agent_from_config_requires_existing_agent(loader_with_fake_
                 "tasks": {"draft": {"description": "draft", "agent": "missing"}},
             }
         )
+
+
+def test_load_fabric_agent_respects_explicit_empty_tools_list(
+    loader_with_fake_crewai: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An agent with an explicit empty ``tools: []`` should get no tools.
+
+    The loader should distinguish between "no tools key" (use the read-only
+    default file tools) and "explicit empty list" (respect the empty list).
+    """
+    monkeypatch.setattr("agentic_fabric.config.llm.get_llm", lambda: None)
+    monkeypatch.setattr(loader_with_fake_crewai, "load_knowledge_sources", lambda paths: [])
+    monkeypatch.setattr(
+        loader_with_fake_crewai,
+        "resolve_tools",
+        lambda tool_names: ["resolved-tool"] if tool_names else [],
+    )
+
+    fabric_agent = loader_with_fake_crewai.load_fabric_agent_from_config(
+        {
+            "agents": {
+                "explicit_empty": {"role": "Explicit Empty", "tools": []},
+                "no_tools_key": {"role": "No Tools Key"},
+            },
+            "tasks": {},
+            "knowledge_paths": [],
+        }
+    )
+
+    agents = fabric_agent.kwargs["agents"]
+    explicit_empty_agent = next(a for a in agents if a.kwargs["role"] == "Explicit Empty")
+    no_tools_key_agent = next(a for a in agents if a.kwargs["role"] == "No Tools Key")
+
+    assert explicit_empty_agent.kwargs["tools"] == []
+    assert len(no_tools_key_agent.kwargs["tools"]) == 2

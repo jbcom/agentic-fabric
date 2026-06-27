@@ -1,4 +1,9 @@
-"""Tests for the direct fabric-agent runner facade."""
+"""Tests for the direct fabric-agent runner facade.
+
+The runner routes through the framework-agnostic decomposer
+(run_fabric_agent_auto) so that required_framework from framework-specific
+config directories is honored.
+"""
 
 from __future__ import annotations
 
@@ -10,34 +15,24 @@ import pytest
 from agentic_fabric.core import runner as fabric_runner
 
 
-class FakeRawResult:
-    """Result object exposing CrewAI's raw output attribute."""
+class FakeRunner:
+    """Minimal runner-like object that returns a string."""
 
-    raw = "raw output"
+    def __init__(self, output: str) -> None:
+        self._output = output
 
+    def build_fabric_agent(self, config: dict[str, Any]) -> Any:
+        return config
 
-class FakeStringResult:
-    """Result object that relies on string conversion."""
-
-    def __str__(self) -> str:
-        return "string output"
-
-
-class FakeCrew:
-    """Minimal CrewAI-like object with kickoff capture."""
-
-    def __init__(self, result: Any) -> None:
-        self.result = result
-        self.inputs: dict[str, Any] | None = None
-
-    def kickoff(self, inputs: dict[str, Any]) -> Any:
-        self.inputs = inputs
-        return self.result
+    def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
+        self._inputs = inputs
+        return self._output
 
 
-def test_run_fabric_agent_discovers_package_loads_config_and_returns_raw(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_run_fabric_agent_discovers_package_loads_config_and_returns_result(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     config_dir = tmp_path / "pkg" / ".fabric"
-    fake_crew = FakeCrew(FakeRawResult())
     calls: list[tuple[Any, ...]] = []
 
     monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"pkg": config_dir})
@@ -46,18 +41,20 @@ def test_run_fabric_agent_discovers_package_loads_config_and_returns_raw(monkeyp
         calls.append(("config", path, fabric_agent_name))
         return {"name": fabric_agent_name}
 
-    def fake_load_fabric_agent_from_config(config: dict[str, Any]) -> FakeCrew:
-        calls.append(("load", config))
-        return fake_crew
+    def fake_run_fabric_agent_auto(config: dict[str, Any], inputs: dict[str, Any] | None = None) -> str:
+        calls.append(("run", config, inputs))
+        return "raw output"
 
     monkeypatch.setattr(fabric_runner, "get_fabric_agent_config", fake_get_fabric_agent_config)
-    monkeypatch.setattr(fabric_runner, "load_fabric_agent_from_config", fake_load_fabric_agent_from_config)
+    monkeypatch.setattr(fabric_runner, "run_fabric_agent_auto", fake_run_fabric_agent_auto)
 
     result = fabric_runner.run_fabric_agent("pkg", "builder", inputs={"topic": "tests"}, workspace_root=tmp_path)
 
     assert result == "raw output"
-    assert fake_crew.inputs == {"topic": "tests"}
-    assert calls == [("config", config_dir, "builder"), ("load", {"name": "builder"})]
+    assert calls == [
+        ("config", config_dir, "builder"),
+        ("run", {"name": "builder"}, {"topic": "tests"}),
+    ]
 
 
 def test_run_fabric_agent_reports_available_packages(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -68,25 +65,39 @@ def test_run_fabric_agent_reports_available_packages(monkeypatch: pytest.MonkeyP
 
 
 def test_run_fabric_agent_defaults_inputs_to_empty_dict(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    fake_crew = FakeCrew(FakeStringResult())
+    calls: list[tuple[Any, ...]] = []
 
     monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"pkg": tmp_path})
     monkeypatch.setattr(fabric_runner, "get_fabric_agent_config", lambda path, fabric_agent_name: {"name": fabric_agent_name})
-    monkeypatch.setattr(fabric_runner, "load_fabric_agent_from_config", lambda config: fake_crew)
+
+    def fake_run_fabric_agent_auto(config: dict[str, Any], inputs: dict[str, Any] | None = None) -> str:
+        calls.append(("run", config, inputs))
+        return "string output"
+
+    monkeypatch.setattr(fabric_runner, "run_fabric_agent_auto", fake_run_fabric_agent_auto)
 
     result = fabric_runner.run_fabric_agent("pkg", "builder")
 
     assert result == "string output"
-    assert fake_crew.inputs == {}
+    assert calls == [("run", {"name": "builder"}, {})]
 
 
 def test_run_fabric_agent_from_path_loads_direct_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    fake_crew = FakeCrew(FakeStringResult())
+    calls: list[tuple[Any, ...]] = []
 
-    monkeypatch.setattr(fabric_runner, "get_fabric_agent_config", lambda path, fabric_agent_name: {"path": path, "name": fabric_agent_name})
-    monkeypatch.setattr(fabric_runner, "load_fabric_agent_from_config", lambda config: fake_crew)
+    monkeypatch.setattr(
+        fabric_runner,
+        "get_fabric_agent_config",
+        lambda path, fabric_agent_name: {"path": path, "name": fabric_agent_name},
+    )
+
+    def fake_run_fabric_agent_auto(config: dict[str, Any], inputs: dict[str, Any] | None = None) -> str:
+        calls.append(("run", config, inputs))
+        return "string output"
+
+    monkeypatch.setattr(fabric_runner, "run_fabric_agent_auto", fake_run_fabric_agent_auto)
 
     result = fabric_runner.run_fabric_agent_from_path(tmp_path / ".fabric", "builder", inputs={"x": 1})
 
     assert result == "string output"
-    assert fake_crew.inputs == {"x": 1}
+    assert calls == [("run", {"path": tmp_path / ".fabric", "name": "builder"}, {"x": 1})]

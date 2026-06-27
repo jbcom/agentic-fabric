@@ -176,6 +176,9 @@ public `vendor-fabric` data methods. `agentic-fabric-meshy-mcp` converts
 Meshy capability metadata from `vendor-fabric[meshy]` into MCP tools. Both
 servers import provider code lazily; install the matching `vendor-fabric`
 package/extras in the same environment before running provider-backed tools.
+If provider startup fails, the adapter error includes the `agentic-fabric[mcp]`
+or `vendor-fabric[...]` install guidance plus the original import failure so
+missing provider extras are visible.
 
 ## Repository Boundary
 

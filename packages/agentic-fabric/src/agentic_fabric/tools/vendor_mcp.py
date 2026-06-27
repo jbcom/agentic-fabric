@@ -22,13 +22,21 @@ VENDOR_INSTALL_MESSAGE = (
 )
 
 
+def _install_error(message: str, error: ImportError) -> ImportError:
+    """Build install guidance without hiding the actual failed import."""
+    detail = str(error)
+    if detail:
+        return ImportError(f"{message}\nOriginal import error: {detail}")
+    return ImportError(message)
+
+
 def _require_vendor_fabric() -> tuple[Any, Callable[..., Any]]:
     """Load vendor-fabric registry and surface helpers lazily."""
     try:
         from vendor_fabric import registry
         from vendor_fabric.surface import connector_data_methods
     except ImportError as exc:
-        raise ImportError(VENDOR_INSTALL_MESSAGE) from exc
+        raise _install_error(VENDOR_INSTALL_MESSAGE, exc) from exc
     return registry, connector_data_methods
 
 

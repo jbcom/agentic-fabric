@@ -49,4 +49,6 @@ MCP ownership follows the same boundary. ``agentic-fabric`` owns the
 points because MCP is an agent runtime transport. The underlying connector
 classes, provider methods, Meshy capability metadata, credentials, and network
 calls remain in ``vendor-fabric`` and are imported lazily only when the MCP
-server is created.
+server is created. If those lazy imports fail, the adapter reports the
+``agentic-fabric[mcp]`` or ``vendor-fabric[...]`` install guidance and preserves
+the original import failure for provider-extra debugging.

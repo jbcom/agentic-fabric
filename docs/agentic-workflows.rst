@@ -112,4 +112,6 @@ runtime-visible adapter layer:
 public ``vendor-fabric`` data methods. ``agentic-fabric-meshy-mcp`` adapts the
 Meshy capability definitions from ``vendor_fabric.meshy.tools`` into MCP tool
 metadata. Install the matching ``vendor-fabric`` package and provider extras
-in the same environment before running provider-backed MCP tools.
+in the same environment before running provider-backed MCP tools. Startup
+errors include the install guidance plus the original import failure so a
+missing provider extra is distinguishable from a missing adapter dependency.

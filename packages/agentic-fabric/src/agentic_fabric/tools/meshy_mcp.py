@@ -19,12 +19,20 @@ VENDOR_INSTALL_MESSAGE = (
 )
 
 
+def _install_error(message: str, error: ImportError) -> ImportError:
+    """Build install guidance without hiding the actual failed import."""
+    detail = str(error)
+    if detail:
+        return ImportError(f"{message}\nOriginal import error: {detail}")
+    return ImportError(message)
+
+
 def _require_meshy_tool_definitions() -> list[dict[str, Any]]:
     """Load Meshy capability metadata from vendor-fabric lazily."""
     try:
         from vendor_fabric.meshy.tools import TOOL_DEFINITIONS
     except ImportError as exc:
-        raise ImportError(VENDOR_INSTALL_MESSAGE) from exc
+        raise _install_error(VENDOR_INSTALL_MESSAGE, exc) from exc
     return list(TOOL_DEFINITIONS)
 
 

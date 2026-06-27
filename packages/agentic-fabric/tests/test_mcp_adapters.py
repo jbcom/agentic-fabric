@@ -150,6 +150,17 @@ def test_meshy_mcp_reports_missing_vendor_fabric(monkeypatch: pytest.MonkeyPatch
         meshy_mcp.create_server()
 
 
+def test_meshy_mcp_preserves_provider_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "vendor_fabric", types.ModuleType("vendor_fabric"))
+    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", types.ModuleType("vendor_fabric.meshy"))
+
+    with pytest.raises(ImportError) as exc_info:
+        meshy_mcp._require_meshy_tool_definitions()
+
+    assert "vendor-fabric[meshy] is required" in str(exc_info.value)
+    assert "Original import error:" in str(exc_info.value)
+
+
 def test_meshy_mcp_exposes_vendor_tool_definitions(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
 
@@ -224,6 +235,7 @@ def test_meshy_mcp_helper_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
         "properties": {},
         "required": [],
     }
+    assert str(meshy_mcp._install_error("install it", ImportError())) == "install it"
     assert meshy_mcp._to_builtin(Dumpable()) == {"dumped": True}
     assert meshy_mcp._to_builtin([Dumpable()]) == [{"dumped": True}]
     assert meshy_mcp._jsonable_tool_result(Dumpable()) == {"dumped": True}
@@ -346,6 +358,18 @@ def test_vendor_mcp_reports_missing_vendor_fabric(monkeypatch: pytest.MonkeyPatc
         vendor_mcp.create_server()
 
 
+def test_vendor_mcp_preserves_provider_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    vendor_module = types.ModuleType("vendor_fabric")
+    vendor_module.registry = types.SimpleNamespace()
+    monkeypatch.setitem(sys.modules, "vendor_fabric", vendor_module)
+
+    with pytest.raises(ImportError) as exc_info:
+        vendor_mcp._require_vendor_fabric()
+
+    assert "vendor-fabric is required" in str(exc_info.value)
+    assert "Original import error:" in str(exc_info.value)
+
+
 def test_vendor_mcp_exposes_catalog_and_connector_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
     install_fake_vendor_fabric(monkeypatch)
@@ -412,6 +436,7 @@ def test_vendor_mcp_helper_branches(monkeypatch: pytest.MonkeyPatch) -> None:
     assert schema["properties"]["count"]["description"] == "Count value."
     assert unresolved_schema["properties"]["value"]["type"] == "string"
     assert vendor_mcp._connector_classes(types.SimpleNamespace()) == {}
+    assert str(vendor_mcp._install_error("install it", ImportError())) == "install it"
     assert vendor_mcp._to_builtin(Dumpable()) == {"dumped": True}
     assert vendor_mcp._to_builtin([Dumpable()]) == [{"dumped": True}]
     assert vendor_mcp._jsonable_tool_result(Dumpable()) == {"dumped": True}

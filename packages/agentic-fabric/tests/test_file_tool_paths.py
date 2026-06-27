@@ -48,3 +48,121 @@ def test_allowed_write_path_requires_directory_boundary(monkeypatch: pytest.Monk
 
     assert file_tools._is_allowed_write_path("src/ecs/component.ts")
     assert not file_tools._is_allowed_write_path("src/ecsnot/component.ts")
+
+
+def test_workspace_root_resolution_uses_workspace_env_and_cwd(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Workspace discovery should fall back from package roots to env vars and cwd."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+    workspace_root = tmp_path / "workspace"
+    target_package = workspace_root / "packages" / "otterfall"
+    target_package.mkdir(parents=True)
+    monkeypatch.setattr(file_tools, "_find_workspace_root", lambda: workspace_root)
+
+    assert file_tools.get_workspace_root() == target_package
+
+    env_root = tmp_path / "env-root"
+    env_root.mkdir()
+    monkeypatch.setattr(file_tools, "_find_workspace_root", lambda: None)
+    monkeypatch.setenv("OTTERFALL_ROOT", str(env_root))
+
+    assert file_tools.get_workspace_root("otterfall") == env_root
+
+    monkeypatch.delenv("OTTERFALL_ROOT")
+    monkeypatch.chdir(tmp_path)
+
+    assert file_tools.get_workspace_root("otterfall") == tmp_path
+
+
+def test_clean_relative_path_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Relative path cleaning should reject empty, absolute, and traversal paths."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+
+    for value in ("", "/tmp/file.ts", "src/../secret.ts"):
+        with pytest.raises(ValueError, match="Path traversal not allowed"):
+            file_tools._clean_relative_path(value)
+
+
+def test_file_tools_write_read_and_list_allowed_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The CrewAI file tools should operate inside the resolved workspace root."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.setattr(file_tools, "get_workspace_root", lambda: workspace_root)
+
+    write_result = file_tools.GameCodeWriterTool()._run("src/ecs/data/species.ts", "export const species = [];")
+    read_result = file_tools.GameCodeReaderTool()._run("src/ecs/data/species.ts")
+    list_result = file_tools.DirectoryListTool()._run("src/ecs/data")
+
+    assert "Successfully wrote" in write_result
+    assert read_result == "export const species = [];"
+    assert "species.ts" in list_result
+
+
+def test_file_tools_report_common_user_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Runtime tool errors should be returned as agent-readable strings."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+    workspace_root = tmp_path / "workspace"
+    workspace_root.mkdir()
+    monkeypatch.setattr(file_tools, "get_workspace_root", lambda: workspace_root)
+
+    bad_write_dir = file_tools.GameCodeWriterTool()._run("src/forbidden/file.ts", "")
+    bad_write_ext = file_tools.GameCodeWriterTool()._run("src/ecs/data/file.py", "")
+    missing_read = file_tools.GameCodeReaderTool()._run("src/ecs/data/missing.ts")
+    missing_dir = file_tools.DirectoryListTool()._run("src/ecs/data")
+
+    assert "not in an allowed directory" in bad_write_dir
+    assert "Extension '.py' not allowed" in bad_write_ext
+    assert "File not found" in missing_read
+    assert "Directory not found" in missing_dir
+
+
+def test_file_tools_report_reader_and_lister_edge_cases(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reader and lister should report directories, large files, files, and empty directories."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+    workspace_root = tmp_path / "workspace"
+    data_dir = workspace_root / "src" / "ecs" / "data"
+    data_dir.mkdir(parents=True)
+    monkeypatch.setattr(file_tools, "get_workspace_root", lambda: workspace_root)
+
+    (data_dir / "folder").mkdir()
+    large_file = data_dir / "large.ts"
+    large_file.write_text("x" * 100_001, encoding="utf-8")
+    empty_dir = data_dir / "empty"
+    empty_dir.mkdir()
+    (data_dir / ".hidden.ts").write_text("hidden", encoding="utf-8")
+    (data_dir / "visible.ts").write_text("visible", encoding="utf-8")
+
+    assert "Path is not a file" in file_tools.GameCodeReaderTool()._run("src/ecs/data/folder")
+    assert "File too large" in file_tools.GameCodeReaderTool()._run("src/ecs/data/large.ts")
+    assert "Path is not a directory" in file_tools.DirectoryListTool()._run("src/ecs/data/visible.ts")
+    assert file_tools.DirectoryListTool()._run("src/ecs/data/empty") == "Directory src/ecs/data/empty is empty"
+
+    list_result = file_tools.DirectoryListTool()._run("src/ecs/data")
+    assert "visible.ts" in list_result
+    assert ".hidden.ts" not in list_result
+
+
+def test_file_tools_convert_permission_and_unexpected_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tool exceptions should be converted to agent-readable strings."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+
+    def raise_permission(path_value: str) -> tuple[str, Path]:
+        raise PermissionError
+
+    monkeypatch.setattr(file_tools, "_resolve_workspace_path", raise_permission)
+
+    assert "Permission denied writing" in file_tools.GameCodeWriterTool()._run("src/ecs/data/file.ts", "")
+    assert "Permission denied reading" in file_tools.GameCodeReaderTool()._run("src/ecs/data/file.ts")
+    assert "Permission denied accessing" in file_tools.DirectoryListTool()._run("src/ecs/data")
+
+    def raise_unexpected(path_value: str) -> tuple[str, Path]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(file_tools, "_resolve_workspace_path", raise_unexpected)
+
+    assert "Error writing file: boom" in file_tools.GameCodeWriterTool()._run("src/ecs/data/file.ts", "")
+    assert "Error reading file: boom" in file_tools.GameCodeReaderTool()._run("src/ecs/data/file.ts")
+    assert "Error listing directory: boom" in file_tools.DirectoryListTool()._run("src/ecs/data")

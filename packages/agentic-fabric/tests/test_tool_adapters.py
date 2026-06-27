@@ -7,9 +7,17 @@ import sys
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pydantic import BaseModel
 
-from agentic_fabric.tools.adapters import resolve_langgraph_tools, resolve_strands_tools
+from agentic_fabric.tools.adapters import (
+    _build_runner,
+    _invoke_tool,
+    _tool_name,
+    resolve_langgraph_tools,
+    resolve_strands_tools,
+)
 
 
 class WriteFileArgs(BaseModel):
@@ -31,6 +39,15 @@ class DummyTool:
     def _run(self, **kwargs: str) -> str:
         self.calls.append(kwargs)
         return f"wrote:{kwargs['file_path']}"
+
+
+class CallableTool:
+    """Callable tool object without a CrewAI _run method."""
+
+    __name__ = "1 callable tool"
+
+    def __call__(self, **kwargs: str) -> str:
+        return f"called:{kwargs['value']}"
 
 
 class FakeStructuredTool:
@@ -95,6 +112,21 @@ def fake_strands_tool(*, name: str, description: str, inputSchema: dict | None):
 class TestLangGraphToolAdapters:
     """Tests for LangGraph configured-tool wrapping."""
 
+    def test_empty_and_unresolved_tools_return_empty(self) -> None:
+        """Empty declarations and unresolved names should not require LangChain."""
+        assert resolve_langgraph_tools([]) == []
+
+        with patch("agentic_fabric.tools.adapters.resolve_tools", return_value=[]):
+            assert resolve_langgraph_tools(["missing"]) == []
+
+    @patch("agentic_fabric.tools.adapters.resolve_tools")
+    def test_missing_langchain_dependency_skips_tools(self, mock_resolve_tools: MagicMock) -> None:
+        """Missing LangChain should be reported as unavailable adaptation."""
+        mock_resolve_tools.return_value = [DummyTool()]
+
+        with patch.dict(sys.modules, {"langchain_core.tools": None}):
+            assert resolve_langgraph_tools(["FileWriteTool"]) == []
+
     @patch("agentic_fabric.tools.adapters.resolve_tools")
     def test_wraps_resolved_tools_with_structured_tool(self, mock_resolve_tools: MagicMock) -> None:
         """Resolved tools should be adapted into LangChain-compatible wrappers."""
@@ -134,6 +166,21 @@ class TestLangGraphToolAdapters:
 class TestStrandsToolAdapters:
     """Tests for Strands configured-tool wrapping."""
 
+    def test_empty_and_unresolved_tools_return_empty(self) -> None:
+        """Empty declarations and unresolved names should not require Strands."""
+        assert resolve_strands_tools([]) == []
+
+        with patch("agentic_fabric.tools.adapters.resolve_tools", return_value=[]):
+            assert resolve_strands_tools(["missing"]) == []
+
+    @patch("agentic_fabric.tools.adapters.resolve_tools")
+    def test_missing_strands_dependency_skips_tools(self, mock_resolve_tools: MagicMock) -> None:
+        """Missing Strands should be reported as unavailable adaptation."""
+        mock_resolve_tools.return_value = [DummyTool()]
+
+        with patch.dict(sys.modules, {"strands": None}):
+            assert resolve_strands_tools(["FileWriteTool"]) == []
+
     @patch("agentic_fabric.tools.adapters.resolve_tools")
     def test_wraps_resolved_tools_with_strands_decorator(self, mock_resolve_tools: MagicMock) -> None:
         """Resolved tools should be adapted into callable Strands tool wrappers."""
@@ -167,3 +214,22 @@ class TestStrandsToolAdapters:
             adapted = resolve_strands_tools(["get_secret_number"])
 
         assert adapted == [existing_tool]
+
+
+class TestToolAdapterHelpers:
+    """Tests for plain adapter helper functions."""
+
+    def test_tool_names_are_framework_safe(self) -> None:
+        assert _tool_name(CallableTool()) == "tool_1_callable_tool"
+        assert _tool_name(object()) == "object"
+
+    def test_build_runner_invokes_callable_tools(self) -> None:
+        runner = _build_runner(CallableTool(), "callable_tool", "Call a tool.")
+
+        assert runner(value="x") == "called:x"
+        assert runner.__name__ == "callable_tool"
+        assert runner.__doc__ == "Call a tool."
+
+    def test_invoke_tool_rejects_noncallable_objects(self) -> None:
+        with pytest.raises(TypeError, match="not callable"):
+            _invoke_tool(object(), {})

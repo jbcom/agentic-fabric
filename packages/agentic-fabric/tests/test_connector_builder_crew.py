@@ -2,44 +2,107 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+import importlib
+import sys
+import types
+
+from typing import Any
 
 import pytest
 
 
-pytest.importorskip("crewai", reason="crewai not installed")
+class FakeAgent:
+    """Capture Agent constructor kwargs."""
 
-from agentic_fabric.crews.connector_builder.connector_builder_crew import ConnectorBuilderCrew
+    calls: list[dict[str, Any]] = []
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
+        self.calls.append(kwargs)
 
 
-@patch("agentic_fabric.crews.connector_builder.connector_builder_crew.Crew")
-@patch("agentic_fabric.crews.connector_builder.connector_builder_crew.Agent")
-@patch("agentic_fabric.crews.connector_builder.connector_builder_crew.Task")
-@patch("agentic_fabric.crews.connector_builder.connector_builder_crew.resolve_tools")
-def test_connector_builder_crew(
-    mock_resolve_tools: MagicMock,
-    mock_task: MagicMock,
-    mock_agent: MagicMock,
-    mock_crew: MagicMock,
-):
-    """Tests that the ConnectorBuilderCrew initializes correctly and can be kicked off."""
-    mock_resolve_tools.side_effect = lambda tools: [f"resolved:{tool}" for tool in tools]
+class FakeTask:
+    """Capture Task constructor kwargs."""
 
-    # Test initialization
-    crew_instance = ConnectorBuilderCrew(output_dir="test_output")
+    calls: list[dict[str, Any]] = []
 
-    assert mock_agent.call_count == 3
-    assert mock_task.call_count == 3
-    assert crew_instance.crew is not None
-    mock_crew.assert_called_once()
-    first_agent_kwargs = mock_agent.call_args_list[0][1]
-    assert first_agent_kwargs["tools"] == ["resolved:ScrapeWebsiteTool", "resolved:CrawlWebsiteTool"]
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
+        self.calls.append(kwargs)
 
-    # Test kickoff
-    mock_crew_instance = mock_crew.return_value
-    mock_crew_instance.kickoff.return_value = "Success"
+
+class FakeCrew:
+    """Capture Crew constructor kwargs and kickoff input."""
+
+    calls: list[dict[str, Any]] = []
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.kwargs = kwargs
+        self.calls.append(kwargs)
+        self.kickoff_inputs: dict[str, Any] | None = None
+
+    def kickoff(self, inputs: dict[str, Any]) -> Any:
+        self.kickoff_inputs = inputs
+        return "Success"
+
+
+def import_connector_builder_with_fake_crewai(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Import the connector builder module with fake CrewAI classes installed."""
+    FakeAgent.calls.clear()
+    FakeTask.calls.clear()
+    FakeCrew.calls.clear()
+
+    fake_crewai = types.ModuleType("crewai")
+    fake_crewai.Agent = FakeAgent
+    fake_crewai.Task = FakeTask
+    fake_crewai.Crew = FakeCrew
+    monkeypatch.setitem(sys.modules, "crewai", fake_crewai)
+    sys.modules.pop("agentic_fabric.crews.connector_builder.connector_builder_crew", None)
+    return importlib.import_module("agentic_fabric.crews.connector_builder.connector_builder_crew")
+
+
+def test_connector_builder_crew_initializes_and_kicks_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ConnectorBuilderCrew should build configured agents/tasks and delegate kickoff."""
+    module = import_connector_builder_with_fake_crewai(monkeypatch)
+    monkeypatch.setattr(module, "resolve_tools", lambda tools: [f"resolved:{tool}" for tool in tools])
+
+    crew_instance = module.ConnectorBuilderCrew(output_dir="test_output")
+
+    assert len(FakeAgent.calls) == 3
+    assert len(FakeTask.calls) == 3
+    assert isinstance(crew_instance.crew, FakeCrew)
+    assert FakeAgent.calls[0]["tools"] == ["resolved:ScrapeWebsiteTool", "resolved:CrawlWebsiteTool"]
+    assert FakeAgent.calls[2]["tools"] == ["resolved:FileWriteTool"]
+    assert "test_output directory" in FakeTask.calls[2]["description"]
+    assert FakeCrew.calls[0]["agents"] == [
+        crew_instance.doc_scraper,
+        crew_instance.api_analyzer,
+        crew_instance.code_generator,
+    ]
+    assert FakeCrew.calls[0]["tasks"] == [
+        crew_instance.scrape_docs,
+        crew_instance.analyze_api,
+        crew_instance.generate_code,
+    ]
 
     result = crew_instance.kickoff(inputs={"url": "http://example.com"})
 
-    mock_crew_instance.kickoff.assert_called_once_with(inputs={"url": "http://example.com"})
     assert result == "Success"
+    assert crew_instance.crew.kickoff_inputs == {"url": "http://example.com"}
+
+
+def test_connector_builder_kickoff_returns_raw_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CrewAI raw results should be returned without string conversion."""
+    module = import_connector_builder_with_fake_crewai(monkeypatch)
+
+    class RawCrew(FakeCrew):
+        def kickoff(self, inputs: dict[str, Any]) -> Any:
+            self.kickoff_inputs = inputs
+            return types.SimpleNamespace(raw="raw success")
+
+    monkeypatch.setattr(module, "Crew", RawCrew)
+    monkeypatch.setattr(module, "resolve_tools", lambda tools: [])
+
+    crew_instance = module.ConnectorBuilderCrew()
+
+    assert crew_instance.kickoff(inputs={"url": "http://example.com"}) == "raw success"

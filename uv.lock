@@ -90,28 +90,28 @@ typing = [
 requires-dist = [
     { name = "agentic-fabric", extras = ["tests", "typing"], marker = "extra == 'dev'", editable = "packages/agentic-fabric" },
     { name = "beautifulsoup4", marker = "extra == 'scraping'", specifier = ">=4.12.0" },
-    { name = "coverage", extras = ["toml"], marker = "extra == 'tests'", specifier = ">=7.6.0" },
+    { name = "coverage", extras = ["toml"], marker = "extra == 'tests'", specifier = ">=7.14.3" },
     { name = "furo", marker = "extra == 'docs'", specifier = ">=2025.12.19" },
     { name = "langchain-anthropic", marker = "extra == 'langgraph'", specifier = ">=0.3.0" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
-    { name = "mypy", marker = "extra == 'typing'", specifier = ">=1.20.1" },
-    { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=4.0.1,<6.0.0" },
-    { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.0.3" },
-    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.23.0" },
+    { name = "mypy", marker = "extra == 'typing'", specifier = ">=2.1.0" },
+    { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=5.1.0,<6.0.0" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.1.1" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=1.4.0" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=7.1.0" },
     { name = "pytest-mock", marker = "extra == 'tests'", specifier = ">=3.15.1" },
     { name = "pytest-timeout", marker = "extra == 'tests'", specifier = ">=2.4.0" },
-    { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.6.1" },
+    { name = "pytest-xdist", marker = "extra == 'tests'", specifier = ">=3.8.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", marker = "extra == 'scraping'", specifier = ">=2.31.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.20" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.2.3,<9.0.0" },
     { name = "sphinx-autodoc2", marker = "extra == 'docs'", specifier = ">=0.5.0" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5.2" },
     { name = "strands-agents", marker = "extra == 'strands'", specifier = ">=0.1.0" },
-    { name = "types-pyyaml", marker = "extra == 'typing'", specifier = ">=6.0.12.20240724" },
-    { name = "types-requests", marker = "extra == 'typing'", specifier = ">=2.33.0.20260408" },
+    { name = "types-pyyaml", marker = "extra == 'typing'", specifier = ">=6.0.12.20260518" },
+    { name = "types-requests", marker = "extra == 'typing'", specifier = ">=2.33.0.20260518" },
 ]
 provides-extras = ["langgraph", "strands", "mcp", "scraping", "tests", "typing", "dev", "docs"]
 
@@ -133,11 +133,11 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mypy", specifier = ">=1.20.1" },
-    { name = "ruff", specifier = ">=0.8.0" },
-    { name = "tox", specifier = ">=4.11" },
-    { name = "tox-gh", specifier = ">=1.3" },
-    { name = "tox-uv", specifier = ">=1.11" },
+    { name = "mypy", specifier = ">=2.1.0" },
+    { name = "ruff", specifier = ">=0.15.20" },
+    { name = "tox", specifier = ">=4.56.1" },
+    { name = "tox-gh", specifier = ">=1.7.1" },
+    { name = "tox-uv", specifier = ">=1.35.2" },
 ]
 
 [[package]]
@@ -1792,13 +1792,13 @@ typing = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mypy", marker = "extra == 'typing'", specifier = ">=1.20.1" },
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.0.3" },
+    { name = "mypy", marker = "extra == 'typing'", specifier = ">=2.1.0" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.1.1" },
     { name = "pytest-agentic-fabric", extras = ["tests", "typing"], marker = "extra == 'dev'", editable = "packages/pytest-agentic-fabric" },
-    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.23.0" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=1.4.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.20" },
 ]
 provides-extras = ["tests", "typing", "dev"]
 

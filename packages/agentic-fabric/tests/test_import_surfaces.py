@@ -6,7 +6,6 @@ import importlib
 import importlib.metadata
 import runpy
 import sys
-import types
 
 import pytest
 
@@ -27,17 +26,8 @@ def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.Monke
     assert namespace["__version__"] == "0.0.0"
 
 
-def test_base_exports_file_tools_with_fake_crewai(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The base package should re-export file tools when CrewAI is present."""
-    fake_crewai = types.ModuleType("crewai")
-    fake_tools = types.ModuleType("crewai.tools")
-
-    class BaseTool:
-        """Minimal BaseTool stand-in."""
-
-    fake_tools.BaseTool = BaseTool
-    monkeypatch.setitem(sys.modules, "crewai", fake_crewai)
-    monkeypatch.setitem(sys.modules, "crewai.tools", fake_tools)
+def test_base_exports_file_tools_without_crewai() -> None:
+    """The base package should re-export framework-neutral file tools."""
     sys.modules.pop("agentic_fabric.tools.file_tools", None)
     sys.modules.pop("agentic_fabric.base", None)
 

@@ -1,13 +1,10 @@
-"""Tests for file manipulation tools.
-
-Note: These tests require crewai to be installed for the tool base classes.
-"""
+"""Tests for framework-neutral file manipulation tools."""
 
 from __future__ import annotations
 
+import builtins
 import os
 import sys
-import types
 
 from pathlib import Path
 from unittest.mock import patch
@@ -16,20 +13,28 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def fake_crewai_base_tool(monkeypatch: pytest.MonkeyPatch):
-    """Import file_tools without requiring the optional CrewAI package."""
-    fake_crewai = types.ModuleType("crewai")
-    fake_tools = types.ModuleType("crewai.tools")
-
-    class BaseTool:
-        """Minimal stand-in for crewai.tools.BaseTool."""
-
-    fake_tools.BaseTool = BaseTool
-    monkeypatch.setitem(sys.modules, "crewai", fake_crewai)
-    monkeypatch.setitem(sys.modules, "crewai.tools", fake_tools)
+def fresh_file_tools_module():
+    """Keep import-branch assertions isolated between tests."""
     sys.modules.pop("agentic_fabric.tools.file_tools", None)
     yield
     sys.modules.pop("agentic_fabric.tools.file_tools", None)
+
+
+def test_file_tools_import_without_optional_frameworks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Built-in tools should not require CrewAI or Pydantic at import time."""
+    real_import = builtins.__import__
+
+    def block_optional_imports(name: str, *args, **kwargs):
+        if name in {"crewai.tools", "pydantic"}:
+            raise ImportError(name)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", block_optional_imports)
+
+    from agentic_fabric.tools.file_tools import GameCodeReaderTool, GameCodeWriterTool
+
+    assert GameCodeReaderTool().args_schema is None
+    assert GameCodeWriterTool()._run("forbidden/example.ts", "").startswith("Error:")
 
 
 class TestGetWorkspaceRoot:

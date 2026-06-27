@@ -9,8 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pydantic import BaseModel
-
 from agentic_fabric.tools.adapters import (
     _build_runner,
     _invoke_tool,
@@ -20,10 +18,13 @@ from agentic_fabric.tools.adapters import (
 )
 
 
-class WriteFileArgs(BaseModel):
+class WriteFileArgs:
     """Schema used to verify adapter schema forwarding."""
 
-    file_path: str
+    @classmethod
+    def model_json_schema(cls) -> dict[str, str]:
+        """Return a minimal schema compatible with adapter expectations."""
+        return {"title": "WriteFileArgs"}
 
 
 class DummyTool:
@@ -69,7 +70,7 @@ class FakeStructuredTool:
         func,
         name: str,
         description: str,
-        args_schema: type[BaseModel] | None,
+        args_schema: type[WriteFileArgs] | None,
         infer_schema: bool,
     ) -> None:
         self.func = func
@@ -85,7 +86,7 @@ class FakeStructuredTool:
         func,
         name: str,
         description: str,
-        args_schema: type[BaseModel] | None,
+        args_schema: type[WriteFileArgs] | None,
         infer_schema: bool,
     ) -> FakeStructuredTool:
         return cls(

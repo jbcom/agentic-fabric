@@ -2,7 +2,8 @@ Getting Started
 ===============
 
 Install the core package when you only need discovery, configuration loading,
-lazy runner selection, and local CLI runner profiles:
+lazy runner selection, local CLI runner profiles, and framework-neutral file
+tools:
 
 .. code:: bash
 
@@ -30,6 +31,10 @@ executables that you install separately:
 
    agentic-fabric list-runners --json
    agentic-fabric run --runner aider --input "Add validation to auth.py"
+
+Built-in filesystem tools also stay in the core package without depending on
+CrewAI or Pydantic. Runtime adapters add framework-specific wrapping only when
+their optional dependencies are installed.
 
 .. code:: python
 

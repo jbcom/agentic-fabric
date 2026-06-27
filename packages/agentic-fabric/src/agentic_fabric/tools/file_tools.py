@@ -1,4 +1,4 @@
-"""File manipulation tools for CrewAI agents.
+"""Framework-neutral file manipulation tools for agents.
 
 These tools enable agents to read and write code to specific directories in
 workspace package codebases.
@@ -9,9 +9,27 @@ from __future__ import annotations
 import os
 
 from pathlib import Path
+from typing import Any
 
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+
+try:  # pragma: no cover - exercised by consumers that install CrewAI
+    from crewai.tools import BaseTool as _BaseTool
+except ImportError:
+
+    class _BaseTool:  # type: ignore[no-redef]
+        """Minimal base class used when no framework-specific tool base exists."""
+
+
+def _load_pydantic_schema_helpers() -> tuple[Any, Any]:  # pragma: no cover
+    """Return Pydantic helpers when optional schema metadata is available."""
+    try:
+        from pydantic import BaseModel, Field
+    except ImportError:
+        return None, None
+    return BaseModel, Field
+
+
+_PYDANTIC_BASE_MODEL, _PYDANTIC_FIELD = _load_pydantic_schema_helpers()
 
 
 def _find_workspace_root() -> Path | None:
@@ -109,14 +127,34 @@ def _is_allowed_write_path(clean_path: str) -> bool:
     return any(clean_path == allowed_dir or clean_path.startswith(f"{allowed_dir}/") for allowed_dir in ALLOWED_WRITE_DIRS)
 
 
-class WriteFileInput(BaseModel):
-    """Input schema for GameCodeWriterTool."""
+def _build_pydantic_schema(
+    name: str,
+    doc: str,
+    fields_by_description: dict[str, str],
+) -> Any:  # pragma: no cover
+    """Build optional Pydantic schemas without making Pydantic a core dependency."""
+    if _PYDANTIC_BASE_MODEL is None or _PYDANTIC_FIELD is None:
+        return None
+    namespace: dict[str, Any] = {
+        "__annotations__": dict.fromkeys(fields_by_description, str),
+        "__doc__": doc,
+    }
+    for field_name, description in fields_by_description.items():
+        namespace[field_name] = _PYDANTIC_FIELD(description=description)
+    return type(name, (_PYDANTIC_BASE_MODEL,), namespace)
 
-    file_path: str = Field(description="Relative path from workspace root (e.g., 'src/ecs/data/NewComponent.ts')")
-    content: str = Field(description="The TypeScript/TSX code content to write")
+
+WriteFileInput = _build_pydantic_schema(
+    "WriteFileInput",
+    "Input schema for GameCodeWriterTool.",
+    {
+        "file_path": "Relative path from workspace root (e.g., 'src/ecs/data/NewComponent.ts')",
+        "content": "The TypeScript/TSX code content to write",
+    },
+)
 
 
-class GameCodeWriterTool(BaseTool):
+class GameCodeWriterTool(_BaseTool):  # type: ignore[misc,valid-type]
     """Tool for writing code files to a game package codebase.
 
     This tool is restricted to specific directories to ensure agents
@@ -146,7 +184,7 @@ class GameCodeWriterTool(BaseTool):
         file_path: "src/ecs/data/species.ts"
         content: "export const PREDATOR_SPECIES = { ... }"
     """
-    args_schema: type[BaseModel] = WriteFileInput
+    args_schema: Any = WriteFileInput
 
     def _run(self, file_path: str, content: str) -> str:
         """Write the file content to the specified path."""
@@ -179,13 +217,14 @@ class GameCodeWriterTool(BaseTool):
             return f"Error writing file: {e!s}"
 
 
-class ReadFileInput(BaseModel):
-    """Input schema for GameCodeReaderTool."""
+ReadFileInput = _build_pydantic_schema(
+    "ReadFileInput",
+    "Input schema for GameCodeReaderTool.",
+    {"file_path": "Relative path from workspace root (e.g., 'src/ecs/components.ts')"},
+)
 
-    file_path: str = Field(description="Relative path from workspace root (e.g., 'src/ecs/components.ts')")
 
-
-class GameCodeReaderTool(BaseTool):
+class GameCodeReaderTool(_BaseTool):  # type: ignore[misc,valid-type]
     """Tool for reading code files from a game package codebase.
 
     Use this to understand existing patterns before writing new code.
@@ -205,7 +244,7 @@ class GameCodeReaderTool(BaseTool):
     Example:
         file_path: "src/ecs/components.ts"
     """
-    args_schema: type[BaseModel] = ReadFileInput
+    args_schema: Any = ReadFileInput
 
     def _run(self, file_path: str) -> str:
         """Read the file content from the specified path."""
@@ -233,13 +272,14 @@ class GameCodeReaderTool(BaseTool):
             return f"Error reading file: {e!s}"
 
 
-class ListDirInput(BaseModel):
-    """Input schema for DirectoryListTool."""
+ListDirInput = _build_pydantic_schema(
+    "ListDirInput",
+    "Input schema for DirectoryListTool.",
+    {"directory": "Relative directory path from workspace root (e.g., 'src/ecs')"},
+)
 
-    directory: str = Field(description="Relative directory path from workspace root (e.g., 'src/ecs')")
 
-
-class DirectoryListTool(BaseTool):
+class DirectoryListTool(_BaseTool):  # type: ignore[misc,valid-type]
     """Tool for listing files in a directory.
 
     Use this to discover existing files and understand project structure.
@@ -259,7 +299,7 @@ class DirectoryListTool(BaseTool):
     Example:
         directory: "src/ecs/data"
     """
-    args_schema: type[BaseModel] = ListDirInput
+    args_schema: Any = ListDirInput
 
     def _run(self, directory: str) -> str:
         """List directory contents."""

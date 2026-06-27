@@ -15,7 +15,7 @@ from what is installed.
 ## Installation
 
 ```bash
-# Core discovery, loading, and runner selection
+# Core discovery, loading, runner selection, local CLI, and neutral file tools
 pip install agentic-fabric
 
 # With a specific framework
@@ -112,6 +112,9 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Framework agnostic: one crew definition, multiple runtime backends.
 - Lazy imports: core package import does not require CrewAI, LangGraph,
   Strands, or vendor SDKs.
+- Framework-neutral file tools: built-in filesystem tools can be resolved
+  without installing CrewAI or Pydantic; framework adapters add schema wrappers
+  only when their optional dependencies are present.
 - Focused extras: `langgraph`, `strands`, `mcp`, `scraping`,
   `tests`, `typing`, `docs`, and `dev`.
 - `AgenticData`: carries data, registered crews, active runtime selection, and

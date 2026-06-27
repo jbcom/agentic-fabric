@@ -93,13 +93,20 @@ compatibility API remains in ``agentic_fabric.core.decomposer``:
 ``detect_framework()``, ``get_runner()``, ``get_available_frameworks()``,
 and ``get_framework_info()``.
 
-Runtime selection should follow explicit precedence when the caller does
-not choose a runtime:
+Runtime selection follows this precedence:
 
-1. a runtime already active on ``AgenticData``
-2. a runtime requested in the fabric agent manifest
-3. the first installed runtime in documented priority order
-4. a clear unavailable-runtime error with install guidance
+1. an explicit runtime argument from the caller
+2. a runtime already active on ``AgenticData``
+3. a runtime required by the fabric agent manifest or framework-specific
+   config directory
+4. the first installed runtime in documented priority order
+5. a clear unavailable-runtime error with install guidance
+
+Manifest-required runtimes are also compatibility constraints. If a caller
+explicitly requests ``langgraph`` for a fabric agent that requires
+``crewai``, or an active runtime conflicts with that requirement,
+``AgenticData`` raises a configuration error rather than silently selecting
+another framework.
 
 Vendor Tooling
 --------------

@@ -147,8 +147,8 @@ Before final validation, check local and remote state for both upstream repos.
 - Add passthrough `vendor-fabric` extras only after `vendor-fabric` exists on
   PyPI. As of this handoff, `vendor-fabric` has no resolvable PyPI release under
   that name, so declaring passthrough extras makes `uv lock` fail.
-- Use configured logging or Python logging/warnings/exceptions; no runtime
-  `print()` paths.
+- Use configured logging or Python logging/warnings/exceptions in library
+  runtime paths. CLI commands and examples may write user-facing output.
 
 ### Docs
 

@@ -26,5 +26,10 @@ Use ``pytest-agentic-fabric`` fixtures for reusable runtime test setup:
        agentic_mock_runtime("langgraph")
        assert agentic_fabric_agent_config["name"] == "test_fabric_agent"
 
+Override ``agentic_fabric_agent_config`` when a test needs a custom
+discoverable workspace. The ``agentic_workspace`` fixture writes that config
+into a temporary ``packages/sample/.fabric`` tree with matching manifest,
+agents, and tasks YAML files.
+
 Before deleting old monorepo code, first prove this repository owns the
 moved surface with docs, tests, package metadata, and release workflows.

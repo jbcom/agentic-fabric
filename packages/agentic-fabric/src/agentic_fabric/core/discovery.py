@@ -2,11 +2,12 @@
 
 Supports framework-specific configuration directories:
 - .fabric/  - framework-agnostic fabric configuration
-- .crewai/   - CrewAI-specific configurations (default)
+- .crewai/   - CrewAI-specific configurations
 - .langgraph/ - LangGraph-specific configurations
 - .strands/  - Strands-specific configurations
 
-The discovery order matches framework priority for auto-detection.
+The discovery order prefers the agnostic fabric before runtime-specific
+directories.
 """
 
 from __future__ import annotations

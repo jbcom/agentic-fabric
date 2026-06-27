@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from tests._fabric_mocker import FabricMocker
+    from pytest_agentic_fabric.mocking import FabricMocker
 
 
 def reject_imports(*blocked_names: str):

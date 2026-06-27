@@ -12,7 +12,7 @@ import pytest
 
 
 if TYPE_CHECKING:
-    from tests._fabric_mocker import FabricMocker
+    from pytest_agentic_fabric.mocking import FabricMocker
 
 
 pytest.importorskip("crewai", reason="crewai not installed")

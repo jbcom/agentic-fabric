@@ -23,6 +23,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "pytest-mock>=3.15.1",
     "pytest>=9.1.1",
     "pyyaml>=6.0.3",
 ]
@@ -30,6 +31,7 @@ dependencies = [
 [project.optional-dependencies]
 tests = [
     "pytest-asyncio>=1.4.0",
+    "pytest-mock>=3.15.1",
     "pytest>=9.1.1",
 ]
 typing = [

@@ -127,8 +127,9 @@ Testing Package
 ---------------
 
 ``pytest-agentic-fabric`` is a sibling package in this repository. It
-provides runtime availability fixtures, runtime module mocking, minimal
-fabric agent/workspace fixtures, and opt-in E2E controls.
+provides runtime availability fixtures, framework mocking helpers, minimal
+fabric agent/workspace fixtures, credential skip fixtures, and opt-in E2E
+controls.
 
 Provider fixtures belong in ``pytest-vendor-fabric``. Base data fixtures
 belong in ``pytest-extended-data``.

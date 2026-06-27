@@ -92,7 +92,7 @@ def test_cmd_run_json_success_auto_detects_framework(
     )
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer"}),
         patch("agentic_fabric.core.decomposer.detect_framework", return_value="crewai"),
         patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done") as run_fabric_agent_auto,
@@ -163,7 +163,7 @@ def test_cmd_run_json_reports_missing_package(capsys: pytest.CaptureFixture[str]
     )
 
     with (
-        patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
+        patch.object(cli, "discover_packages", return_value={"known": Path(".fabric")}),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_run(args)
@@ -189,7 +189,7 @@ def test_cmd_run_json_reports_execution_errors(
     )
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("bad fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
@@ -255,7 +255,7 @@ def test_cmd_run_text_reports_missing_package(capsys: pytest.CaptureFixture[str]
     )
 
     with (
-        patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
+        patch.object(cli, "discover_packages", return_value={"known": Path(".fabric")}),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_run(args)
@@ -321,7 +321,7 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
     )
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer", "required_framework": "crewai"}),
         patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done"),
     ):
@@ -333,7 +333,7 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
     assert "done" in output
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", side_effect=RuntimeError("boom")),
         pytest.raises(SystemExit) as exc_info,
     ):
@@ -354,7 +354,7 @@ def test_cmd_info_json_success(tmp_path: Path, capsys: pytest.CaptureFixture[str
     }
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", return_value=config),
     ):
         cli.cmd_info(args)
@@ -370,7 +370,7 @@ def test_cmd_info_json_reports_config_error(tmp_path: Path, capsys: pytest.Captu
     args = SimpleNamespace(package="pkg", fabric_agent="missing", json=True)
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("missing fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
@@ -384,7 +384,7 @@ def test_cmd_info_json_reports_missing_package(capsys: pytest.CaptureFixture[str
     args = SimpleNamespace(package="missing", fabric_agent="reviewer", json=True)
 
     with (
-        patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
+        patch.object(cli, "discover_packages", return_value={"known": Path(".fabric")}),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_info(args)
@@ -405,7 +405,7 @@ def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.Capture
     }
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", return_value=config),
     ):
         cli.cmd_info(args)
@@ -425,7 +425,7 @@ def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.Capture
     assert "Package 'pkg' not found" in capsys.readouterr().out
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
         patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("missing fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
@@ -508,7 +508,7 @@ def test_single_agent_json_success_uses_package_workdir(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     fake_runner = FakeCliRunner(result="fixed")
-    package_dir = tmp_path / "pkg" / ".crewai"
+    package_dir = tmp_path / "pkg" / ".fabric"
 
     args = SimpleNamespace(
         json=True,

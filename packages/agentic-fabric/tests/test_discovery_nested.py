@@ -93,9 +93,9 @@ class TestDiscoverPackagesNested:
     def test_framework_filter_no_match(self, tmp_path: Path) -> None:
         """Filtering by framework with no matching dirs returns empty."""
         pkg_dir = tmp_path / "packages" / "test_pkg"
-        fabric_dir = pkg_dir / ".crewai"
-        fabric_dir.mkdir(parents=True)
-        (fabric_dir / "manifest.yaml").write_text("name: test\nfabric_agents: {}")
+        crewai_dir = pkg_dir / ".crewai"
+        crewai_dir.mkdir(parents=True)
+        (crewai_dir / "manifest.yaml").write_text("name: test\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path, framework="strands")
         assert packages == {}

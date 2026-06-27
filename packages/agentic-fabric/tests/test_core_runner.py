@@ -36,11 +36,11 @@ class FakeCrew:
 
 
 def test_run_fabric_agent_discovers_package_loads_config_and_returns_raw(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    crewai_dir = tmp_path / "pkg" / ".crewai"
+    config_dir = tmp_path / "pkg" / ".fabric"
     fake_crew = FakeCrew(FakeRawResult())
     calls: list[tuple[Any, ...]] = []
 
-    monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"pkg": crewai_dir})
+    monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"pkg": config_dir})
 
     def fake_get_fabric_agent_config(path: Path, fabric_agent_name: str) -> dict[str, Any]:
         calls.append(("config", path, fabric_agent_name))
@@ -57,11 +57,11 @@ def test_run_fabric_agent_discovers_package_loads_config_and_returns_raw(monkeyp
 
     assert result == "raw output"
     assert fake_crew.inputs == {"topic": "tests"}
-    assert calls == [("config", crewai_dir, "builder"), ("load", {"name": "builder"})]
+    assert calls == [("config", config_dir, "builder"), ("load", {"name": "builder"})]
 
 
 def test_run_fabric_agent_reports_available_packages(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"known": Path(".crewai")})
+    monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"known": Path(".fabric")})
 
     with pytest.raises(ValueError, match=r"Package 'missing' not found. Available: \['known'\]"):
         fabric_runner.run_fabric_agent("missing", "builder")
@@ -86,7 +86,7 @@ def test_run_fabric_agent_from_path_loads_direct_config(monkeypatch: pytest.Monk
     monkeypatch.setattr(fabric_runner, "get_fabric_agent_config", lambda path, fabric_agent_name: {"path": path, "name": fabric_agent_name})
     monkeypatch.setattr(fabric_runner, "load_fabric_agent_from_config", lambda config: fake_crew)
 
-    result = fabric_runner.run_fabric_agent_from_path(tmp_path / ".crewai", "builder", inputs={"x": 1})
+    result = fabric_runner.run_fabric_agent_from_path(tmp_path / ".fabric", "builder", inputs={"x": 1})
 
     assert result == "string output"
     assert fake_crew.inputs == {"x": 1}

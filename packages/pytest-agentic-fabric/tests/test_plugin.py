@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import runpy
+import sys
 
 from collections.abc import Callable
 from pathlib import Path
@@ -13,6 +14,8 @@ from typing import Any
 
 import pytest
 import yaml
+
+from pytest_agentic_fabric.mocking import FabricMocker
 
 
 pytest_plugins = ("pytester",)
@@ -76,10 +79,183 @@ def test_agentic_mock_runtime_sets_runtime_entrypoints(
     assert hasattr(modules[runtime], expected_attr)
 
 
+def test_fabric_mocker_properties(fabric_mocker: FabricMocker, mocker: Any) -> None:
+    """The published mocker should expose pytest-mock helpers."""
+    target = ModuleType("spy_target")
+    target.func = lambda: "ok"
+
+    assert fabric_mocker.MagicMock() is not None
+    assert fabric_mocker.Mock() is not None
+    patched: dict[str, bool] = {}
+    fabric_mocker.patch.dict(patched, {"patched": True})
+    assert patched["patched"] is True
+    spy = fabric_mocker.spy(target, "func")
+    assert target.func() == "ok"
+    spy.assert_called_once_with()
+    assert fabric_mocker.stub(name="stub") is not None
+    assert fabric_mocker.mocker is mocker
+
+
+def test_fabric_mocker_module_restore_handles_original_parent_attr(
+    fabric_mocker: FabricMocker,
+) -> None:
+    """Mocked nested modules should restore previous parent attributes."""
+    parent = ModuleType("parent_fixture")
+    original_child = object()
+    parent.child = original_child
+    sys.modules["parent_fixture"] = parent
+
+    try:
+        child = fabric_mocker.mock_module("parent_fixture.child")
+
+        assert parent.child is child
+
+        fabric_mocker.restore_modules()
+
+        assert parent.child is original_child
+        assert "parent_fixture.child" not in sys.modules
+    finally:
+        sys.modules.pop("parent_fixture", None)
+
+
+def test_fabric_mocker_restore_removes_new_parent_attr(fabric_mocker: FabricMocker) -> None:
+    """Mocked nested modules should remove parent attributes they created."""
+    parent = ModuleType("new_parent_fixture")
+    sys.modules["new_parent_fixture"] = parent
+
+    try:
+        child = fabric_mocker.mock_module("new_parent_fixture.child")
+
+        assert parent.child is child
+
+        fabric_mocker.restore_modules()
+
+        assert not hasattr(parent, "child")
+    finally:
+        sys.modules.pop("new_parent_fixture", None)
+
+
+def test_fabric_mocker_returns_same_module_on_repeat(fabric_mocker: FabricMocker) -> None:
+    """Repeated module mocks should reuse the same fake module."""
+    assert fabric_mocker.mock_module("repeat_fixture") is fabric_mocker.mock_module("repeat_fixture")
+
+
+def test_fabric_mocker_restores_original_module(fabric_mocker: FabricMocker) -> None:
+    """Existing sys.modules entries should be restored."""
+    original = ModuleType("existing_fixture")
+    sys.modules["existing_fixture"] = original
+
+    try:
+        mocked = fabric_mocker.mock_module("existing_fixture")
+
+        assert mocked is not original
+
+        fabric_mocker.restore_modules()
+
+        assert sys.modules["existing_fixture"] is original
+    finally:
+        sys.modules.pop("existing_fixture", None)
+
+
+def test_fabric_mocker_crewai_helpers(fabric_mocker: FabricMocker) -> None:
+    """CrewAI helpers should mock modules and common objects."""
+    modules = fabric_mocker.mock_crewai()
+
+    patched_agent = fabric_mocker.patch_crewai_agent()
+    assert modules["crewai"].Agent is patched_agent
+    assert fabric_mocker.patch_crewai_task() is not None
+    assert fabric_mocker.patch_crewai_crew() is not None
+    assert fabric_mocker.patch_crewai_process() is not None
+    assert fabric_mocker.patch_knowledge_source() is modules[
+        "crewai.knowledge.source.text_file_knowledge_source"
+    ].TextFileKnowledgeSource
+    assert fabric_mocker.mock_crewai_agent(role="Tester").role == "Tester"
+    assert fabric_mocker.mock_crewai_task(description="Task").description == "Task"
+    assert fabric_mocker.mock_crewai_crew(result="done").kickoff().raw == "done"
+
+
+def test_fabric_mocker_langgraph_helpers(fabric_mocker: FabricMocker) -> None:
+    """LangGraph helpers should mock modules and common objects."""
+    modules = fabric_mocker.mock_langgraph()
+
+    assert fabric_mocker.patch_create_react_agent() is modules["langgraph.prebuilt"].create_react_agent
+    assert fabric_mocker.patch_chat_anthropic() is modules["langchain_anthropic"].ChatAnthropic
+    assert fabric_mocker.mock_langgraph_graph(result="done").invoke()["messages"][0].content == "done"
+
+
+def test_fabric_mocker_strands_helpers(fabric_mocker: FabricMocker) -> None:
+    """Strands helpers should mock modules and common objects."""
+    modules = fabric_mocker.mock_strands()
+
+    assert fabric_mocker.patch_strands_agent() is modules["strands"].Agent
+    assert fabric_mocker.mock_strands_agent(result="done")() == "done"
+
+
+def test_fabric_mocker_patch_helpers_install_missing_frameworks(agentic_fabric_mocker: FabricMocker) -> None:
+    """Patch helpers should lazily install framework modules when needed."""
+    crewai_agent = agentic_fabric_mocker.patch_crewai_agent()
+    langgraph_agent = agentic_fabric_mocker.patch_create_react_agent()
+    strands_agent = agentic_fabric_mocker.patch_strands_agent()
+
+    assert sys.modules["crewai"].Agent is crewai_agent
+    assert sys.modules["langgraph"].prebuilt.create_react_agent is langgraph_agent
+    assert sys.modules["strands"].Agent is strands_agent
+
+
+def test_fabric_mocker_all_frameworks(mock_agentic_frameworks: dict[str, ModuleType]) -> None:
+    """The all-framework fixture should install each supported runtime module."""
+    assert "crewai" in mock_agentic_frameworks
+    assert "langgraph.prebuilt" in mock_agentic_frameworks
+    assert "strands" in mock_agentic_frameworks
+
+
+def test_framework_specific_mock_fixtures(
+    mock_crewai: dict[str, ModuleType],
+    mock_langgraph: dict[str, ModuleType],
+    mock_strands: dict[str, ModuleType],
+) -> None:
+    """Framework-specific fixtures should install only their runtime modules."""
+    assert "crewai" in mock_crewai
+    assert "langgraph.prebuilt" in mock_langgraph
+    assert "strands" in mock_strands
+
+
+def test_agentic_fabric_mocker_internal_patch_helpers(agentic_fabric_mocker: FabricMocker) -> None:
+    """Agentic-fabric patch helpers should target fabric names."""
+    llm = object()
+
+    assert agentic_fabric_mocker.patch_get_llm(return_value=llm).return_value is llm
+    assert agentic_fabric_mocker.patch_discover_packages({"pkg": Path(".fabric")}).return_value == {
+        "pkg": Path(".fabric"),
+    }
+    assert agentic_fabric_mocker.patch_get_fabric_agent_config({"name": "custom"}).return_value == {
+        "name": "custom",
+    }
+    assert agentic_fabric_mocker.patch_run_fabric_agent_auto("done").return_value == "done"
+
+
 def test_agentic_fabric_agent_config_fixture(agentic_fabric_agent_config: dict[str, Any]) -> None:
     """Minimal fabric agent config should be usable by runtime tests."""
     assert agentic_fabric_agent_config["agents"]["tester"]["role"] == "Tester"
     assert agentic_fabric_agent_config["tasks"]["verify"]["agent"] == "tester"
+
+
+def test_shared_config_fixtures(
+    simple_agent_config: dict[str, Any],
+    simple_task_config: dict[str, Any],
+    simple_fabric_agent_config: dict[str, Any],
+    multi_agent_fabric_agent_config: dict[str, Any],
+    fabric_agent_with_knowledge: dict[str, Any],
+    temp_fabric_dir: Path,
+) -> None:
+    """Shared config fixtures should be framework-neutral and discoverable."""
+    assert simple_agent_config["role"] == "Test Agent"
+    assert simple_task_config["description"].startswith("Answer the question")
+    assert simple_fabric_agent_config["tasks"]["test_task"]["agent"] == "test_agent"
+    assert multi_agent_fabric_agent_config["tasks"]["writing_task"]["context"] == ["research_task"]
+    assert fabric_agent_with_knowledge["knowledge_paths"][0].joinpath("test_info.md").exists()
+    assert temp_fabric_dir.name == ".fabric"
+    assert temp_fabric_dir.joinpath("fabric_agents").is_dir()
 
 
 def test_agentic_workspace_fixture(agentic_workspace: Path) -> None:
@@ -147,6 +323,36 @@ def test_agentic_workspace_fixture_uses_overridden_config(pytester: pytest.Pytes
     result = pytester.runpytest("-q")
 
     result.assert_outcomes(passed=1)
+
+
+def test_check_api_key_fixture_skips_without_key(pytester: pytest.Pytester) -> None:
+    """Credential fixtures should skip live tests when credentials are absent."""
+    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
+    pytester.makepyfile(
+        """
+        def test_requires_api_key(check_api_key):
+            assert True
+        """
+    )
+
+    result = pytester.runpytest("-q")
+
+    result.assert_outcomes(skipped=1)
+
+
+def test_check_aws_credentials_fixture_skips_without_credentials(pytester: pytest.Pytester) -> None:
+    """AWS credential fixture should skip live tests when credentials are absent."""
+    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
+    pytester.makepyfile(
+        """
+        def test_requires_aws(check_aws_credentials):
+            assert True
+        """
+    )
+
+    result = pytester.runpytest("-q")
+
+    result.assert_outcomes(skipped=1)
 
 
 def test_agentic_e2e_marker_skips_by_default(pytester: pytest.Pytester) -> None:

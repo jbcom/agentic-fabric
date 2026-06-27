@@ -56,7 +56,7 @@ class TestManagerAgent:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {
             "name": "game_design",
             "agents": {},
@@ -87,7 +87,7 @@ class TestManagerAgent:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
         with (
@@ -132,8 +132,8 @@ class TestManagerAgent:
         manager = ManagerAgent(fabric_agents={"design": "game_design"})
 
         mock_packages = {
-            "pkg1": Path("/pkg1/.crewai"),
-            "pkg2": Path("/pkg2/.crewai"),
+            "pkg1": Path("/pkg1/.fabric"),
+            "pkg2": Path("/pkg2/.fabric"),
         }
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
@@ -146,7 +146,7 @@ class TestManagerAgent:
 
             # First package doesn't have the fabric agent.
             def get_config_side_effect(pkg_dir, fabric_agent_name):
-                if pkg_dir == Path("/pkg1/.crewai"):
+                if pkg_dir == Path("/pkg1/.fabric"):
                     raise ValueError("Fabric agent not found")
                 return mock_config
 
@@ -165,21 +165,21 @@ class TestManagerAgent:
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
         with (
-            patch("agentic_fabric.core.manager.discover_packages", return_value={"test_pkg": Path("/test/.crewai")}),
+            patch("agentic_fabric.core.manager.discover_packages", return_value={"test_pkg": Path("/test/.fabric")}),
             patch("agentic_fabric.core.manager.get_fabric_agent_config", return_value=mock_config) as mock_get_config,
             patch("agentic_fabric.core.manager.run_fabric_agent_auto", side_effect=["first", "second"]) as mock_run,
         ):
             assert manager.delegate("design", "first task", framework="crewai") == "first"
             assert manager.delegate("design", {"task": "second task"}, framework="langgraph") == "second"
 
-        mock_get_config.assert_called_once_with(Path("/test/.crewai"), "game_design")
+        mock_get_config.assert_called_once_with(Path("/test/.fabric"), "game_design")
         assert mock_run.call_args_list[1].kwargs == {"inputs": {"task": "second task"}, "framework": "langgraph"}
 
     def test_delegate_fabric_agent_not_found_raises_error(self):
         """Test that fabric agent not found in any package raises ValueError."""
         manager = ManagerAgent(fabric_agents={"design": "missing_fabric_agent"})
 
-        mock_packages = {"pkg1": Path("/pkg1/.crewai")}
+        mock_packages = {"pkg1": Path("/pkg1/.fabric")}
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
@@ -199,7 +199,7 @@ class TestManagerAgent:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
         with (
@@ -223,7 +223,7 @@ class TestManagerAgent:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
@@ -268,7 +268,7 @@ class TestManagerAgent:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {"name": "test", "agents": {}, "tasks": {}}
 
         with (
@@ -346,7 +346,7 @@ class TestManagerAgentSubclass:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {"name": "test", "agents": {}, "tasks": {}}
 
         with (
@@ -390,7 +390,7 @@ class TestManagerAgentSubclass:
             package_name="test_pkg",
         )
 
-        mock_packages = {"test_pkg": Path("/test/.crewai")}
+        mock_packages = {"test_pkg": Path("/test/.fabric")}
         mock_config = {"name": "test", "agents": {}, "tasks": {}}
 
         with (

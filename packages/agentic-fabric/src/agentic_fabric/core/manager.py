@@ -131,8 +131,8 @@ class ManagerAgent:
             packages = self._get_packages()
             if self.package_name not in packages:
                 raise ValueError(f"Package '{self.package_name}' not found. Available: {list(packages.keys())}")
-            crewai_dir = packages[self.package_name]
-            fabric_agent_config = get_fabric_agent_config(crewai_dir, fabric_agent_name)
+            config_dir = packages[self.package_name]
+            fabric_agent_config = get_fabric_agent_config(config_dir, fabric_agent_name)
         else:
             # Auto-discover package containing the fabric agent
             packages = self._get_packages()

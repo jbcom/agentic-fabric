@@ -95,7 +95,7 @@ class TestCLIEntryPoint:
 
     def test_info_missing_fabric_agent_exits_2(self, tmp_path) -> None:
         """'info' with non-existent fabric agent should exit with code 2."""
-        config_dir = tmp_path / ".crewai"
+        config_dir = tmp_path / ".fabric"
         config_dir.mkdir()
         (config_dir / "manifest.yaml").write_text("fabric_agents: {}\n")
 

@@ -14,6 +14,7 @@ import pytest
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = PACKAGE_ROOT.parents[1]
+REPO_SPECIFIC_LEGACY_TOKEN = "otter" + "fall"
 
 
 def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -72,7 +73,7 @@ def test_runtime_source_does_not_reown_vendor_or_legacy_surfaces() -> None:
     disallowed = {
         "secrets_sync": "SecretSync Python access must route through vendor-fabric capabilities",
         "secretssync": "SecretSync direct-import spelling is not part of this layer",
-        "otterfall": "otterfall is repo-specific and not part of the agnostic package",
+        REPO_SPECIFIC_LEGACY_TOKEN: "repo-specific package naming is not part of the agnostic package",
         "agentic-crew": "fabric agent naming replaced old crew package naming",
         "connector_builder_crew": "connector builder code should use fabric naming",
         "ConnectorBuilderCrew": "connector builder code should use fabric naming",

@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from tests._fabric_mocker import ALL_FRAMEWORK_MODULES, CREWAI_MODULES, LANGGRAPH_MODULES, STRANDS_MODULES
+from pytest_agentic_fabric.mocking import ALL_FRAMEWORK_MODULES, CREWAI_MODULES, LANGGRAPH_MODULES, STRANDS_MODULES
 
 
 if TYPE_CHECKING:
-    from tests._fabric_mocker import FabricMocker
+    from pytest_agentic_fabric.mocking import FabricMocker
 
 
 class TestFabricMockerBasics:
@@ -70,4 +70,4 @@ class TestLocalFixtures:
     """Test reusable local fixtures."""
 
     def test_temp_workspace_fixture(self, temp_workspace: Path) -> None:
-        assert (temp_workspace / "packages" / "sample" / ".crewai" / "manifest.yaml").exists()
+        assert (temp_workspace / "packages" / "sample" / ".fabric" / "manifest.yaml").exists()

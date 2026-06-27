@@ -14,7 +14,7 @@ from __future__ import annotations
 # - simple_fabric_agent_config
 # - multi_agent_fabric_agent_config
 # - fabric_agent_with_knowledge
-# - temp_crewai_dir
+# - temp_fabric_dir
 #
 # CLI options:
 # - --e2e: Enable E2E tests

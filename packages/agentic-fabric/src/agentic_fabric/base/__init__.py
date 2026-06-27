@@ -57,7 +57,7 @@ def _interpolate(text: str, variables: dict[str, Any]) -> str:
         return text
     try:
         return text.format(**variables)
-    except (KeyError, IndexError):
+    except (KeyError, IndexError, ValueError):
         return text
 
 
@@ -103,7 +103,7 @@ def resolve_archetype(
         variables = {}
 
     resolved: dict[str, Any] = dict(agent_config)
-    del resolved["extends"]
+    resolved.pop("extends", None)
     resolved.pop("variables", None)
 
     for field in ("role", "goal", "backstory"):

@@ -253,36 +253,36 @@ class TestConfigureWriteRestrictions:
 
     def test_configure_write_restrictions_replaces_allowed_dirs(self) -> None:
         """configure_write_restrictions should replace the allowed write dirs list."""
-        import agentic_fabric.tools.file_tools as ft
+        from agentic_fabric.tools.file_tools import ALLOWED_WRITE_DIRS, configure_write_restrictions
 
-        original = list(ft.ALLOWED_WRITE_DIRS)
+        original = list(ALLOWED_WRITE_DIRS)
         try:
-            ft.configure_write_restrictions(allowed_dirs=["custom/dir"])
-            assert list(ft.ALLOWED_WRITE_DIRS) == ["custom/dir"]
+            configure_write_restrictions(allowed_dirs=["custom/dir"])
+            assert list(ALLOWED_WRITE_DIRS) == ["custom/dir"]
         finally:
-            ft.configure_write_restrictions(allowed_dirs=original)
+            configure_write_restrictions(allowed_dirs=original)
 
     def test_configure_write_restrictions_replaces_allowed_extensions(self) -> None:
         """configure_write_restrictions should replace the allowed extensions set."""
-        import agentic_fabric.tools.file_tools as ft
+        from agentic_fabric.tools.file_tools import ALLOWED_EXTENSIONS, configure_write_restrictions
 
-        original = set(ft.ALLOWED_EXTENSIONS)
+        original = set(ALLOWED_EXTENSIONS)
         try:
-            ft.configure_write_restrictions(allowed_extensions={".py", ".toml"})
-            assert set(ft.ALLOWED_EXTENSIONS) == {".py", ".toml"}
+            configure_write_restrictions(allowed_extensions={".py", ".toml"})
+            assert set(ALLOWED_EXTENSIONS) == {".py", ".toml"}
         finally:
-            ft.configure_write_restrictions(allowed_extensions=original)
+            configure_write_restrictions(allowed_extensions=original)
 
     def test_configure_write_restrictions_leaves_unchanged_when_none(self) -> None:
         """Passing None for an argument should leave that restriction unchanged."""
-        import agentic_fabric.tools.file_tools as ft
+        from agentic_fabric.tools.file_tools import ALLOWED_WRITE_DIRS, configure_write_restrictions
 
-        before_dirs = list(ft.ALLOWED_WRITE_DIRS)
+        before_dirs = list(ALLOWED_WRITE_DIRS)
         try:
-            ft.configure_write_restrictions(allowed_dirs=None, allowed_extensions=None)
-            assert list(ft.ALLOWED_WRITE_DIRS) == before_dirs
+            configure_write_restrictions(allowed_dirs=None, allowed_extensions=None)
+            assert list(ALLOWED_WRITE_DIRS) == before_dirs
         finally:
-            ft.configure_write_restrictions(allowed_dirs=before_dirs)
+            configure_write_restrictions(allowed_dirs=before_dirs)
 
     def test_env_dirs_override_default_allowed_write_dirs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """AGENTIC_FABRIC_WRITE_DIRS env var should override the defaults at import time."""

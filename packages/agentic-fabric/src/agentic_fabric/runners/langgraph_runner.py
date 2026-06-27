@@ -63,13 +63,13 @@ class LangGraphRunner(BaseRunner):
         # For single-agent configs, create a simple ReAct agent
         agents_config = fabric_agent_config.get("agents", {})
         if len(agents_config) <= 1:
-            return create_react_agent(llm, tools, prompt=system_prompt) if system_prompt else create_react_agent(llm, tools)
+            return create_react_agent(llm, tools, state_modifier=system_prompt) if system_prompt else create_react_agent(llm, tools)
 
         # For multi-agent configs, still create a single ReAct agent but
         # with a system prompt that encodes all agent roles and tasks.
         # This preserves the multi-agent intent in the prompt while using
         # the simplest LangGraph execution model.
-        return create_react_agent(llm, tools, prompt=system_prompt)
+        return create_react_agent(llm, tools, state_modifier=system_prompt)
 
     def _build_system_prompt(self, fabric_agent_config: dict[str, Any]) -> str:
         """Build a system prompt from the fabric agent config for multi-agent cases."""

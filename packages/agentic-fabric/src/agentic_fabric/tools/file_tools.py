@@ -154,11 +154,13 @@ def configure_write_restrictions(
             dots, e.g. ``{".py", ".toml"}``). Replaces the existing set when
             provided.
     """
-    global ALLOWED_WRITE_DIRS, ALLOWED_EXTENSIONS
+    # Mutate in-place so all imported references are updated correctly.
     if allowed_dirs is not None:
-        ALLOWED_WRITE_DIRS = list(allowed_dirs)
+        ALLOWED_WRITE_DIRS.clear()
+        ALLOWED_WRITE_DIRS.extend(allowed_dirs)
     if allowed_extensions is not None:
-        ALLOWED_EXTENSIONS = set(allowed_extensions)
+        ALLOWED_EXTENSIONS.clear()
+        ALLOWED_EXTENSIONS.update(allowed_extensions)
 
 
 def _clean_relative_path(path_value: str) -> str:

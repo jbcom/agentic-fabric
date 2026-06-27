@@ -210,6 +210,20 @@ def test_get_llm_with_explicit_ollama_provider(monkeypatch: pytest.MonkeyPatch) 
     assert "base_url" in result.kwargs
 
 
+def test_get_llm_auto_detects_ollama_when_base_url_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Without explicit provider, OLLAMA_BASE_URL should auto-route to Ollama."""
+    clear_llm_env(monkeypatch)
+    enable_fake_llm(monkeypatch)
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+    monkeypatch.delenv("AGENTIC_FABRIC_LLM_PROVIDER", raising=False)
+
+    result = llm_config.get_llm()
+
+    assert isinstance(result, FakeLLM)
+    assert result.kwargs["model"].startswith("ollama_chat/")
+
+
 def test_get_llm_or_raise_mentions_ollama_when_no_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     """The install-guidance error should mention Ollama as an alternative."""
     clear_llm_env(monkeypatch)

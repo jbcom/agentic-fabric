@@ -149,8 +149,8 @@ def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, provider: LLMP
     if LLM is None:
         return None
 
-    # Force provider if specified
-    if provider == LLMProvider.OLLAMA or _is_ollama_mode():
+    # Force provider if specified — explicit provider always takes precedence
+    if provider == LLMProvider.OLLAMA:
         return _create_ollama_llm(model if model != DEFAULT_MODEL else _get_ollama_model(), temperature)
 
     if provider == LLMProvider.ANTHROPIC:
@@ -164,6 +164,10 @@ def get_llm(model: str = DEFAULT_MODEL, temperature: float = 0.7, provider: LLMP
         if not openrouter_key:
             return None
         return _create_openrouter_llm(model, temperature, openrouter_key)
+
+    # Auto-detect: Try Ollama first if configured
+    if _is_ollama_mode():
+        return _create_ollama_llm(model if model != DEFAULT_MODEL else _get_ollama_model(), temperature)
 
     # Auto-detect: Try Anthropic first for direct Claude models
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")

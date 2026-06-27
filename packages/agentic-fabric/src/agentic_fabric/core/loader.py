@@ -161,15 +161,12 @@ def load_fabric_agent_from_config(fabric_agent_config: dict) -> Crew:
     agents_config = resolve_agent_archetypes(agents_config)
 
     for agent_name, agent_cfg in agents_config.items():
-        resolved_tools = resolve_tools(agent_cfg.get("tools", []))
-
-        # Only fall back to default file tools when no explicit tools are declared.
-        # This preserves backward compatibility while not forcing game-specific tools
-        # on agents that explicitly declare no tools.
-        if resolved_tools:
+        tools_val = agent_cfg.get("tools")
+        if tools_val is not None:
+            resolved_tools = resolve_tools(tools_val)
             tools = resolved_tools
         elif "tools" in agent_cfg:
-            # Agent explicitly declared an empty tools list — respect it
+            # Agent explicitly declared tools: null (empty list) — respect it
             tools = []
         else:
             # No tools key at all: use read-only file tools as a sensible default

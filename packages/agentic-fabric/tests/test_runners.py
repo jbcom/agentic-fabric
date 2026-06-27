@@ -673,10 +673,10 @@ class TestLangGraphRunner:
 
         mock_create.assert_called_once()
         kwargs = mock_create.call_args[1]
-        assert "prompt" in kwargs
-        assert "Research and write reports." in kwargs["prompt"]
-        assert "Researcher" in kwargs["prompt"]
-        assert "Writer" in kwargs["prompt"]
+        assert "state_modifier" in kwargs
+        assert "Research and write reports." in kwargs["state_modifier"]
+        assert "Researcher" in kwargs["state_modifier"]
+        assert "Writer" in kwargs["state_modifier"]
 
     def test_get_llm_uses_chat_ollama_when_ollama_base_url_set(
         self, fabric_mocker: FabricMocker

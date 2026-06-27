@@ -40,7 +40,7 @@ class TestCrewAIRunner:
         try:
             CrewAIRunner()
         except RuntimeError as exc:
-            assert "pip install crewai[tools]" in str(exc)
+            assert 'pip install "agentic-fabric[crewai]"' in str(exc)
         else:  # pragma: no cover - defensive if CrewAI import mocking stops working
             raise AssertionError("CrewAIRunner did not report missing CrewAI")
 
@@ -372,7 +372,7 @@ class TestLangGraphRunner:
         try:
             LangGraphRunner()
         except RuntimeError as exc:
-            assert "pip install langgraph" in str(exc)
+            assert 'pip install "agentic-fabric[langgraph]"' in str(exc)
         else:  # pragma: no cover - defensive if LangGraph import mocking stops working
             raise AssertionError("LangGraphRunner did not report missing LangGraph")
 
@@ -580,7 +580,7 @@ class TestStrandsRunner:
         try:
             StrandsRunner()
         except RuntimeError as exc:
-            assert "pip install strands-agents" in str(exc)
+            assert 'pip install "agentic-fabric[strands]"' in str(exc)
         else:  # pragma: no cover - defensive if Strands import mocking stops working
             raise AssertionError("StrandsRunner did not report missing Strands")
 

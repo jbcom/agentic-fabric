@@ -89,12 +89,8 @@ def detect_framework(preferred: str | None = None) -> str:
         if is_framework_available(framework):
             return framework
 
-    raise RuntimeError(
-        "No AI frameworks installed. Install one of:\n"
-        "  pip install crewai[tools]\n"
-        "  pip install langgraph\n"
-        "  pip install strands-agents"
-    )
+    install_options = "\n".join(f"  {_get_install_command(framework)}" for framework in FRAMEWORK_PRIORITY)
+    raise RuntimeError(f"No AI frameworks installed. Install one of:\n{install_options}")
 
 
 def get_available_frameworks() -> list[str]:
@@ -237,7 +233,7 @@ def decompose_crew(
         if not is_framework_available(required_framework):
             raise RuntimeError(
                 f"Crew requires {required_framework} but it's not installed. "
-                f"Install with: pip install {_get_install_command(required_framework)}"
+                f"Install with: {_get_install_command(required_framework)}"
             )
         framework = required_framework
 
@@ -246,13 +242,11 @@ def decompose_crew(
 
 
 def _get_install_command(framework: str) -> str:
-    """Get the pip install command for a framework."""
-    install_commands = {
-        "crewai": "crewai[tools]",
-        "langgraph": "langgraph langchain-anthropic",
-        "strands": "strands-agents",
-    }
-    return install_commands.get(framework, framework)
+    """Get the package-extra install command for a framework."""
+    try:
+        return get_runtime_spec(framework).install
+    except ValueError:
+        return f"pip install {framework}"
 
 
 # Convenience function for simple use cases
@@ -290,7 +284,7 @@ def run_crew_auto(
         if not is_framework_available(required_framework):
             raise RuntimeError(
                 f"Crew requires {required_framework} but it's not installed. "
-                f"Install with: pip install {_get_install_command(required_framework)}"
+                f"Install with: {_get_install_command(required_framework)}"
             )
         framework = required_framework
 

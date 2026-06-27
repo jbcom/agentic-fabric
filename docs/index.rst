@@ -12,6 +12,7 @@ LangGraph, Strands, or local CLI runners.
    pip install "agentic-fabric[crewai]"
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
+   pip install "agentic-fabric[ai]"
 
 Vendor-backed tools will be exposed as passthrough extras after
 ``vendor-fabric`` is available on PyPI. Until then, agent runtime work

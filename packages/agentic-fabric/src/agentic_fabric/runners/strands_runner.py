@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from agentic_fabric.runners.base import BaseRunner
+from agentic_fabric.runners.registry import install_command
 from agentic_fabric.tools.adapters import resolve_strands_tools
 
 
@@ -25,7 +26,7 @@ class StrandsRunner(BaseRunner):
         try:
             import strands  # noqa: F401
         except ImportError as e:
-            raise RuntimeError("Strands not installed. Install with: pip install strands-agents") from e
+            raise RuntimeError(f"Strands not installed. Install with: {install_command(self.framework_name)}") from e
 
     def build_crew(self, crew_config: dict[str, Any]) -> Any:
         """Build a Strands agent from configuration.

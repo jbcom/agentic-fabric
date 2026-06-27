@@ -40,6 +40,30 @@ When no framework is installed, discovery and metadata inspection still
 work. Execution reports the unavailable runtime instead of failing
 during import.
 
+Runtime Extras
+--------------
+
+The public runtime registry exposes install guidance for each optional
+framework:
+
+.. code:: python
+
+   from agentic_fabric import get_framework_info
+
+   for runtime in get_framework_info():
+       print(runtime["name"], runtime["available"], runtime["install"])
+
+Supported runtime extras are ``crewai``, ``langgraph``, and ``strands``.
+``ai`` installs all three. ``mcp`` and ``scraping`` are optional tool surfaces;
+``all`` installs every optional runtime and tool dependency. Local CLI runners
+are configured profiles over external executables and do not require a Python
+extra:
+
+.. code:: bash
+
+   agentic-fabric list-runners
+   agentic-fabric run --runner claude-code --input "Review this package"
+
 Tool Resolution
 ---------------
 

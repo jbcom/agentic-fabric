@@ -127,7 +127,7 @@ class TestDetectFramework:
         """RuntimeError should include installation instructions."""
         with (
             patch("agentic_fabric.core.decomposer.is_framework_available", return_value=False),
-            pytest.raises(RuntimeError, match="pip install crewai"),
+            pytest.raises(RuntimeError, match=r"agentic-fabric\[crewai\]"),
         ):
             detect_framework()
 
@@ -243,7 +243,7 @@ class TestRunnerDispatch:
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: False)
 
-        with pytest.raises(RuntimeError, match="pip install crewai\\[tools\\]"):
+        with pytest.raises(RuntimeError, match=r"agentic-fabric\[crewai\]"):
             decompose_crew(crew_config)
 
     def test_run_crew_auto_enforces_required_runtime_and_runs(
@@ -278,7 +278,7 @@ class TestRunnerDispatch:
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: False)
 
-        with pytest.raises(RuntimeError, match="pip install langgraph"):
+        with pytest.raises(RuntimeError, match=r"agentic-fabric\[langgraph\]"):
             run_crew_auto(crew_config)
 
 
@@ -306,17 +306,15 @@ class TestGetInstallCommand:
     """Tests for _get_install_command."""
 
     def test_crewai_includes_tools(self) -> None:
-        assert "crewai[tools]" in _get_install_command("crewai")
+        assert _get_install_command("crewai") == 'pip install "agentic-fabric[crewai]"'
 
     def test_langgraph_includes_langchain(self) -> None:
-        result = _get_install_command("langgraph")
-        assert "langgraph" in result
-        assert "langchain" in result
+        assert _get_install_command("langgraph") == 'pip install "agentic-fabric[langgraph]"'
 
     def test_strands_maps_correctly(self) -> None:
-        assert "strands-agents" in _get_install_command("strands")
+        assert _get_install_command("strands") == 'pip install "agentic-fabric[strands]"'
 
     def test_unknown_framework_returns_itself(self) -> None:
         """Unknown framework name should return as-is."""
         result = _get_install_command("unknown_framework")
-        assert result == "unknown_framework"
+        assert result == "pip install unknown_framework"

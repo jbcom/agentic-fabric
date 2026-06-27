@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_fabric.runners.base import BaseRunner
+from agentic_fabric.runners.registry import install_command
 from agentic_fabric.tools.registry import resolve_tools
 
 
@@ -33,7 +34,7 @@ class CrewAIRunner(BaseRunner):
         try:
             import crewai  # noqa: F401
         except ImportError as e:
-            raise RuntimeError("CrewAI not installed. Install with: pip install crewai[tools]") from e
+            raise RuntimeError(f"CrewAI not installed. Install with: {install_command(self.framework_name)}") from e
 
     def build_crew(self, crew_config: dict[str, Any]) -> Any:
         """Build a CrewAI Crew from configuration.

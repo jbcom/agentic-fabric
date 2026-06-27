@@ -26,8 +26,22 @@ pip install "agentic-fabric[strands]"
 # All frameworks
 pip install "agentic-fabric[ai]"
 
-# Vendor-backed passthrough extras are added after vendor-fabric is published.
+# Non-framework optional surfaces
+pip install "agentic-fabric[mcp]"
+pip install "agentic-fabric[scraping]"
+pip install "agentic-fabric[all]"
 ```
+
+Local CLI runners do not require a Python extra. Install the external CLI
+(`aider`, `claude`, `codex`, `ollama`, or a custom executable) and inspect
+profiles with `agentic-fabric list-runners --json`.
+
+Vendor-backed passthrough extras are added after `vendor-fabric` is published.
+Until then, vendor references stay lazy and report install guidance at use time.
+
+The `crewai`, `ai`, `scraping`, and `all` extras include dependencies selected
+by CrewAI. If a transitive CrewAI dependency has an upstream advisory with no
+patched release, upgrading `agentic-fabric` alone cannot clear that advisory.
 
 ## Quick Start
 
@@ -52,10 +66,15 @@ review_code:
 ### 2. Run It
 
 ```python
-from agentic_fabric import run_crew_auto, detect_framework
+from pathlib import Path
+
+from agentic_fabric import detect_framework, get_crew_config, run_crew_auto
 
 # See what framework is available
 framework = detect_framework()
+
+# Load a crew manifest discovered in a package or workspace
+config = get_crew_config(Path(".crew"), "analyzer")
 
 # Auto-detect best framework and run
 result = run_crew_auto(config, inputs={"code": "..."})
@@ -94,6 +113,8 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Framework agnostic: one crew definition, multiple runtime backends.
 - Lazy imports: core package import does not require CrewAI, LangGraph,
   Strands, or vendor SDKs.
+- Complete extras: `crewai`, `langgraph`, `strands`, `ai`, `mcp`,
+  `scraping`, `tests`, `typing`, `docs`, `dev`, and `all`.
 - `AgenticData`: carries data, registered crews, active runtime selection, and
   vendor-layer context together.
 - Capability decorators: runners and tools expose declared capabilities through
@@ -116,6 +137,24 @@ result = session.run_agent("reviewer", runtime="crewai")
 
 You can always force a specific runner with `get_runner("langgraph")` or
 `agentic-fabric run --framework langgraph`.
+
+If the selected runtime is not installed, errors point to the matching
+`agentic-fabric[...]` extra. Framework-specific config directories also enforce
+their runtime: a crew in `.langgraph/` will not silently run on CrewAI.
+
+## Local CLI Runners
+
+For single-agent coding tools, use the `--runner` CLI path:
+
+```bash
+agentic-fabric list-runners --json
+agentic-fabric run --runner aider --input "Add validation to auth.py"
+agentic-fabric run --runner ollama --model deepseek-coder --input "Explain this module"
+```
+
+Profiles are loaded from the packaged `local_cli_profiles.yaml`, validated
+before use, and rejected on POSIX systems if the profiles file is group- or
+world-writable.
 
 ## Repository Boundary
 

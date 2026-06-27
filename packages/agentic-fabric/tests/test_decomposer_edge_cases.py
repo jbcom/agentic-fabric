@@ -9,6 +9,7 @@ import pytest
 from agentic_fabric.core.decomposer import (
     _framework_cache,
     _get_install_command,
+    _resolve_required_framework,
     decompose_crew,
     detect_framework,
     get_available_frameworks,
@@ -165,6 +166,10 @@ class TestGetAvailableFrameworks:
 
 class TestRunnerDispatch:
     """Tests for framework runner dispatch helpers."""
+
+    def test_resolve_required_framework_preserves_requested_runtime_without_requirement(self) -> None:
+        """Framework selection should pass through when configs are runtime-agnostic."""
+        assert _resolve_required_framework({"name": "reviewer"}, "langgraph") == "langgraph"
 
     def test_get_runner_auto_detects_and_instantiates_runner(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """get_runner should instantiate the registered runner class."""

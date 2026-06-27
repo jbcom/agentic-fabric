@@ -199,6 +199,26 @@ def is_cli_runner_available(profile: str) -> bool:
         return False
 
 
+def _resolve_required_framework(crew_config: dict[str, Any], framework: str | None = None) -> str | None:
+    """Return the framework selected after honoring crew-level requirements."""
+    required_framework = crew_config.get("required_framework")
+    if not required_framework:
+        return framework
+
+    if framework and framework not in (required_framework, "auto"):
+        raise ValueError(
+            f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
+            f"but {framework} was requested"
+        )
+
+    if not is_framework_available(required_framework):
+        raise RuntimeError(
+            f"Crew requires {required_framework} but it's not installed. "
+            f"Install with: {_get_install_command(required_framework)}"
+        )
+    return required_framework
+
+
 def decompose_crew(
     crew_config: dict[str, Any],
     framework: str | None = None,
@@ -219,25 +239,7 @@ def decompose_crew(
     Raises:
         RuntimeError: If required framework is not available.
     """
-    # Check if crew config requires a specific framework
-    required_framework = crew_config.get("required_framework")
-
-    if required_framework:
-        # Framework is enforced by config directory (.crewai, .strands, etc.)
-        if framework and framework not in (required_framework, "auto"):
-            raise ValueError(
-                f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
-                f"but {framework} was requested"
-            )
-
-        if not is_framework_available(required_framework):
-            raise RuntimeError(
-                f"Crew requires {required_framework} but it's not installed. "
-                f"Install with: {_get_install_command(required_framework)}"
-            )
-        framework = required_framework
-
-    runner = get_runner(framework)
+    runner = get_runner(_resolve_required_framework(crew_config, framework))
     return runner.build_crew(crew_config)
 
 
@@ -271,23 +273,6 @@ def run_crew_auto(
         RuntimeError: If required framework is not available.
         ValueError: If requested framework conflicts with required framework.
     """
-    # Check if crew config requires a specific framework
-    required_framework = crew_config.get("required_framework")
-
-    if required_framework:
-        if framework and framework not in (required_framework, "auto"):
-            raise ValueError(
-                f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
-                f"but {framework} was requested"
-            )
-
-        if not is_framework_available(required_framework):
-            raise RuntimeError(
-                f"Crew requires {required_framework} but it's not installed. "
-                f"Install with: {_get_install_command(required_framework)}"
-            )
-        framework = required_framework
-
-    runner = get_runner(framework)
+    runner = get_runner(_resolve_required_framework(crew_config, framework))
     crew = runner.build_crew(crew_config)
     return runner.run(crew, inputs or {})

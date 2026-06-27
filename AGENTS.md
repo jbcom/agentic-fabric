@@ -77,7 +77,7 @@ PyPI. The package currently has no resolvable PyPI release under that name.
 ## Preferred Commands
 
 ```bash
-uv sync --all-packages
+uv sync --all-packages --all-extras --dev
 tox -e lint
 tox -e typecheck
 tox -e py311,py312,py313,py314

@@ -205,6 +205,7 @@ tox -e docs
 Local validation:
 
 ```bash
+uv sync --all-packages --all-extras --dev
 tox -e lint
 tox -e typecheck
 tox -e py311
@@ -212,6 +213,7 @@ tox -e py312
 tox -e py313
 tox -e py314
 tox -e coverage
+tox -e plugin
 tox -e build
 ```
 

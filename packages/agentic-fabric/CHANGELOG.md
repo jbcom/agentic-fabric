@@ -2,6 +2,13 @@
 
 <!-- version list -->
 
+## [1.2.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.1.0...agentic-fabric-v1.2.0) (2026-06-27)
+
+
+### Features
+
+* fix all assessment findings + add Ollama E2E support ([#4](https://github.com/jbcom/agentic-fabric/issues/4)) ([37cc3b6](https://github.com/jbcom/agentic-fabric/commit/37cc3b6b62de867676d37a7959dab955ac1d331c))
+
 ## [1.1.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.0.0...agentic-fabric-v1.1.0) (2026-06-27)
 
 

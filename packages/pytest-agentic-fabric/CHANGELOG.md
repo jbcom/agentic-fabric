@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.2.0...pytest-agentic-fabric-v0.3.0) (2026-06-27)
+
+
+### Features
+
+* fix all assessment findings + add Ollama E2E support ([#4](https://github.com/jbcom/agentic-fabric/issues/4)) ([37cc3b6](https://github.com/jbcom/agentic-fabric/commit/37cc3b6b62de867676d37a7959dab955ac1d331c))
+
 ## [0.2.0](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.1.0...pytest-agentic-fabric-v0.2.0) (2026-06-27)
 
 

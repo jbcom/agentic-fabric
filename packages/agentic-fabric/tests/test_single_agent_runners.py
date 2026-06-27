@@ -173,6 +173,26 @@ profiles:
         assert runner.config.task_flag == "--prompt"
         assert runner.config.auto_approve == "--yes"
 
+    def test_rejects_unknown_config_dict_fields(self):
+        """Custom config dicts should reject unsupported fields."""
+        with pytest.raises(ValueError, match="unsupported fields"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "shell": True})
+
+    def test_rejects_shell_operator_in_command(self):
+        """Profile commands should be direct executable invocations."""
+        with pytest.raises(ValueError, match="direct executable"):
+            LocalCLIRunner({"command": "my-tool && rm -rf /", "task_flag": "--prompt"})
+
+    def test_rejects_invalid_additional_flags(self):
+        """List fields should contain only non-empty strings."""
+        with pytest.raises(ValueError, match="additional_flags"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "additional_flags": ["--ok", ""]})
+
+    def test_rejects_invalid_timeout(self):
+        """Timeouts should stay within the bounded execution range."""
+        with pytest.raises(ValueError, match="timeout"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "timeout": 0})
+
     def test_init_with_config_object(self):
         """Should initialize with a LocalCLIConfig object."""
         config = LocalCLIConfig(

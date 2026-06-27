@@ -178,6 +178,21 @@ def load_manifest(crewai_dir: Path) -> dict[str, Any]:
         return result or {}
 
 
+def _resolve_config_path(config_dir: Path, relative_path: str) -> Path:
+    """Resolve a manifest path and require it to stay below the config dir."""
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        msg = f"Manifest path must be relative to {config_dir.name}: {relative_path}"
+        raise ValueError(msg)
+
+    root = config_dir.resolve()
+    resolved = (root / candidate).resolve(strict=False)
+    if not resolved.is_relative_to(root):
+        msg = f"Manifest path escapes config directory: {relative_path}"
+        raise ValueError(msg)
+    return resolved
+
+
 def get_framework_from_config_dir(config_dir: Path) -> str | None:
     """Determine the required framework from a config directory path.
 
@@ -215,8 +230,8 @@ def get_crew_config(config_dir: Path, crew_name: str) -> dict:
         raise ValueError(f"Crew '{crew_name}' not found. Available: {available}")
 
     # Load agents and tasks YAML
-    agents_path = config_dir / crew_config["agents"]
-    tasks_path = config_dir / crew_config["tasks"]
+    agents_path = _resolve_config_path(config_dir, crew_config["agents"])
+    tasks_path = _resolve_config_path(config_dir, crew_config["tasks"])
 
     agents = yaml.safe_load(agents_path.read_text()) if agents_path.exists() else {}
     tasks = yaml.safe_load(tasks_path.read_text()) if tasks_path.exists() else {}
@@ -224,7 +239,7 @@ def get_crew_config(config_dir: Path, crew_name: str) -> dict:
     # Resolve knowledge paths
     knowledge_paths = []
     for kp in crew_config.get("knowledge", []):
-        full_path = config_dir / kp
+        full_path = _resolve_config_path(config_dir, kp)
         if full_path.exists():
             knowledge_paths.append(full_path)
 

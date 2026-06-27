@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import os
 
 from collections.abc import Callable
 from typing import Any
@@ -49,10 +50,31 @@ _TOOL_ALIASES = {
     "mcp://filesystem/list_directory": "DirectoryListTool",
 }
 
+_DEFAULT_IMPORT_PREFIXES = ("agentic_fabric.",)
+
 
 def _canonical_tool_name(tool_name: str) -> str:
     """Normalize aliases to a canonical tool identifier."""
     return _TOOL_ALIASES.get(tool_name, tool_name)
+
+
+def register_tool_factory(tool_name: str, factory: ToolFactory, *, aliases: tuple[str, ...] = ()) -> None:
+    """Register a safe tool factory without using dynamic imports."""
+    _TOOL_FACTORIES[tool_name] = factory
+    for alias in aliases:
+        _TOOL_ALIASES[alias] = tool_name
+
+
+def _allowed_import_prefixes() -> tuple[str, ...]:
+    """Return module prefixes allowed for fully qualified tool references."""
+    configured = os.environ.get("AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", "")
+    extra = tuple(prefix.strip() for prefix in configured.split(",") if prefix.strip())
+    return (*_DEFAULT_IMPORT_PREFIXES, *extra)
+
+
+def _is_import_allowed(module_name: str) -> bool:
+    """Return whether a fully qualified tool module may be imported."""
+    return any(module_name == prefix.rstrip(".") or module_name.startswith(prefix) for prefix in _allowed_import_prefixes())
 
 
 def _resolve_vendor_tool(tool_name: str) -> Any | None:
@@ -99,11 +121,17 @@ def resolve_tool(tool_name: str) -> Any | None:
     try:
         if ":" in canonical_name:
             module_name, attr_name = canonical_name.split(":", 1)
+            if not _is_import_allowed(module_name):
+                logger.warning("Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name)
+                return None
             return _build_factory(module_name, attr_name)()
 
         if "." in canonical_name:
             module_name, _, attr_name = canonical_name.rpartition(".")
             if module_name and attr_name:
+                if not _is_import_allowed(module_name):
+                    logger.warning("Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name)
+                    return None
                 return _build_factory(module_name, attr_name)()
     except (ImportError, AttributeError) as exc:
         logger.warning("Failed to resolve tool '%s': %s", tool_name, exc)

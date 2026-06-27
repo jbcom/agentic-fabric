@@ -148,6 +148,34 @@ class TestGetCrewConfigErrors:
         config = get_crew_config(tmp_path, "test_crew")
         assert config["knowledge_paths"] == []
 
+    def test_agents_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
+        """Manifest agents paths must stay inside the config directory."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "crews:\n"
+            "  test_crew:\n"
+            "    agents: ../outside_agents.yaml\n"
+            "    tasks: tasks.yaml\n"
+        )
+
+        with pytest.raises(ValueError, match="Manifest path must be relative"):
+            get_crew_config(tmp_path, "test_crew")
+
+    def test_knowledge_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
+        """Manifest knowledge paths must stay inside the config directory."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "crews:\n"
+            "  test_crew:\n"
+            "    agents: agents.yaml\n"
+            "    tasks: tasks.yaml\n"
+            "    knowledge:\n"
+            "      - ../knowledge\n"
+        )
+
+        with pytest.raises(ValueError, match="Manifest path must be relative"):
+            get_crew_config(tmp_path, "test_crew")
+
 
 class TestGetFrameworkFromConfigDir:
     """Test edge cases for get_framework_from_config_dir."""

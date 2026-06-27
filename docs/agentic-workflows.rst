@@ -39,3 +39,32 @@ For stateful orchestration, register the same config with
 When no framework is installed, discovery and metadata inspection still
 work. Execution reports the unavailable runtime instead of failing
 during import.
+
+Tool Resolution
+---------------
+
+Crew tool entries are resolved lazily. Built-in filesystem tool aliases,
+``mcp://filesystem/...`` aliases, and ``vendor://provider/operation``
+references do not import optional framework or vendor packages until the
+tool is used.
+
+For Python tools, prefer registering a factory in application startup:
+
+.. code:: python
+
+   from agentic_fabric.tools.registry import register_tool_factory
+
+   register_tool_factory("MyTool", lambda: MyTool(), aliases=("my-tool",))
+
+Fully qualified ``module:attribute`` and ``package.module.ClassName``
+references are allowed for ``agentic_fabric`` modules by default. External
+module imports must be explicitly allowlisted:
+
+.. code:: bash
+
+   export AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST="my_company.tools,shared_agents."
+
+Manifest paths for ``agents``, ``tasks``, and ``knowledge`` are resolved
+relative to the crew config directory and cannot escape it. Filesystem
+tools resolve symlinks before reading or writing and keep writes inside
+their configured workspace directories.

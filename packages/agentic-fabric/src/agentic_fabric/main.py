@@ -9,17 +9,17 @@ Usage:
     agentic-fabric list --json  # JSON output for external tools
 
     # List crews in a specific package
-    agentic-fabric list otterfall
+    agentic-fabric list my-package
 
     # Run a crew
-    agentic-fabric run otterfall game_builder --input "Create a BiomeComponent"
-    agentic-fabric run otterfall game_builder --input "..." --json  # JSON output
+    agentic-fabric run my-package reviewer --input "Review this code"
+    agentic-fabric run my-package reviewer --input "..." --json  # JSON output
 
     # Run with input from file
-    agentic-fabric run otterfall game_builder --file tasks.md
+    agentic-fabric run my-package reviewer --file tasks.md
 
     # Show crew details
-    agentic-fabric info otterfall game_builder --json
+    agentic-fabric info my-package reviewer --json
 """
 
 from __future__ import annotations
@@ -32,7 +32,6 @@ import time
 from pathlib import Path
 
 from agentic_fabric.core.discovery import discover_packages, get_crew_config, list_crews
-from agentic_fabric.core.runner import run_crew
 
 
 def cmd_list(args):
@@ -321,28 +320,6 @@ def _cmd_run_single_agent(args, use_json: bool, start_time: float):
         sys.exit(1)
 
 
-def cmd_build(args):
-    """Legacy build command - runs otterfall game_builder."""
-    print("=" * 60)
-    print("🎮 OTTERFALL GAME BUILDER")
-    print("=" * 60)
-    print()
-    print(f"Building: {args.spec[:100]}...")
-
-    inputs = {"spec": args.spec, "component_spec": args.spec}
-
-    try:
-        result = run_crew("otterfall", "game_builder", inputs)
-        print("\n" + "=" * 60)
-        print("📄 RESULT")
-        print("=" * 60)
-        print(result)
-    except ValueError as e:
-        print(f"❌ Error: {e}")
-        print("\nNote: The 'build' command requires packages/otterfall/.crewai/")
-        sys.exit(1)
-
-
 def cmd_info(args):
     """Show detailed info about a crew."""
     use_json = getattr(args, "json", False)
@@ -500,15 +477,15 @@ Examples:
     agentic-fabric list --json  # JSON output for external tools
 
     # List crews in a package
-    agentic-fabric list otterfall
+    agentic-fabric list my-package
 
     # List available single-agent runners
     agentic-fabric list-runners
     agentic-fabric list-runners --json
 
     # Run a multi-agent crew
-    agentic-fabric run otterfall game_builder --input "Create a QuestComponent"
-    agentic-fabric run otterfall game_builder --input "..." --json  # JSON output
+    agentic-fabric run my-package reviewer --input "Review this code"
+    agentic-fabric run my-package reviewer --input "..." --json  # JSON output
 
     # Run with single-agent CLI runner
     agentic-fabric run --runner aider --input "Add error handling to auth.py"
@@ -516,7 +493,7 @@ Examples:
     agentic-fabric run --runner ollama --input "Fix the bug" --model deepseek-coder
 
     # Show crew details
-    agentic-fabric info otterfall game_builder --json
+    agentic-fabric info my-package reviewer --json
 
 Exit codes:
     0 - Success
@@ -543,8 +520,8 @@ Exit codes:
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Run a crew or single-agent task")
-    run_parser.add_argument("package", nargs="?", help="Package name (e.g., otterfall)")
-    run_parser.add_argument("crew", nargs="?", help="Crew name (e.g., game_builder)")
+    run_parser.add_argument("package", nargs="?", help="Package name (e.g., my-package)")
+    run_parser.add_argument("crew", nargs="?", help="Crew name (e.g., reviewer)")
     run_parser.add_argument("--input", "-i", help="Input specification")
     run_parser.add_argument("--file", "-f", help="Read input from file")
     run_parser.add_argument(
@@ -577,14 +554,6 @@ Exit codes:
     info_parser.add_argument("crew", help="Crew name")
     info_parser.add_argument("--json", action="store_true", help="Output as JSON (for external tools)")
 
-    # Legacy build command (for backwards compatibility)
-    build_parser = subparsers.add_parser("build", help="Build a game component (legacy)")
-    build_parser.add_argument("spec", help="Component specification")
-
-    # Legacy commands
-    subparsers.add_parser("list-knowledge", help="List knowledge sources (legacy)")
-    subparsers.add_parser("test-tools", help="Test file tools (legacy)")
-
     args = parser.parse_args()
 
     if args.command == "list":
@@ -595,24 +564,6 @@ Exit codes:
         cmd_run(args)
     elif args.command == "info":
         cmd_info(args)
-    elif args.command == "build":
-        cmd_build(args)
-    elif args.command == "list-knowledge":
-        # Legacy - list knowledge from otterfall
-        packages = discover_packages()
-        if "otterfall" in packages:
-            config = get_crew_config(packages["otterfall"], "game_builder")
-            print("Knowledge sources:")
-            for kp in config.get("knowledge_paths", []):
-                print(f"  • {kp}")
-        else:
-            print("No otterfall package found.")
-    elif args.command == "test-tools":
-        from agentic_fabric.tools.file_tools import DirectoryListTool, get_workspace_root
-
-        print(f"Workspace root: {get_workspace_root()}")
-        tool = DirectoryListTool()
-        print(tool._run("packages"))
     else:
         parser.print_help()
 

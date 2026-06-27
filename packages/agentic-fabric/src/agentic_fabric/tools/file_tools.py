@@ -79,6 +79,29 @@ ALLOWED_WRITE_DIRS = [
 ALLOWED_EXTENSIONS = {".ts", ".tsx", ".json", ".md"}
 
 
+def _clean_relative_path(path_value: str) -> str:
+    """Normalize a user-provided relative path string."""
+    clean_path = path_value.strip().replace("\\", "/")
+    if not clean_path or clean_path.startswith("/") or ".." in Path(clean_path).parts:
+        raise ValueError(f"Path traversal not allowed in '{clean_path}'")
+    return clean_path
+
+
+def _resolve_workspace_path(path_value: str) -> tuple[str, Path]:
+    """Resolve a user path and ensure it remains inside the workspace root."""
+    clean_path = _clean_relative_path(path_value)
+    workspace_root = get_workspace_root().resolve()
+    full_path = (workspace_root / clean_path).resolve(strict=False)
+    if not full_path.is_relative_to(workspace_root):
+        raise ValueError(f"Path '{clean_path}' escapes workspace root")
+    return clean_path, full_path
+
+
+def _is_allowed_write_path(clean_path: str) -> bool:
+    """Return whether a normalized path is under an allowed write directory."""
+    return any(clean_path == allowed_dir or clean_path.startswith(f"{allowed_dir}/") for allowed_dir in ALLOWED_WRITE_DIRS)
+
+
 class WriteFileInput(BaseModel):
     """Input schema for GameCodeWriterTool."""
 
@@ -121,26 +144,16 @@ class GameCodeWriterTool(BaseTool):
     def _run(self, file_path: str, content: str) -> str:
         """Write the file content to the specified path."""
         try:
-            # Validate path
-            clean_path = file_path.strip().replace("\\", "/")
-
-            # Check for path traversal
-            if ".." in clean_path or clean_path.startswith("/"):
-                return f"Error: Invalid path '{clean_path}'. Path traversal not allowed."
+            clean_path, full_path = _resolve_workspace_path(file_path)
 
             # Check allowed directories
-            is_allowed = any(clean_path.startswith(allowed_dir) for allowed_dir in ALLOWED_WRITE_DIRS)
-            if not is_allowed:
+            if not _is_allowed_write_path(clean_path):
                 return f"Error: Path '{clean_path}' is not in an allowed directory. Allowed: {ALLOWED_WRITE_DIRS}"
 
             # Check extension
             ext = Path(clean_path).suffix.lower()
             if ext not in ALLOWED_EXTENSIONS:
                 return f"Error: Extension '{ext}' not allowed. Allowed: {ALLOWED_EXTENSIONS}"
-
-            # Construct full path
-            workspace_root = get_workspace_root()
-            full_path = workspace_root / clean_path
 
             # Create parent directories
             full_path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +166,8 @@ class GameCodeWriterTool(BaseTool):
 
         except PermissionError:
             return f"Error: Permission denied writing to {file_path}"
+        except ValueError as e:
+            return f"Error: {e!s}"
         except Exception as e:
             return f"Error writing file: {e!s}"
 
@@ -188,13 +203,7 @@ class GameCodeReaderTool(BaseTool):
     def _run(self, file_path: str) -> str:
         """Read the file content from the specified path."""
         try:
-            clean_path = file_path.strip().replace("\\", "/")
-
-            if ".." in clean_path:
-                return f"Error: Path traversal not allowed in '{clean_path}'"
-
-            workspace_root = get_workspace_root()
-            full_path = workspace_root / clean_path
+            clean_path, full_path = _resolve_workspace_path(file_path)
 
             if not full_path.exists():
                 return f"Error: File not found: {clean_path}"
@@ -211,6 +220,8 @@ class GameCodeReaderTool(BaseTool):
 
         except PermissionError:
             return f"Error: Permission denied reading {file_path}"
+        except ValueError as e:
+            return f"Error: {e!s}"
         except Exception as e:
             return f"Error reading file: {e!s}"
 
@@ -246,13 +257,7 @@ class DirectoryListTool(BaseTool):
     def _run(self, directory: str) -> str:
         """List directory contents."""
         try:
-            clean_path = directory.strip().replace("\\", "/")
-
-            if ".." in clean_path:
-                return "Error: Path traversal not allowed"
-
-            workspace_root = get_workspace_root()
-            full_path = workspace_root / clean_path
+            clean_path, full_path = _resolve_workspace_path(directory)
 
             if not full_path.exists():
                 return f"Error: Directory not found: {clean_path}"
@@ -274,5 +279,7 @@ class DirectoryListTool(BaseTool):
 
         except PermissionError:
             return f"Error: Permission denied accessing {directory}"
+        except ValueError as e:
+            return f"Error: {e!s}"
         except Exception as e:
             return f"Error listing directory: {e!s}"

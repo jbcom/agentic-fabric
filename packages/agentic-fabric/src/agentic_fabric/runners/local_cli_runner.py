@@ -24,7 +24,7 @@ import os
 import shlex
 import subprocess
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +76,50 @@ class LocalCLIConfig:
     notes: str = ""
 
 
+_CONFIG_FIELD_NAMES = {item.name for item in fields(LocalCLIConfig)}
+
+
+def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str, Any]:
+    """Validate a local CLI profile loaded from YAML."""
+    unknown_fields = set(config_dict) - _CONFIG_FIELD_NAMES
+    if unknown_fields:
+        msg = f"Profile '{name}' has unsupported fields: {sorted(unknown_fields)}"
+        raise ValueError(msg)
+
+    command = config_dict.get("command")
+    task_flag = config_dict.get("task_flag")
+    if not isinstance(command, str) or not command.strip():
+        msg = f"Profile '{name}' must define a non-empty command string"
+        raise ValueError(msg)
+    if not isinstance(task_flag, str):
+        msg = f"Profile '{name}' must define task_flag as a string"
+        raise TypeError(msg)
+
+    command_parts = shlex.split(command)
+    if not command_parts or any(part in {";", "&&", "||", "|"} for part in command_parts):
+        msg = f"Profile '{name}' command is not a direct executable invocation"
+        raise ValueError(msg)
+
+    for field_name in ("auth_env", "additional_flags"):
+        value = config_dict.get(field_name, [])
+        if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+            msg = f"Profile '{name}' field '{field_name}' must be a list of non-empty strings"
+            raise ValueError(msg)
+
+    for field_name in ("subcommand", "auto_approve", "structured_output", "model_flag", "default_model", "working_dir_flag"):
+        value = config_dict.get(field_name)
+        if value is not None and not isinstance(value, str):
+            msg = f"Profile '{name}' field '{field_name}' must be a string when provided"
+            raise ValueError(msg)
+
+    timeout = config_dict.get("timeout", 300)
+    if not isinstance(timeout, int) or timeout <= 0 or timeout > 3600:
+        msg = f"Profile '{name}' timeout must be between 1 and 3600 seconds"
+        raise ValueError(msg)
+
+    return config_dict
+
+
 class LocalCLIRunner(SingleAgentRunner):
     """Universal runner for CLI-based coding agents.
 
@@ -124,7 +168,7 @@ class LocalCLIRunner(SingleAgentRunner):
             self.config = profiles[profile]
         elif isinstance(profile, dict):
             # Convert dict to LocalCLIConfig
-            self.config = LocalCLIConfig(**profile)
+            self.config = LocalCLIConfig(**_validate_profile_config("custom", profile))
         else:
             # Use provided LocalCLIConfig directly
             self.config = profile
@@ -155,7 +199,7 @@ class LocalCLIRunner(SingleAgentRunner):
 
         profiles = {}
         for name, config_dict in data.get("profiles", {}).items():
-            profiles[name] = LocalCLIConfig(**config_dict)
+            profiles[name] = LocalCLIConfig(**_validate_profile_config(name, config_dict))
 
         cls._profiles_cache = profiles
         return profiles

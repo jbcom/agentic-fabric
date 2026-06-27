@@ -98,6 +98,8 @@ result = session.run_agent("reviewer", runtime="crewai")
   vendor-layer context together.
 - Capability decorators: runners and tools expose declared capabilities through
   read-only metadata and deterministic dispatch.
+- Tool resolution: built-in, vendor URI, and registered factories are preferred;
+  external dynamic imports require `AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST`.
 - YAML-first: crew configuration in YAML, not Python boilerplate.
 - Hierarchical orchestration: `ManagerAgent` delegates across crews.
 - Package discovery: finds `.crew/`, `.crewai/`, `.langgraph/`, and

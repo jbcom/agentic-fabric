@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
+
 from unittest.mock import MagicMock, patch
 
-from agentic_fabric.tools.registry import resolve_tool, resolve_tools
+from agentic_fabric.tools.registry import register_tool_factory, resolve_tool, resolve_tools
 from agentic_fabric.tools.vendor import VendorCapabilityTool
 
 
@@ -30,7 +32,7 @@ class TestResolveTool:
 
     @patch("agentic_fabric.tools.registry.importlib.import_module")
     def test_resolves_fully_qualified_reference(self, mock_import_module: MagicMock) -> None:
-        """module:attribute references should be resolved dynamically."""
+        """Allowed module:attribute references should be resolved dynamically."""
         mock_tool_class = MagicMock()
         mock_tool_instance = MagicMock()
         mock_tool_class.return_value = mock_tool_instance
@@ -39,11 +41,30 @@ class TestResolveTool:
         mock_module.CustomTool = mock_tool_class
         mock_import_module.return_value = mock_module
 
-        result = resolve_tool("custom.module:CustomTool")
+        with patch.dict(os.environ, {"AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST": "custom.module"}):
+            result = resolve_tool("custom.module:CustomTool")
 
         mock_import_module.assert_called_once_with("custom.module")
         mock_tool_class.assert_called_once_with()
         assert result is mock_tool_instance
+
+    @patch("agentic_fabric.tools.registry.importlib.import_module")
+    def test_skips_unallowed_fully_qualified_reference(self, mock_import_module: MagicMock) -> None:
+        """Fully qualified references should require an explicit allowlist."""
+        result = resolve_tool("custom.module:CustomTool")
+
+        assert result is None
+        mock_import_module.assert_not_called()
+
+    def test_resolves_registered_factory_alias(self) -> None:
+        """Application code can register safe tool factories directly."""
+        tool = object()
+        factory = MagicMock(return_value=tool)
+
+        register_tool_factory("UnitTestTool", factory, aliases=("unit-test-tool",))
+
+        assert resolve_tool("unit-test-tool") is tool
+        factory.assert_called_once_with()
 
     def test_returns_none_for_unresolved_mcp_tool(self) -> None:
         """Unsupported MCP tool references should be skipped cleanly."""

@@ -77,8 +77,6 @@ all = [
 
 [project.scripts]
 agentic-fabric = "agentic_fabric.main:main"
-run-crew = "agentic_fabric.crew:kickoff"
-train-crew = "agentic_fabric.crew:train"
 
 [project.urls]
 Documentation = "https://jonbogaty.com/agentic-fabric/"
@@ -168,7 +166,6 @@ ignore = [
 "examples/**" = ["T201"]
 "tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "N806", "PLC0415", "PT", "S", "SIM117", "TRY"]
 "src/agentic_fabric/main.py" = ["T201"]
-"src/agentic_fabric/run_flow.py" = ["T201"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

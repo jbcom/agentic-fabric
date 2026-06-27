@@ -18,12 +18,18 @@ E2E tests are **disabled by default** to avoid:
 - Network dependency in CI/CD
 - Slow test execution
 
-### Run all E2E tests
+### Two marker systems
+
+E2E tests carry both the local markers (`e2e`, `crewai`/`langgraph`/`strands`)
+and the published `pytest-agentic-fabric` markers (`agentic_e2e`,
+`agentic_runtime("crewai")`). Either system can enable them:
 
 ```bash
-# Requires ANTHROPIC_API_KEY environment variable
-export ANTHROPIC_API_KEY="your-api-key"
+# Local markers (requires --e2e flag)
 uv run pytest tests/e2e/ --e2e -v
+
+# Published plugin markers (requires --agentic-e2e flag)
+uv run pytest tests/e2e/ --agentic-e2e -v
 ```
 
 ### Run framework-specific tests
@@ -45,98 +51,102 @@ uv run pytest tests/e2e/ --e2e --framework=strands -v
 uv run pytest tests/e2e/test_crewai_e2e.py::TestCrewAISimpleExecution::test_simple_crew_execution --e2e -v
 ```
 
+## Local Ollama E2E (no API key needed)
+
+E2E tests can run against a local [Ollama](https://ollama.com) instance instead
+of Anthropic/AWS Bedrock. This is the mode used in CI (`.github/workflows/e2e-ollama.yml`).
+
+### Prerequisites
+
+1. Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh`
+2. Start the server: `ollama serve &`
+3. Pull a small model: `ollama pull qwen2.5:0.5b`
+
+### Running
+
+```bash
+# Set env vars to route runners to Ollama
+export OLLAMA_BASE_URL=http://localhost:11434
+export OLLAMA_MODEL=qwen2.5:0.5b
+export AGENTIC_FABRIC_LLM_PROVIDER=ollama
+
+# Run e2e tests — no API key needed
+uv run pytest tests/e2e/ --e2e -v
+```
+
+When `AGENTIC_FABRIC_LLM_PROVIDER=ollama` is set:
+- **CrewAI** routes through litellm's `ollama_chat/` provider
+- **LangGraph** uses `langchain_ollama.ChatOllama`
+- **Strands** uses `strands.models.ollama.OllamaModel`
+
+### Recommended models for CI
+
+| Model | Size | Reliability | Notes |
+|-------|------|-------------|-------|
+| `qwen2.5:0.5b` | ~400 MB | Good for simple Q&A | **Recommended** — smallest reliable model |
+| `qwen2.5:1.5b` | ~1 GB | Better | More world knowledge |
+| `llama3.2:1b` | ~1.3 GB | Good | Alternative |
+
+Use `qwen2.5:0.5b` for CI. It reliably answers "What is 2+2?" and "What is the
+capital of France?" at temperature 0.
+
+### Test assertions
+
+Assertions use `in` checks (e.g., `"4" in result`, `"paris" in result.lower()`)
+rather than exact matches, since small models may include extra text.
+
 ## Environment Variables
 
-### Required
+### For Anthropic (default, non-Ollama)
 
 - `ANTHROPIC_API_KEY` - For Claude LLM (CrewAI, LangGraph)
 
-### Optional (for Strands with AWS Bedrock)
+### For Strands with AWS Bedrock
 
 - `AWS_ACCESS_KEY_ID` - AWS credentials
 - `AWS_SECRET_ACCESS_KEY` - AWS credentials
 - `AWS_REGION` - AWS region (e.g., `us-west-2`)
 
+### For Ollama (local, no API key)
+
+- `OLLAMA_BASE_URL` - Ollama server URL (default: `http://localhost:11434`)
+- `OLLAMA_MODEL` - Model name (default: `qwen2.5:0.5b`)
+- `AGENTIC_FABRIC_LLM_PROVIDER` - Set to `ollama` to force Ollama mode
+
 #### Bedrock Model IDs
 
-When configuring Strands tests with Bedrock, use the official model IDs from [Claude on Amazon Bedrock](https://platform.claude.com/docs/en/build-with-claude/claude-on-amazon-bedrock):
+When using Strands with Bedrock (non-Ollama), use the official model IDs:
 
 | Model | Bedrock Model ID |
 |-------|------------------|
-| Claude Haiku 4.5 ⭐ | `anthropic.claude-haiku-4-5-20251001-v1:0` |
+| Claude Haiku 4.5 | `anthropic.claude-haiku-4-5-20251001-v1:0` |
 | Claude Sonnet 4.5 | `anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| Claude Sonnet 4 | `anthropic.claude-sonnet-4-20250514-v1:0` |
-
-**Recommended**: Use Claude Haiku 4.5 for E2E tests - it's fast, cost-effective, and capable.
-
-Example configuration:
-```python
-fabric_agent_config = {
-    "llm": {
-        "provider": "bedrock",
-        "model": "anthropic.claude-haiku-4-5-20251001-v1:0",
-    },
-    # ... rest of config
-}
-```
-
-## Test Structure
-
-```text
-tests/e2e/
-├── conftest.py              # E2E fixtures and pytest configuration
-├── test_crewai_e2e.py       # CrewAI runner E2E tests
-├── test_langgraph_e2e.py    # LangGraph runner E2E tests
-└── test_strands_e2e.py      # Strands runner E2E tests
-```
-
-## Test Coverage
-
-### CrewAI (`test_crewai_e2e.py`)
-
-- ✅ Simple single-agent fabric_agent execution
-- ✅ Build and run convenience method
-- ✅ Multi-agent fabric_agent collaboration
-- ✅ Knowledge source integration
-- ✅ Tool usage with agents
-
-### LangGraph (`test_langgraph_e2e.py`)
-
-- ✅ ReAct agent execution
-- ✅ Build and run method
-- ✅ Multi-step graph execution
-- ✅ State management between nodes
-- ✅ Tool usage with agents
-
-### Strands (`test_strands_e2e.py`)
-
-- ✅ Simple agent execution
-- ✅ Build and run method
-- ✅ Agent building from configuration
-- ✅ Task building
-- ✅ System prompt generation
-- ✅ AWS Bedrock integration (if credentials available)
-- ✅ Tool usage (basic)
 
 ## CI/CD Integration
 
-E2E tests are **excluded from regular CI runs** in `.github/workflows/ci.yml`:
+### Ollama E2E workflow
 
-```yaml
-- name: Run tests
-  run: uv run pytest tests -v --ignore=tests/e2e
-```
+The `.github/workflows/e2e-ollama.yml` workflow runs E2E tests against a local
+Ollama instance on every PR and push to `main`. It:
 
-To run E2E tests in CI (e.g., on a schedule):
+1. Installs Ollama and pulls `qwen2.5:0.5b`
+2. Installs all framework extras + crewai
+3. Runs `pytest tests/e2e/ --e2e` with `AGENTIC_FABRIC_LLM_PROVIDER=ollama`
+
+This verifies the runner→LLM integration for all three frameworks without API
+keys or cloud credentials.
+
+### Traditional (Anthropic/AWS) E2E
+
+For scheduled runs with real cloud LLMs, use secrets:
 
 ```yaml
 # .github/workflows/e2e.yml
-name: E2E Tests
+name: E2E Tests (Cloud)
 on:
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
   workflow_dispatch:
-
 jobs:
   e2e:
     runs-on: ubuntu-latest
@@ -152,25 +162,26 @@ jobs:
 
 ## Writing New E2E Tests
 
-1. Mark tests with `@pytest.mark.e2e` and framework marker
-2. Use `check_api_key` fixture to verify required credentials
-3. Keep tests focused and minimal to reduce API costs
-4. Use fixtures from `conftest.py` for common configurations
-
-Note: Tests marked with `@pytest.mark.e2e` are automatically skipped unless the `--e2e` flag is provided.
+1. Mark tests with `@pytest.mark.e2e` (local) and `@pytest.mark.agentic_e2e` (published)
+2. Add framework marker: `@pytest.mark.crewai` and `@pytest.mark.agentic_runtime("crewai")`
+3. Use `check_api_key` fixture to verify required credentials (skips if not set)
+4. Keep tests focused and minimal to reduce API costs
+5. Use `in` assertions (not exact match) for LLM responses
 
 Example:
 
 ```python
 @pytest.mark.e2e
 @pytest.mark.crewai
+@pytest.mark.agentic_e2e
+@pytest.mark.agentic_runtime("crewai")
 def test_my_feature(
     check_api_key: None,
     simple_fabric_agent_config: dict[str, Any],
 ) -> None:
     """Test my new feature."""
     from agentic_fabric.runners.crewai_runner import CrewAIRunner
-    
+
     runner = CrewAIRunner()
     result = runner.build_and_run(simple_fabric_agent_config, {"input": "test"})
     assert result is not None
@@ -181,23 +192,24 @@ def test_my_feature(
 If tests fail:
 
 1. Check API key is set: `echo $ANTHROPIC_API_KEY`
-2. Verify framework is installed: `pip list | grep crewai`
-3. Run with verbose output: `-vv`
-4. Run single test to isolate issue
-5. Check network connectivity to LLM APIs
+2. Or check Ollama is running: `curl http://localhost:11434/api/tags`
+3. Verify framework is installed: `pip list | grep crewai`
+4. Run with verbose output: `-vv`
+5. Run single test to isolate issue
 
 ## Cost Considerations
 
+### Cloud LLM (Anthropic/AWS)
+
 E2E tests make real API calls which incur costs:
+- **Total estimated cost per full E2E run**: ~$0.16-1.10
 
-- **CrewAI tests**: ~5-10 tests × ~$0.01-0.05 per test = ~$0.05-0.50
-- **LangGraph tests**: ~5 tests × ~$0.01-0.05 per test = ~$0.05-0.25
-- **Strands tests**: ~6-7 tests × $0.01-0.05 per test = ~$0.06-0.35
+### Local Ollama
 
-**Total estimated cost per full E2E run**: ~$0.16-1.10
+E2E tests with Ollama are **free** — no API costs, fully local.
+Pull time is ~20-40s cold (cached after first run).
 
 To minimize costs:
-- Run E2E tests only when needed
+- Use Ollama mode for CI (`AGENTIC_FABRIC_LLM_PROVIDER=ollama`)
+- Run cloud-based E2E only on schedule or manually
 - Use `--framework` filter for specific tests
-- Run on schedule instead of per-PR
-- Use test timeouts to prevent runaway costs

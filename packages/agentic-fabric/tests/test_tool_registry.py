@@ -257,3 +257,25 @@ class TestVendorCapabilityTool:
 
         assert tool.provider == "github"
         assert tool.operation == "list_repos"
+
+    def test_vendor_capability_tools_logs_when_vendor_fabric_unavailable(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """When vendor-fabric is missing, the helper should log and return [].
+
+        ``vendor_fabric_available=False`` plus empty capabilities should hit
+        the informational log path that nudges users to install vendor-fabric.
+        """
+        import logging
+
+        from agentic_fabric.tools import vendor as vendor_module
+
+        data = MagicMock()
+        data.capabilities.return_value = []
+        data.vendor_fabric_available = False
+
+        with caplog.at_level(logging.INFO, logger=vendor_module.logger.name):
+            tools = vendor_capability_tools(data)
+
+        assert tools == []
+        assert "vendor-fabric is not installed" in caplog.text

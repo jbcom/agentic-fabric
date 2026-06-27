@@ -37,7 +37,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("agentic-fabric")
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: no cover - only hit when not installed
     __version__ = "1.1.0"
 
 # Core exports - framework-agnostic functionality

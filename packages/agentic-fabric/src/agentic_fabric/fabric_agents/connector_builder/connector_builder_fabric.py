@@ -3,9 +3,15 @@
 This script creates and initializes the ``connector_builder`` fabric agent, which is
 designed to automatically generate HTTP connector code by scraping API
 documentation.
+
+This is a library-only example. It is not discoverable through
+``discover_packages`` because it has no ``manifest.yaml``. Use it by
+importing ``ConnectorBuilderFabricAgent`` directly.
 """
 
 from __future__ import annotations
+
+import functools
 
 from pathlib import Path
 from typing import Any
@@ -15,32 +21,18 @@ from agentic_fabric.tools.registry import resolve_tools
 from agentic_fabric.utils import load_config
 
 
-Agent: Any | None = None
-Crew: Any | None = None
-Task: Any | None = None
-
-
+@functools.cache
 def _load_crewai_classes() -> tuple[Any, Any, Any]:
     """Load CrewAI classes only when the connector-builder fabric agent is used."""
-    global Agent, Crew, Task
+    try:
+        from crewai import Agent as ImportedAgent
+        from crewai import Crew as ImportedCrew
+        from crewai import Task as ImportedTask
+    except ImportError as exc:
+        msg = f"ConnectorBuilderFabricAgent requires CrewAI. Install with: {install_command('crewai')}"
+        raise RuntimeError(msg) from exc
 
-    if Agent is None or Crew is None or Task is None:
-        try:
-            from crewai import Agent as ImportedAgent
-            from crewai import Crew as ImportedCrew
-            from crewai import Task as ImportedTask
-        except ImportError as exc:
-            msg = f"ConnectorBuilderFabricAgent requires CrewAI. Install with: {install_command('crewai')}"
-            raise RuntimeError(msg) from exc
-
-        if Agent is None:
-            Agent = ImportedAgent
-        if Crew is None:
-            Crew = ImportedCrew
-        if Task is None:
-            Task = ImportedTask
-
-    return Agent, Crew, Task
+    return ImportedAgent, ImportedCrew, ImportedTask
 
 
 class ConnectorBuilderFabricAgent:
@@ -49,6 +41,9 @@ class ConnectorBuilderFabricAgent:
     This class loads agent and task configurations from YAML files, instantiates
     the necessary CrewAI components, and provides a method to execute the
     fabric agent's workflow.
+
+    This is a library-only example, not discoverable through the standard
+    package discovery system.
 
     Attributes:
         fabric_agent: An instance of the CrewAI Crew configured with agents and

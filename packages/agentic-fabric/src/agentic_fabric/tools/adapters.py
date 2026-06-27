@@ -69,8 +69,8 @@ def resolve_langgraph_tools(tool_names: list[str]) -> list[Any]:
     try:
         from langchain_core.tools import StructuredTool
     except ImportError as exc:
-        logger.warning("LangGraph tool adaptation unavailable; skipping configured tools: %s", exc)
-        return []
+        msg = f"LangGraph tool adaptation unavailable: {exc}. Install langchain-core or remove tool declarations."
+        raise RuntimeError(msg) from exc
 
     adapted_tools: list[Any] = []
     for tool_obj in resolved_tools:
@@ -108,8 +108,8 @@ def resolve_strands_tools(tool_names: list[str]) -> list[Any]:
     try:
         from strands import tool as strands_tool
     except ImportError as exc:
-        logger.warning("Strands tool adaptation unavailable; skipping configured tools: %s", exc)
-        return []
+        msg = f"Strands tool adaptation unavailable: {exc}. Install strands or remove tool declarations."
+        raise RuntimeError(msg) from exc
 
     adapted_tools: list[Any] = []
     for tool_obj in resolved_tools:

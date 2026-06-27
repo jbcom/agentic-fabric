@@ -57,8 +57,11 @@ class StrandsRunner(BaseRunner):
             "tools": tools,
         }
 
-        # Add model provider if configured
-        if model_provider:
+        # Use Ollama model if configured (local, no AWS needed)
+        if self._is_ollama_mode():
+            ollama_model = self._get_ollama_model(model_provider)
+            agent_kwargs["model"] = ollama_model
+        elif model_provider:
             agent_kwargs["model_id"] = model_provider
 
         return Agent(**agent_kwargs)
@@ -80,6 +83,25 @@ class StrandsRunner(BaseRunner):
 
         # Extract model from config dict
         return llm_config.get("model")
+
+    def _is_ollama_mode(self) -> bool:
+        """Return whether Ollama is the configured LLM provider."""
+        import os
+
+        return (
+            os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama"
+            or bool(os.getenv("OLLAMA_BASE_URL"))
+        )
+
+    def _get_ollama_model(self, model_override: str | None = None):
+        """Return a Strands OllamaModel for local inference."""
+        import os
+
+        from strands.models.ollama import OllamaModel
+
+        model_id = model_override or os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+        host = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        return OllamaModel(host=host, model_id=model_id)
 
     def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
         """Execute the Strands agent.

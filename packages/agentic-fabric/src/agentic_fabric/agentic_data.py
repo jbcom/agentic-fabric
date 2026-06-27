@@ -15,11 +15,20 @@ except ImportError:  # pragma: no cover - default in this workspace until vendor
     _VENDOR_FABRIC_AVAILABLE = False
 
     class _VendorDataBase:  # type: ignore[no-redef]
-        """Small fallback that keeps AgenticData importable without vendor-fabric."""
+        """Small fallback that keeps AgenticData importable without vendor-fabric.
 
-        def __init__(self, value: Any = None, **_: Any) -> None:
+        This is an importability shim, not a second architecture. It implements
+        the minimal ``VendorData`` surface needed for ``AgenticData`` to function.
+        Methods that require vendor-fabric raise clear ``ImportError`` guidance.
+
+        Omitted vs. real ``VendorData``: ``capabilities()`` returns an empty list
+        (so ``vendor_tools()`` degrades gracefully instead of crashing).
+        """
+
+        def __init__(self, value: Any = None, *, fabric: Any = None, logger: Any = None, **_: Any) -> None:
             self._agentic_value = value
             self._active_provider: str | None = None
+            self._logger = logger
 
         @property
         def value(self) -> Any:
@@ -55,6 +64,14 @@ except ImportError:  # pragma: no cover - default in this workspace until vendor
             """Raise clear guidance for vendor-backed operations."""
             msg = f"Vendor operation '{operation}' requires vendor-fabric."
             raise ImportError(msg)
+
+        def capabilities(self, provider: str | None = None, *, include_unavailable: bool = True) -> list[Any]:
+            """Return an empty capability list without vendor-fabric.
+
+            Without vendor-fabric, no provider capabilities are available.
+            This lets ``vendor_tools()`` degrade gracefully (returns ``[]``).
+            """
+            return []
 
 else:
     _VENDOR_FABRIC_AVAILABLE = True
@@ -218,10 +235,12 @@ class AgenticData(_VendorDataBase):
             if fabric_agent_name in self._fabric_agents:
                 return lambda *args, **kwargs: self.run_fabric_agent(fabric_agent_name, *args, **kwargs)
 
-        try:
+        # When real VendorData is installed, it may define __getattr__ for
+        # provider dispatch. Try the superclass, but fall through to a clean
+        # AttributeError if neither this class nor the superclass handles it.
+        if hasattr(super(), "__getattr__"):
             return super().__getattr__(name)  # type: ignore[misc]
-        except AttributeError:
-            raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}") from None
+        raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}")
 
     def __dir__(self) -> list[str]:
         """Include dynamic registered-fabric-agent helpers in introspection."""

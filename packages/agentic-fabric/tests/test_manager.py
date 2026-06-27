@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -12,13 +13,25 @@ import pytest
 from agentic_fabric.core.manager import ManagerAgent
 
 
+class _ConcreteManager(ManagerAgent):
+    """Concrete subclass for testing base ManagerAgent behavior."""
+
+    async def execute_workflow(self, task: str, **kwargs: Any) -> str:
+        return task
+
+
 class TestManagerAgent:
     """Tests for ManagerAgent base class."""
+
+    def test_manager_is_abstract(self):
+        """ManagerAgent cannot be instantiated directly (abstract)."""
+        with pytest.raises(TypeError, match="abstract class"):
+            ManagerAgent(fabric_agents={"test": "test_fabric_agent"})  # type: ignore[abstract]
 
     def test_init_with_fabric_agents(self):
         """Test manager initialization with fabric agent mappings."""
         fabric_agents = {"design": "game_design", "qa": "quality_assurance"}
-        manager = ManagerAgent(fabric_agents=fabric_agents)
+        manager = _ConcreteManager(fabric_agents=fabric_agents)
 
         assert manager.fabric_agents == fabric_agents
         assert manager.package_name is None
@@ -27,13 +40,22 @@ class TestManagerAgent:
     def test_init_with_package_name(self):
         """Test manager initialization with package name."""
         fabric_agents = {"design": "game_design"}
-        manager = ManagerAgent(fabric_agents=fabric_agents, package_name="my_package")
+        manager = _ConcreteManager(fabric_agents=fabric_agents, package_name="my_package")
 
         assert manager.package_name == "my_package"
 
+    def test_init_with_reviewer(self):
+        """Test manager initialization with a reviewer callback."""
+
+        def reviewer(msg: str, result: Any) -> tuple[bool, Any]:
+            return True, result
+
+        manager = _ConcreteManager(fabric_agents={"test": "test"}, reviewer=reviewer)
+        assert manager.reviewer is reviewer
+
     def test_get_packages_caches_result(self):
         """Test that package discovery is cached."""
-        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
+        manager = _ConcreteManager(fabric_agents={"test": "test_fabric_agent"})
 
         with patch("agentic_fabric.core.manager.discover_packages") as mock_discover:
             mock_packages = {"pkg1": Path("/path/pkg1")}
@@ -51,7 +73,7 @@ class TestManagerAgent:
 
     def test_delegate_with_string_input(self):
         """Test delegation with string input."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
@@ -82,7 +104,7 @@ class TestManagerAgent:
 
     def test_delegate_with_dict_input(self):
         """Test delegation with dict input."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
@@ -109,14 +131,14 @@ class TestManagerAgent:
 
     def test_delegate_unknown_role_raises_error(self):
         """Test that delegating to unknown role raises ValueError."""
-        manager = ManagerAgent(fabric_agents={"design": "game_design"})
+        manager = _ConcreteManager(fabric_agents={"design": "game_design"})
 
         with pytest.raises(ValueError, match="Unknown fabric agent role 'unknown'"):
             manager.delegate("unknown", "test task")
 
     def test_delegate_package_not_found_raises_error(self):
         """Test that missing package raises ValueError."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design"},
             package_name="nonexistent",
         )
@@ -129,7 +151,7 @@ class TestManagerAgent:
 
     def test_delegate_auto_discovers_fabric_agent(self):
         """Test auto-discovery of a fabric agent when package_name is not specified."""
-        manager = ManagerAgent(fabric_agents={"design": "game_design"})
+        manager = _ConcreteManager(fabric_agents={"design": "game_design"})
 
         mock_packages = {
             "pkg1": Path("/pkg1/.fabric"),
@@ -161,7 +183,7 @@ class TestManagerAgent:
 
     def test_delegate_uses_cached_fabric_agent_config(self):
         """Repeated delegation to the same fabric agent should reuse the cached config."""
-        manager = ManagerAgent(fabric_agents={"design": "game_design"}, package_name="test_pkg")
+        manager = _ConcreteManager(fabric_agents={"design": "game_design"}, package_name="test_pkg")
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
         with (
@@ -177,7 +199,7 @@ class TestManagerAgent:
 
     def test_delegate_fabric_agent_not_found_raises_error(self):
         """Test that fabric agent not found in any package raises ValueError."""
-        manager = ManagerAgent(fabric_agents={"design": "missing_fabric_agent"})
+        manager = _ConcreteManager(fabric_agents={"design": "missing_fabric_agent"})
 
         mock_packages = {"pkg1": Path("/pkg1/.fabric")}
 
@@ -194,7 +216,7 @@ class TestManagerAgent:
     @pytest.mark.asyncio
     async def test_delegate_async(self):
         """Test async delegation."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
@@ -218,7 +240,7 @@ class TestManagerAgent:
     @pytest.mark.asyncio
     async def test_delegate_parallel(self):
         """Test parallel delegation to multiple fabric agents."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design", "assets": "asset_gen"},
             package_name="test_pkg",
         )
@@ -263,7 +285,7 @@ class TestManagerAgent:
 
     def test_delegate_sequential(self):
         """Test sequential delegation to multiple fabric agents."""
-        manager = ManagerAgent(
+        manager = _ConcreteManager(
             fabric_agents={"design": "game_design", "impl": "implementation"},
             package_name="test_pkg",
         )
@@ -296,7 +318,7 @@ class TestManagerAgent:
 
     def test_checkpoint_auto_approve(self):
         """Test checkpoint with auto_approve=True."""
-        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
+        manager = _ConcreteManager(fabric_agents={"test": "test_fabric_agent"})
 
         approved, result = manager.checkpoint(
             "Review design",
@@ -308,24 +330,42 @@ class TestManagerAgent:
         assert result == "Design output"
 
     def test_checkpoint_base_implementation_auto_approves(self):
-        """Test that base checkpoint implementation auto-approves."""
-        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
+        """Test that checkpoint without reviewer auto-approves."""
+        manager = _ConcreteManager(fabric_agents={"test": "test_fabric_agent"})
 
         approved, result = manager.checkpoint(
             "Review design",
             "Design output",
-            auto_approve=False,  # Even with False, base impl approves
+            auto_approve=False,
         )
 
         assert approved is True
         assert result == "Design output"
 
-    def test_execute_workflow_not_implemented(self):
-        """Test that execute_workflow raises NotImplementedError in base class."""
-        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
+    def test_checkpoint_with_reviewer(self):
+        """Test that checkpoint calls the reviewer callback when set."""
 
-        with pytest.raises(NotImplementedError, match="Subclasses must implement"):
-            asyncio.run(manager.execute_workflow("test task"))
+        def reject(msg: str, result: Any) -> tuple[bool, Any]:
+            return False, "rejected result"
+
+        manager = _ConcreteManager(fabric_agents={"test": "test"}, reviewer=reject)
+
+        approved, result = manager.checkpoint(
+            "Review design",
+            "Design output",
+            auto_approve=False,
+        )
+
+        assert approved is False
+        assert result == "rejected result"
+
+    def test_execute_workflow_is_abstract(self):
+        """Test that execute_workflow is abstract and must be overridden."""
+        # Already tested via test_manager_is_abstract — direct instantiation fails.
+        # A concrete subclass must implement execute_workflow.
+        manager = _ConcreteManager(fabric_agents={"test": "test_fabric_agent"})
+        result = asyncio.run(manager.execute_workflow("test task"))
+        assert result == "test task"
 
 
 class TestManagerAgentSubclass:

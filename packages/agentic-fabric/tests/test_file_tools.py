@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import builtins
+import importlib
 import os
 import sys
 
@@ -245,3 +246,66 @@ class TestDirectoryListTool:
 
         assert "Error" in result
         assert "not allowed" in result
+
+
+class TestConfigureWriteRestrictions:
+    """Tests for configure_write_restrictions and env-var overrides."""
+
+    def test_configure_write_restrictions_replaces_allowed_dirs(self) -> None:
+        """configure_write_restrictions should replace the allowed write dirs list."""
+        from agentic_fabric.tools.file_tools import ALLOWED_WRITE_DIRS, configure_write_restrictions
+
+        original = list(ALLOWED_WRITE_DIRS)
+        try:
+            configure_write_restrictions(allowed_dirs=["custom/dir"])
+            assert list(ALLOWED_WRITE_DIRS) == ["custom/dir"]
+        finally:
+            configure_write_restrictions(allowed_dirs=original)
+
+    def test_configure_write_restrictions_replaces_allowed_extensions(self) -> None:
+        """configure_write_restrictions should replace the allowed extensions set."""
+        from agentic_fabric.tools.file_tools import ALLOWED_EXTENSIONS, configure_write_restrictions
+
+        original = set(ALLOWED_EXTENSIONS)
+        try:
+            configure_write_restrictions(allowed_extensions={".py", ".toml"})
+            assert set(ALLOWED_EXTENSIONS) == {".py", ".toml"}
+        finally:
+            configure_write_restrictions(allowed_extensions=original)
+
+    def test_configure_write_restrictions_leaves_unchanged_when_none(self) -> None:
+        """Passing None for an argument should leave that restriction unchanged."""
+        from agentic_fabric.tools.file_tools import ALLOWED_WRITE_DIRS, configure_write_restrictions
+
+        before_dirs = list(ALLOWED_WRITE_DIRS)
+        try:
+            configure_write_restrictions(allowed_dirs=None, allowed_extensions=None)
+            assert list(ALLOWED_WRITE_DIRS) == before_dirs
+        finally:
+            configure_write_restrictions(allowed_dirs=before_dirs)
+
+    def test_env_dirs_override_default_allowed_write_dirs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """AGENTIC_FABRIC_WRITE_DIRS env var should override the defaults at import time."""
+        monkeypatch.setenv("AGENTIC_FABRIC_WRITE_DIRS", "src/python,src/config")
+        sys.modules.pop("agentic_fabric.tools.file_tools", None)
+        try:
+            module = importlib.import_module("agentic_fabric.tools.file_tools")
+
+            assert module.ALLOWED_WRITE_DIRS == ["src/python", "src/config"]
+        finally:
+            sys.modules.pop("agentic_fabric.tools.file_tools", None)
+            monkeypatch.delenv("AGENTIC_FABRIC_WRITE_DIRS", raising=False)
+
+    def test_env_extensions_override_default_allowed_extensions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """AGENTIC_FABRIC_WRITE_EXTENSIONS env var should override the defaults at import time."""
+        monkeypatch.setenv("AGENTIC_FABRIC_WRITE_EXTENSIONS", ".py,.toml")
+        sys.modules.pop("agentic_fabric.tools.file_tools", None)
+        try:
+            module = importlib.import_module("agentic_fabric.tools.file_tools")
+
+            assert {".py", ".toml"} == module.ALLOWED_EXTENSIONS
+        finally:
+            sys.modules.pop("agentic_fabric.tools.file_tools", None)
+            monkeypatch.delenv("AGENTIC_FABRIC_WRITE_EXTENSIONS", raising=False)

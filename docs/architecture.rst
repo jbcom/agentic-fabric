@@ -76,6 +76,7 @@ The implementation lives in ``agentic_fabric.capabilities``:
 - ``@agent_capability(...)``
 - ``@runtime_capability(...)``
 - ``@tool_capability(...)``
+- ``AgentCapabilitySpec``
 - ``AgentCapabilityProviderMixin``
 
 Do not use custom dunder capability names. The capability registry is
@@ -91,7 +92,10 @@ SDKs being imported eagerly.
 Runtime metadata lives in ``agentic_fabric.runners.registry``. The public
 compatibility API remains in ``agentic_fabric.core.decomposer``:
 ``detect_framework()``, ``get_runner()``, ``get_available_frameworks()``,
-and ``get_framework_info()``.
+``get_framework_info()``, ``is_framework_available()``,
+``compose_fabric_agent()``, ``run_fabric_agent_auto()``,
+``get_cli_runner()``, ``get_available_cli_runners()``, and
+``is_cli_runner_available()``.
 
 Runtime selection follows this precedence:
 

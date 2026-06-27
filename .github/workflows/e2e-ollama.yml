@@ -1,0 +1,57 @@
+name: E2E (Ollama)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  e2e:
+    name: E2E tests with local Ollama
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OLLAMA_BASE_URL: http://localhost:11434
+      OLLAMA_MODEL: qwen2.5:0.5b
+      AGENTIC_FABRIC_LLM_PROVIDER: ollama
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.19"
+          enable-cache: true
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          sleep 2
+      - name: Pull model and wait for readiness
+        run: |
+          ollama pull qwen2.5:0.5b
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
+              echo "Ollama ready"
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:11434/api/tags >/dev/null || { echo "Ollama never came up"; exit 1; }
+      - name: Warm model
+        run: |
+          curl -s http://localhost:11434/api/generate \
+            -d '{"model":"qwen2.5:0.5b","prompt":"ping","stream":false}' >/dev/null
+      - run: uv sync --all-packages --all-extras --dev
+      - run: uv pip install crewai
+      - name: Run E2E tests
+        run: |
+          uvx --with tox-uv tox -e py313 -- packages/agentic-fabric/tests -m "e2e" --e2e -v

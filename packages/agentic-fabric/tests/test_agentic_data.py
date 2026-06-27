@@ -273,3 +273,47 @@ def test_dynamic_helpers_and_missing_attributes(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(AttributeError, match="has no attribute 'missing'"):
         data.missing
+
+
+def test_fallback_vendor_data_base_capabilities_returns_empty_list() -> None:
+    """The no-vendor fallback should expose an empty capabilities list."""
+    data = AgenticData()
+    if data.vendor_fabric_available:
+        pytest.skip("vendor-fabric is installed in this environment")
+
+    assert data.capabilities() == []
+    assert data.capabilities("github", include_unavailable=False) == []
+
+
+def test_agentic_data_delegates_to_vendor_data_getattr(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When the real VendorData defines __getattr__, AgenticData should delegate to it."""
+    import agentic_fabric.agentic_data as current_agentic_data
+
+    fake_vendor_fabric = types.ModuleType("vendor_fabric")
+    fake_vendor_data = types.ModuleType("vendor_fabric.vendor_data")
+
+    class VendorDataWithGetattr:
+        def __init__(self, value: Any = None, **_: Any) -> None:
+            self.value = value
+
+        def __getattr__(self, name: str) -> Any:
+            if name == "dispatched_provider":
+                return "vendor-dispatched"
+            raise AttributeError(f"VendorData has no attribute {name!r}")
+
+    fake_vendor_data.VendorData = VendorDataWithGetattr
+    monkeypatch.setitem(sys.modules, "vendor_fabric", fake_vendor_fabric)
+    monkeypatch.setitem(sys.modules, "vendor_fabric.vendor_data", fake_vendor_data)
+
+    spec = importlib.util.spec_from_file_location(
+        "_agentic_data_getattr_delegation",
+        Path(current_agentic_data.__file__),
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    data = module.AgenticData("value")
+
+    assert data.dispatched_provider == "vendor-dispatched"

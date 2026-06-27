@@ -30,6 +30,8 @@ except ImportError:
 pytestmark = [
     pytest.mark.e2e,
     pytest.mark.strands,
+    pytest.mark.agentic_e2e,
+    pytest.mark.agentic_runtime("strands"),
     pytest.mark.skipif(not STRANDS_AVAILABLE, reason="strands not installed"),
 ]
 

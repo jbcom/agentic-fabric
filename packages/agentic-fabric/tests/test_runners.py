@@ -11,6 +11,8 @@ import sys
 
 from typing import TYPE_CHECKING, Any
 
+import pytest
+
 
 if TYPE_CHECKING:
     from pytest_agentic_fabric.mocking import FabricMocker
@@ -601,6 +603,206 @@ class TestLangGraphRunner:
         mock_create.assert_called_once()
         assert mock_create.call_args[0][1] == [resolved_tool]
 
+    def test_build_system_prompt_includes_description_agents_tasks(self, fabric_mocker: FabricMocker) -> None:
+        """_build_system_prompt should combine description, agent roles, and tasks."""
+        fabric_mocker.mock_langgraph()
+
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        runner = LangGraphRunner()
+        fabric_agent_config = {
+            "description": "Triage and route incoming requests.",
+            "agents": {
+                "triager": {"role": "Triager", "goal": "Classify requests"},
+                "resolver": {"role": "Resolver", "goal": "Resolve requests"},
+            },
+            "tasks": {
+                "classify": {"description": "Classify the incoming request type."},
+                "resolve": {"description": "Resolve the request and return an answer."},
+            },
+        }
+
+        prompt = runner._build_system_prompt(fabric_agent_config)
+
+        assert "Triage and route incoming requests." in prompt
+        assert "Agent Roles" in prompt
+        assert "Triager" in prompt
+        assert "Resolver" in prompt
+        assert "Classify the incoming request type." in prompt
+        assert "Resolve the request and return an answer." in prompt
+
+    def test_build_system_prompt_truncates_long_task_descriptions(self, fabric_mocker: FabricMocker) -> None:
+        """Long task descriptions in the prompt should be truncated with ellipsis."""
+        fabric_mocker.mock_langgraph()
+
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        runner = LangGraphRunner()
+        long_desc = "A" * 250
+        fabric_agent_config = {
+            "tasks": {"long_task": {"description": long_desc}},
+        }
+
+        prompt = runner._build_system_prompt(fabric_agent_config)
+
+        assert "..." in prompt
+        assert prompt.count("A") == 200
+
+    def test_build_fabric_agent_uses_system_prompt_for_multi_agent(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """Multi-agent configs should pass the system prompt to create_react_agent."""
+        fabric_mocker.mock_langgraph()
+
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        mock_create = fabric_mocker.patch_create_react_agent()
+        fabric_mocker.patch_chat_anthropic()
+
+        runner = LangGraphRunner()
+        fabric_agent_config = {
+            "description": "Research and write reports.",
+            "agents": {
+                "researcher": {"role": "Researcher", "goal": "Find facts"},
+                "writer": {"role": "Writer", "goal": "Write reports"},
+            },
+            "tasks": {},
+        }
+
+        runner.build_fabric_agent(fabric_agent_config)
+
+        mock_create.assert_called_once()
+        kwargs = mock_create.call_args[1]
+        assert "state_modifier" in kwargs
+        assert "Research and write reports." in kwargs["state_modifier"]
+        assert "Researcher" in kwargs["state_modifier"]
+        assert "Writer" in kwargs["state_modifier"]
+
+    def test_get_llm_uses_chat_ollama_when_ollama_base_url_set(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """OLLAMA_BASE_URL should route get_llm to ChatOllama."""
+        import types as _types
+
+        fabric_mocker.mock_langgraph()
+        MockChatOllama = fabric_mocker.MagicMock()
+        fake_ollama_module = _types.ModuleType("langchain_ollama")
+        fake_ollama_module.ChatOllama = MockChatOllama  # type: ignore[attr-defined]
+        fabric_mocker.patch.dict("sys.modules", {"langchain_ollama": fake_ollama_module})
+        fabric_mocker.patch.dict(
+            "os.environ",
+            {"OLLAMA_BASE_URL": "http://localhost:11434", "OLLAMA_MODEL": "qwen2.5:0.5b"},
+            clear=False,
+        )
+
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        runner = LangGraphRunner()
+        runner.get_llm()
+
+        MockChatOllama.assert_called_once()
+        call_kwargs = MockChatOllama.call_args[1]
+        assert call_kwargs["model"] == "qwen2.5:0.5b"
+        assert call_kwargs["base_url"] == "http://localhost:11434"
+
+
+class TestStrandsRunnerOllama:
+    """Tests for the Strands runner Ollama provider path."""
+
+    def test_is_ollama_mode_true_when_ollama_base_url_set(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """OLLAMA_BASE_URL should enable Ollama mode in the Strands runner."""
+        fabric_mocker.mock_strands()
+        fabric_mocker.patch.dict("os.environ", {"OLLAMA_BASE_URL": "http://localhost:11434"}, clear=False)
+
+        from agentic_fabric.runners.strands_runner import StrandsRunner
+
+        runner = StrandsRunner()
+
+        assert runner._is_ollama_mode() is True
+
+    def test_is_ollama_mode_true_when_provider_env_set(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """AGENTIC_FABRIC_LLM_PROVIDER=ollama should enable Ollama mode."""
+        fabric_mocker.mock_strands()
+        fabric_mocker.patch.dict(
+            "os.environ", {"AGENTIC_FABRIC_LLM_PROVIDER": "ollama"}, clear=False
+        )
+
+        from agentic_fabric.runners.strands_runner import StrandsRunner
+
+        runner = StrandsRunner()
+
+        assert runner._is_ollama_mode() is True
+
+    def test_get_ollama_model_returns_ollama_model_instance(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """_get_ollama_model should construct a Strands OllamaModel."""
+        fabric_mocker.mock_strands()
+
+        MockOllamaModel = fabric_mocker.MagicMock()
+        fake_ollama_module = fabric_mocker.MagicMock()
+        fake_ollama_module.OllamaModel = MockOllamaModel
+        fabric_mocker.patch.dict(
+            "sys.modules",
+            {"strands.models.ollama": fake_ollama_module},
+        )
+        fabric_mocker.patch.dict(
+            "os.environ",
+            {"OLLAMA_BASE_URL": "http://localhost:11434", "OLLAMA_MODEL": "llama3:8b"},
+            clear=False,
+        )
+
+        from agentic_fabric.runners.strands_runner import StrandsRunner
+
+        runner = StrandsRunner()
+        result = runner._get_ollama_model()
+
+        MockOllamaModel.assert_called_once_with(
+            host="http://localhost:11434",
+            model_id="llama3:8b",
+        )
+        assert result is MockOllamaModel.return_value
+
+    def test_build_fabric_agent_uses_ollama_model_when_ollama_mode(
+        self, fabric_mocker: FabricMocker
+    ) -> None:
+        """build_fabric_agent should attach an OllamaModel when in Ollama mode."""
+        import types as _types
+
+        fabric_mocker.mock_strands()
+        MockAgent = fabric_mocker.patch_strands_agent()
+        MockOllamaModel = fabric_mocker.MagicMock()
+        mock_ollama_instance = fabric_mocker.MagicMock()
+        MockOllamaModel.return_value = mock_ollama_instance
+        fake_ollama_module = _types.ModuleType("strands.models.ollama")
+        fake_ollama_module.OllamaModel = MockOllamaModel  # type: ignore[attr-defined]
+        fabric_mocker.patch.dict("sys.modules", {"strands.models.ollama": fake_ollama_module})
+        fabric_mocker.patch.dict(
+            "os.environ",
+            {"OLLAMA_BASE_URL": "http://localhost:11434", "OLLAMA_MODEL": "qwen2.5:0.5b"},
+            clear=False,
+        )
+
+        from agentic_fabric.runners.strands_runner import StrandsRunner
+
+        runner = StrandsRunner()
+        fabric_agent_config = {
+            "description": "Local agent",
+            "llm": {"model": "qwen2.5:0.5b"},
+            "agents": {},
+            "tasks": {},
+        }
+
+        runner.build_fabric_agent(fabric_agent_config)
+
+        call_kwargs = MockAgent.call_args[1]
+        assert call_kwargs["model"] is mock_ollama_instance
+        assert "model_id" not in call_kwargs
+
 
 class TestStrandsRunner:
     """Tests for Strands runner implementation."""
@@ -977,8 +1179,13 @@ class TestBaseRunner:
 
         assert llm == mock_get_llm.return_value
 
-    def test_get_llm_returns_none_when_module_unavailable(self, fabric_mocker: FabricMocker) -> None:
-        """Test that get_llm returns None when llm module not available."""
+    def test_get_llm_raises_when_module_unavailable(self, fabric_mocker: FabricMocker) -> None:
+        """Test that get_llm raises ImportError when llm module is broken.
+
+        config.llm is a core module with no optional deps. If it can't import,
+        that's a broken install — the error should propagate, not silently
+        return None and use a wrong default model.
+        """
         from agentic_fabric.runners.base import BaseRunner
 
         class TestRunner(BaseRunner):
@@ -998,6 +1205,5 @@ class TestBaseRunner:
 
         # Simulate that the agentic_fabric.config.llm module is not available
         fabric_mocker.patch.dict(sys.modules, {"agentic_fabric.config.llm": None})
-        llm = runner.get_llm()
-
-        assert llm is None
+        with pytest.raises(ImportError):
+            runner.get_llm()

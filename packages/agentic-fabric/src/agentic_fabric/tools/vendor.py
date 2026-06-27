@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from collections.abc import Mapping
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class VendorCapabilityTool:
@@ -44,6 +49,8 @@ class VendorCapabilityTool:
             from agentic_fabric.agentic_data import AgenticData
 
             data = AgenticData()
+        if data.active_provider is None or data.active_provider != self.provider:
+            data.open(self.provider, strict=False)
         return data.call(self.operation, self.provider, **kwargs)
 
     def __call__(self, **kwargs: Any) -> Any:
@@ -72,6 +79,15 @@ def vendor_capability_tools(
         if provider is not None
         else capabilities(include_unavailable=include_unavailable)
     )
+
+    if not raw_capabilities:
+        # Check if this is because vendor-fabric is not installed
+        vendor_available = getattr(data, "vendor_fabric_available", True)
+        if not vendor_available:
+            logger.info(
+                "vendor_capability_tools() returned no tools: vendor-fabric is not installed. "
+                "Install vendor-fabric to enable vendor-backed agent tools."
+            )
 
     tools: list[VendorCapabilityTool] = []
     for capability in raw_capabilities:

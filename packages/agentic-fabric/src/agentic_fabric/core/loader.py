@@ -144,28 +144,33 @@ def load_fabric_agent_from_config(fabric_agent_config: dict) -> Crew:
     from agentic_fabric.tools.file_tools import (
         DirectoryListTool,
         GameCodeReaderTool,
-        GameCodeWriterTool,
     )
 
-    # Initialize tools
-    code_writer = GameCodeWriterTool()
+    # Initialize default file tools for agents without explicit tool lists.
     code_reader = GameCodeReaderTool()
     dir_lister = DirectoryListTool()
-    all_tools = [code_writer, code_reader, dir_lister]
     read_tools = [code_reader, dir_lister]
 
     # Create agents
     agents_config = fabric_agent_config.get("agents", {})
     agents: dict[str, Any] = {}
 
-    for agent_name, agent_cfg in agents_config.items():
-        resolved_tools = resolve_tools(agent_cfg.get("tools", []))
+    # Resolve agent archetypes (extends/variables) if any agent uses them
+    from agentic_fabric.base import resolve_agent_archetypes
 
-        # Preserve the older role-based fallback when no concrete tool could be resolved.
-        if resolved_tools:
+    agents_config = resolve_agent_archetypes(agents_config)
+
+    for agent_name, agent_cfg in agents_config.items():
+        tools_val = agent_cfg.get("tools")
+        if tools_val is not None:
+            resolved_tools = resolve_tools(tools_val)
             tools = resolved_tools
+        elif "tools" in agent_cfg:
+            # Agent explicitly declared tools: null (empty list) — respect it
+            tools = []
         else:
-            tools = all_tools if "engineer" in agent_name.lower() or "developer" in agent_name.lower() else read_tools
+            # No tools key at all: use read-only file tools as a sensible default
+            tools = read_tools
 
         agents[agent_name] = create_agent_from_config(agent_name, agent_cfg, tools)
 

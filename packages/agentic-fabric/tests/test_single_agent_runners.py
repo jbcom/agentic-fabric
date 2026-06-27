@@ -23,11 +23,14 @@ class TestSingleAgentRunner:
             SingleAgentRunner()
 
     def test_default_is_available(self):
-        """Default is_available should return True."""
+        """is_available is now abstract — subclasses must implement it."""
 
         class TestRunner(SingleAgentRunner):
             def run(self, task: str, working_dir: str | None = None, **kwargs):
                 return "test"
+
+            def is_available(self) -> bool:
+                return True
 
         runner = TestRunner()
         assert runner.is_available() is True
@@ -38,6 +41,9 @@ class TestSingleAgentRunner:
         class TestRunner(SingleAgentRunner):
             def run(self, task: str, working_dir: str | None = None, **kwargs):
                 return "test"
+
+            def is_available(self) -> bool:
+                return True
 
         runner = TestRunner()
         assert runner.get_required_env_vars() == []

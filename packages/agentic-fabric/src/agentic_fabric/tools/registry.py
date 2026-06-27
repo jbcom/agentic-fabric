@@ -88,7 +88,11 @@ def _resolve_vendor_tool(tool_name: str) -> Any | None:
             return VendorCapabilityTool(provider, operation)
 
     if tool_name.startswith("vendor:"):
-        _, provider, operation = tool_name.split(":", 2) if tool_name.count(":") >= 2 else ("", "", "")
+        parts = tool_name.split(":")
+        if len(parts) < 3 or not parts[1] or not parts[2]:
+            logger.warning("Malformed vendor tool reference '%s'; expected 'vendor:provider:operation'", tool_name)
+            return None
+        _, provider, operation = parts[0], parts[1], parts[2]
         if provider and operation:
             from agentic_fabric.tools.vendor import VendorCapabilityTool
 

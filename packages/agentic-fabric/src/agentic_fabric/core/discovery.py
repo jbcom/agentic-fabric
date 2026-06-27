@@ -268,6 +268,11 @@ def get_fabric_agent_config(config_dir: Path, fabric_agent_name: str) -> dict:
     agents = _load_yaml_mapping(agents_path, "Agents")
     tasks = _load_yaml_mapping(tasks_path, "Tasks")
 
+    # Resolve agent archetypes (extends/variables) if any agent uses them
+    from agentic_fabric.base import resolve_agent_archetypes
+
+    agents = resolve_agent_archetypes(agents)
+
     # Resolve knowledge paths
     knowledge_paths = []
     for kp in fabric_agent_config.get("knowledge", []):

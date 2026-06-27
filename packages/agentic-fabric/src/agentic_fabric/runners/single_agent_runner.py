@@ -55,14 +55,16 @@ class SingleAgentRunner(AgentCapabilityProviderMixin, ABC):
         """
 
     @runtime_capability("is_available", description="Report whether this local runner can execute.")
+    @abstractmethod
     def is_available(self) -> bool:
         """Check if this runner is available (dependencies installed, etc.).
 
         Returns:
             True if the runner can be used.
+
+        Raises:
+            NotImplementedError: Subclasses must override this.
         """
-        # Default implementation - subclasses can override
-        return True
 
     @runtime_capability("required_env_vars", description="List environment variables required by this runner.")
     def get_required_env_vars(self) -> list[str]:

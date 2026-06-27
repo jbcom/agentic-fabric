@@ -359,12 +359,11 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
             ```
         """
         # Default implementation - subclasses can override
-        # Import lazily to avoid requiring crewai at module load time
-        try:
-            from agentic_fabric.config.llm import DEFAULT_MODEL, get_llm
+        # Import lazily to avoid requiring crewai at module load time.
+        # config.llm is a core module with no optional deps — if it can't import,
+        # that's a broken install, so let the ImportError propagate rather than
+        # silently returning None and using a wrong default model.
+        from agentic_fabric.config.llm import DEFAULT_MODEL, get_llm
 
-            # Use default model if none specified to avoid AttributeError
-            return get_llm(model or DEFAULT_MODEL)
-        except ImportError:
-            # If llm module not available, return None (framework may have its own default)
-            return None
+        # Use default model if none specified to avoid AttributeError
+        return get_llm(model or DEFAULT_MODEL)

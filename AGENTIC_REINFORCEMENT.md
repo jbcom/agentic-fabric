@@ -15,7 +15,7 @@ This repository creates the runtime- and agent-aware superclass on top of
 
 - runtime discovery and selection
 - runner registries and runtime adapters
-- LangChain, CrewAI, LangGraph, Strands, and MCP-facing tool wrappers
+- CrewAI, LangGraph, Strands, and MCP-facing tool wrappers
 - agent-facing tool catalogs built from vendor capabilities
 - fabric agent, session, and agent orchestration context
 

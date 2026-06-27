@@ -1,4 +1,4 @@
-"""Configuration for CrewAI agents."""
+"""LLM configuration shared by all runners."""
 
 from __future__ import annotations
 

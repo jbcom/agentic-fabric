@@ -131,12 +131,13 @@ class TestLangGraphToolAdapters:
             assert resolve_langgraph_tools(["missing"]) == []
 
     @patch("agentic_fabric.tools.adapters.resolve_tools")
-    def test_missing_langchain_dependency_skips_tools(self, mock_resolve_tools: MagicMock) -> None:
-        """Missing LangChain should be reported as unavailable adaptation."""
+    def test_missing_langchain_dependency_raises(self, mock_resolve_tools: MagicMock) -> None:
+        """Missing LangChain should raise RuntimeError instead of silently returning empty."""
         mock_resolve_tools.return_value = [DummyTool()]
 
         with patch.dict(sys.modules, {"langchain_core.tools": None}):
-            assert resolve_langgraph_tools(["FileWriteTool"]) == []
+            with pytest.raises(RuntimeError, match="LangGraph tool adaptation unavailable"):
+                resolve_langgraph_tools(["FileWriteTool"])
 
     @patch("agentic_fabric.tools.adapters.resolve_tools")
     def test_wraps_resolved_tools_with_structured_tool(self, mock_resolve_tools: MagicMock) -> None:
@@ -200,12 +201,13 @@ class TestStrandsToolAdapters:
             assert resolve_strands_tools(["missing"]) == []
 
     @patch("agentic_fabric.tools.adapters.resolve_tools")
-    def test_missing_strands_dependency_skips_tools(self, mock_resolve_tools: MagicMock) -> None:
-        """Missing Strands should be reported as unavailable adaptation."""
+    def test_missing_strands_dependency_raises(self, mock_resolve_tools: MagicMock) -> None:
+        """Missing Strands should raise RuntimeError instead of silently returning empty."""
         mock_resolve_tools.return_value = [DummyTool()]
 
         with patch.dict(sys.modules, {"strands": None}):
-            assert resolve_strands_tools(["FileWriteTool"]) == []
+            with pytest.raises(RuntimeError, match="Strands tool adaptation unavailable"):
+                resolve_strands_tools(["FileWriteTool"])
 
     @patch("agentic_fabric.tools.adapters.resolve_tools")
     def test_wraps_resolved_tools_with_strands_decorator(self, mock_resolve_tools: MagicMock) -> None:

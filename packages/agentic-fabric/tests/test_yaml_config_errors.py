@@ -112,6 +112,34 @@ class TestGetCrewConfigErrors:
         config = get_crew_config(tmp_path, "test_crew")
         assert config["tasks"] == {}
 
+    def test_agents_and_tasks_yaml_are_read_as_utf8(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Agents and tasks YAML should use explicit UTF-8 decoding."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "crews:\n"
+            "  test_crew:\n"
+            "    agents: agents.yaml\n"
+            "    tasks: tasks.yaml\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "agents.yaml").write_text("agent:\n  role: Café reviewer\n", encoding="utf-8")
+        (tmp_path / "tasks.yaml").write_text("task:\n  description: Résumé review\n", encoding="utf-8")
+        original_read_text = Path.read_text
+        encodings: list[str | None] = []
+
+        def tracking_read_text(self: Path, *args, **kwargs) -> str:
+            if self.name in {"agents.yaml", "tasks.yaml"}:
+                encodings.append(kwargs.get("encoding"))
+            return original_read_text(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", tracking_read_text)
+
+        config = get_crew_config(tmp_path, "test_crew")
+
+        assert config["agents"]["agent"]["role"] == "Café reviewer"
+        assert config["tasks"]["task"]["description"] == "Résumé review"
+        assert encodings == ["utf-8", "utf-8"]
+
     def test_empty_crews_section_raises_for_any_crew(self, tmp_path: Path) -> None:
         """Empty crews section should raise ValueError."""
         manifest_file = tmp_path / "manifest.yaml"

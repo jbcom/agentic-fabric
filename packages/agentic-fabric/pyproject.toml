@@ -29,11 +29,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-crewai = ["crewai[anthropic]>=1.5.0"]
 langgraph = ["langgraph>=0.2.0", "langchain-anthropic>=0.3.0"]
 strands = ["strands-agents>=0.1.0"]
 mcp = ["mcp>=1.0.0"]
-scraping = ["beautifulsoup4>=4.12.0", "crewai-tools>=1.5.0", "requests>=2.31.0"]
+scraping = ["beautifulsoup4>=4.12.0", "requests>=2.31.0"]
 tests = [
     "coverage[toml]>=7.6.0",
     "pytest-asyncio>=0.23.0",
@@ -173,7 +172,6 @@ module = [
     "bs4",
     "crewai",
     "crewai.*",
-    "crewai_tools",
     "langchain_anthropic",
     "langgraph",
     "langgraph.*",

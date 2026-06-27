@@ -9,16 +9,16 @@ LangGraph, Strands, or local CLI runners.
 .. code:: bash
 
    pip install agentic-fabric
-   pip install "agentic-fabric[crewai]"
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
    pip install "agentic-fabric[mcp]"
    pip install "agentic-fabric[scraping]"
 
 Local CLI runners are part of the core install because they shell out to
-external executables and require no third-party Python framework. CrewAI,
-LangGraph, Strands, MCP, scraping helpers, and vendor providers are opt-in
-extras.
+external executables and require no third-party Python framework. LangGraph,
+Strands, MCP, scraping helpers, and vendor providers are opt-in extras. CrewAI
+support stays lazy but CrewAI itself is an external install while its ChromaDB
+dependency path has an upstream critical advisory with no patched version.
 
 Vendor-backed passthrough extras are deferred until ``vendor-fabric`` is
 published with a stable optional-extra contract. Until then, vendor references

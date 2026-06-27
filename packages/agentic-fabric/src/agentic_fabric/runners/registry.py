@@ -18,7 +18,7 @@ class RuntimeSpec:
     runner_module: str
     runner_class: str
     install: str
-    extra: str
+    extra: str | None
     description: str = ""
 
     def as_dict(self, *, available: bool) -> dict[str, Any]:
@@ -136,9 +136,9 @@ register_runtime(
         import_name="crewai",
         runner_module="agentic_fabric.runners.crewai_runner",
         runner_class="CrewAIRunner",
-        install='pip install "agentic-fabric[crewai]"',
-        extra="crewai",
-        description="Full multi-agent crew orchestration with CrewAI.",
+        install="pip install crewai",
+        extra=None,
+        description="CrewAI orchestration through an externally installed CrewAI runtime.",
     )
 )
 register_runtime(

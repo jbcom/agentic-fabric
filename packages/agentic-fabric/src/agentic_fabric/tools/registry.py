@@ -34,7 +34,7 @@ _TOOL_FACTORIES: dict[str, ToolFactory] = {
     "GameCodeWriterTool": _build_factory("agentic_fabric.tools.file_tools", "GameCodeWriterTool"),
     "GameCodeReaderTool": _build_factory("agentic_fabric.tools.file_tools", "GameCodeReaderTool"),
     "DirectoryListTool": _build_factory("agentic_fabric.tools.file_tools", "DirectoryListTool"),
-    "ScrapeWebsiteTool": _build_factory("crewai_tools", "ScrapeWebsiteTool"),
+    "ScrapeWebsiteTool": _build_factory("agentic_fabric.tools.scraping_tools", "ScrapeWebsiteTool"),
     "CrawlWebsiteTool": _build_factory("agentic_fabric.tools.scraping_tools", "CrawlWebsiteTool"),
 }
 

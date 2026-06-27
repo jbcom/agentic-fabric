@@ -31,7 +31,7 @@ def test_use_runtime_strict_reports_install_guidance(monkeypatch: pytest.MonkeyP
     """Unavailable runtimes should raise a typed error with install guidance."""
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: False)
 
-    with pytest.raises(RuntimeUnavailableError, match="agentic-fabric\\[crewai\\]"):
+    with pytest.raises(RuntimeUnavailableError, match="pip install crewai"):
         AgenticData().use_runtime("crewai")
 
 
@@ -206,7 +206,7 @@ def test_select_runtime_reports_unavailable_requested_runtime(monkeypatch: pytes
     """Unavailable explicit runtimes should raise install guidance."""
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: False)
 
-    with pytest.raises(RuntimeUnavailableError, match="agentic-fabric\\[crewai\\]"):
+    with pytest.raises(RuntimeUnavailableError, match="pip install crewai"):
         AgenticData().select_runtime("crewai")
 
 

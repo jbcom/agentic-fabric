@@ -14,12 +14,8 @@ import pytest
 
 def import_scraping_tools(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     """Import scraping_tools with lightweight optional dependency stand-ins."""
-    fake_crewai_tools = types.ModuleType("crewai_tools")
     fake_requests = types.ModuleType("requests")
     fake_bs4 = types.ModuleType("bs4")
-
-    class ScrapeWebsiteTool:
-        """Minimal stand-in for crewai_tools.ScrapeWebsiteTool."""
 
     class RequestError(Exception):
         """Minimal stand-in for requests.RequestException."""
@@ -45,12 +41,10 @@ def import_scraping_tools(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
         def stripped_strings(self) -> list[str]:
             return [part.strip() for part in re.sub(r"<[^>]+>", " ", self.content).split() if part.strip()]
 
-    fake_crewai_tools.ScrapeWebsiteTool = ScrapeWebsiteTool
     fake_requests.RequestException = RequestError
     fake_requests.get = MagicMock()
     fake_bs4.BeautifulSoup = BeautifulSoup
 
-    monkeypatch.setitem(sys.modules, "crewai_tools", fake_crewai_tools)
     monkeypatch.setitem(sys.modules, "requests", fake_requests)
     monkeypatch.setitem(sys.modules, "bs4", fake_bs4)
     sys.modules.pop("agentic_fabric.tools.scraping_tools", None)

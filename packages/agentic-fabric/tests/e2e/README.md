@@ -143,7 +143,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hynek/setup-cached-uv@v2
-      - run: uv sync --extra tests --extra crewai --extra langgraph --extra strands
+      - run: uv sync --extra tests --extra langgraph --extra strands
+      - run: uv pip install crewai
       - run: uv run pytest tests/e2e/ --e2e -v
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

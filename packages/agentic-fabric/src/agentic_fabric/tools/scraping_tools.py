@@ -11,7 +11,6 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 from bs4 import BeautifulSoup
-from crewai_tools import ScrapeWebsiteTool
 
 
 log = logging.getLogger(__name__)
@@ -45,6 +44,35 @@ def _is_safe_crawl_url(url: str) -> bool:
         or address.is_reserved
         or address.is_unspecified
     )
+
+
+class ScrapeWebsiteTool:
+    """A small first-party website scraping tool with CrewAI-compatible shape."""
+
+    name: str = "ScrapeWebsiteTool"
+    description: str = "Scrape readable content from a URL."
+
+    def _run(self, url: str) -> str:
+        """Scrape readable content from one safe HTTP(S) URL."""
+        if not _is_safe_crawl_url(url):
+            log.warning("Skipping unsafe scrape URL %s", url)
+            return ""
+
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException:
+            log.exception("Error scraping %s", url)
+            return ""
+
+        soup = BeautifulSoup(response.content, "html.parser")
+        return self._scrape_content(soup)
+
+    def _scrape_content(self, soup: BeautifulSoup) -> str:
+        """Scrape readable content from a BeautifulSoup object."""
+        for script_or_style in soup(["script", "style"]):
+            script_or_style.decompose()
+        return " ".join(t.strip() for t in soup.stripped_strings)
 
 
 class CrawlWebsiteTool(ScrapeWebsiteTool):
@@ -111,9 +139,3 @@ class CrawlWebsiteTool(ScrapeWebsiteTool):
                 log.exception("Error crawling %s", current_url)
 
         return " ".join(scraped_content)
-
-    def _scrape_content(self, soup: BeautifulSoup) -> str:
-        """Scrapes the readable content from a BeautifulSoup object."""
-        for script_or_style in soup(["script", "style"]):
-            script_or_style.decompose()
-        return " ".join(t.strip() for t in soup.stripped_strings)

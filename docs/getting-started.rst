@@ -12,18 +12,16 @@ Install the runtime extras you actually use:
 
 .. code:: bash
 
-   pip install "agentic-fabric[crewai]"
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
    pip install "agentic-fabric[mcp]"
    pip install "agentic-fabric[scraping]"
 
-``mcp`` exposes MCP integration dependencies. ``scraping`` installs the CrewAI
-tools surface plus ``requests`` and ``beautifulsoup4``. Vendor passthrough
-extras are deferred until ``vendor-fabric`` is published with a stable
-optional-extra contract. There is no aggregate AI or all-frameworks extra.
-Test, typing, docs, and dev extras are reserved for repository validation and
-package maintenance.
+``mcp`` exposes MCP integration dependencies. ``scraping`` installs the
+first-party requests/BeautifulSoup scraping helpers. Vendor passthrough extras
+are deferred until ``vendor-fabric`` is published with a stable optional-extra
+contract. There is no aggregate AI or all-frameworks extra. Test, typing, docs,
+and dev extras are reserved for repository validation and package maintenance.
 
 Local CLI runners do not require a Python extra. They shell out to external
 executables that you install separately:
@@ -47,9 +45,9 @@ framework-agnostic. A framework-specific directory requires that
 runtime.
 
 If a required runtime is unavailable, runtime errors include the matching
-``agentic-fabric[...]`` install command. Automatic selection follows CrewAI,
-then LangGraph, then Strands, but explicit runtime selection always wins unless
-the crew is stored in a framework-specific directory.
+install guidance. Automatic selection follows CrewAI, then LangGraph, then
+Strands, but explicit runtime selection always wins unless the crew is stored
+in a framework-specific directory.
 
 Use ``AgenticData`` when runtime context should travel with data and
 registered crew definitions:
@@ -65,9 +63,9 @@ registered crew definitions:
 CrewAI Dependency Note
 ----------------------
 
-The ``crewai`` and ``scraping`` extras include dependencies chosen by CrewAI.
-If a transitive CrewAI dependency has an upstream advisory with no patched
-release, upgrading ``agentic-fabric`` or relaxing its CrewAI range cannot clear
-that advisory by itself. Core and local CLI installs do not include CrewAI.
-Track the upstream CrewAI and dependency advisory state before enabling those
-optional extras in sensitive environments.
+The CrewAI adapter remains lazy and source-compatible, but
+``agentic-fabric`` does not publish a CrewAI extra while current CrewAI
+releases depend on ChromaDB releases covered by an upstream critical advisory
+with no patched version. Install CrewAI separately only after reviewing that
+advisory state. Core, local CLI, LangGraph, Strands, MCP, and first-party
+scraping installs do not include CrewAI.

@@ -126,7 +126,7 @@ class TestDetectFramework:
         """RuntimeError should include installation instructions."""
         with (
             patch("agentic_fabric.core.decomposer.is_framework_available", return_value=False),
-            pytest.raises(RuntimeError, match=r"agentic-fabric\[crewai\]"),
+            pytest.raises(RuntimeError, match="pip install crewai"),
         ):
             detect_framework()
 
@@ -242,7 +242,7 @@ class TestRunnerDispatch:
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: False)
 
-        with pytest.raises(RuntimeError, match=r"agentic-fabric\[crewai\]"):
+        with pytest.raises(RuntimeError, match="pip install crewai"):
             decompose_crew(crew_config)
 
     def test_run_crew_auto_enforces_required_runtime_and_runs(
@@ -296,16 +296,16 @@ class TestFrameworkInfo:
 
         assert isinstance(info, dict)
         assert info["name"] == "crewai"
-        assert info["extra"] == "crewai"
+        assert info["extra"] is None
         assert info["available"] is False
-        assert "agentic-fabric[crewai]" in info["install"]
+        assert info["install"] == "pip install crewai"
 
 
 class TestGetInstallCommand:
     """Tests for _get_install_command."""
 
-    def test_crewai_includes_tools(self) -> None:
-        assert _get_install_command("crewai") == 'pip install "agentic-fabric[crewai]"'
+    def test_crewai_is_external_install(self) -> None:
+        assert _get_install_command("crewai") == "pip install crewai"
 
     def test_langgraph_includes_langchain(self) -> None:
         assert _get_install_command("langgraph") == 'pip install "agentic-fabric[langgraph]"'

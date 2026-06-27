@@ -8,11 +8,6 @@ updates:
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-    ignore:
-      # ChromaDB is pulled only through optional CrewAI extras. As of 2026-06-27,
-      # the latest published ChromaDB release is still in the vulnerable range,
-      # so Dependabot cannot produce a patched update yet.
-      - dependency-name: chromadb
   - package-ecosystem: github-actions
     directory: /
     schedule:

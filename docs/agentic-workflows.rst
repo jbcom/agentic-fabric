@@ -53,7 +53,10 @@ framework:
    for runtime in get_framework_info():
        print(runtime["name"], runtime["available"], runtime["install"])
 
-Supported runtime extras are ``crewai``, ``langgraph``, and ``strands``.
+Supported runtime extras are ``langgraph`` and ``strands``. The CrewAI adapter
+is lazy and can use an externally installed CrewAI runtime, but
+``agentic-fabric`` does not publish a CrewAI extra while CrewAI's ChromaDB
+dependency path has an upstream critical advisory with no patched version.
 Install the runtime you actually execute; the package does not publish an
 aggregate AI or all-frameworks extra. ``mcp`` and ``scraping`` remain focused
 optional tool surfaces. Local CLI runners are configured profiles over external

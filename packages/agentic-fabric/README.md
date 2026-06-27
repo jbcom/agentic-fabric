@@ -19,7 +19,6 @@ from what is installed.
 pip install agentic-fabric
 
 # With a specific framework
-pip install "agentic-fabric[crewai]"
 pip install "agentic-fabric[langgraph]"
 pip install "agentic-fabric[strands]"
 
@@ -37,10 +36,11 @@ Vendor-backed passthrough extras will be added after the upstream
 vendor references stay lazy and report install guidance at use time.
 
 There is no aggregate AI extra. Install exactly the framework or provider path
-you use. The `crewai` and `scraping` extras include dependencies selected by
-CrewAI. If a transitive CrewAI dependency has an upstream advisory with no
-patched release, upgrading `agentic-fabric` alone cannot clear that advisory;
-core/local-CLI installs are unaffected.
+you use. The CrewAI adapter remains lazy, but `agentic-fabric` does not publish
+a CrewAI extra while CrewAI depends on ChromaDB releases covered by an upstream
+critical advisory with no patched version. Install CrewAI separately only after
+reviewing that advisory state. Core, local-CLI, and first-party scraping
+installs are unaffected.
 
 ## Quick Start
 
@@ -112,7 +112,7 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Framework agnostic: one crew definition, multiple runtime backends.
 - Lazy imports: core package import does not require CrewAI, LangGraph,
   Strands, or vendor SDKs.
-- Focused extras: `crewai`, `langgraph`, `strands`, `mcp`, `scraping`,
+- Focused extras: `langgraph`, `strands`, `mcp`, `scraping`,
   `tests`, `typing`, `docs`, and `dev`.
 - `AgenticData`: carries data, registered crews, active runtime selection, and
   vendor-layer context together.

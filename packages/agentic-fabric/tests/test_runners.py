@@ -40,7 +40,7 @@ class TestCrewAIRunner:
         try:
             CrewAIRunner()
         except RuntimeError as exc:
-            assert 'pip install "agentic-fabric[crewai]"' in str(exc)
+            assert "pip install crewai" in str(exc)
         else:  # pragma: no cover - defensive if CrewAI import mocking stops working
             raise AssertionError("CrewAIRunner did not report missing CrewAI")
 

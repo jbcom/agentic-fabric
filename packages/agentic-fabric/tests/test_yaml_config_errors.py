@@ -206,6 +206,30 @@ class TestGetCrewConfigErrors:
         with pytest.raises(ValueError, match="Manifest path must be relative"):
             get_crew_config(tmp_path, "test_crew")
 
+    def test_agents_symlink_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
+        """Resolved symlinks must not escape the config directory."""
+        config_dir = tmp_path / ".crew"
+        config_dir.mkdir()
+        outside = tmp_path / "outside_agents.yaml"
+        outside.write_text("agent: {}\n", encoding="utf-8")
+        link_path = config_dir / "agents-link.yaml"
+        try:
+            link_path.symlink_to(outside)
+        except (OSError, NotImplementedError) as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        manifest_file = config_dir / "manifest.yaml"
+        manifest_file.write_text(
+            "crews:\n"
+            "  test_crew:\n"
+            "    agents: agents-link.yaml\n"
+            "    tasks: tasks.yaml\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="Manifest path escapes config directory"):
+            get_crew_config(config_dir, "test_crew")
+
     def test_knowledge_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
         """Manifest knowledge paths must stay inside the config directory."""
         manifest_file = tmp_path / "manifest.yaml"

@@ -76,6 +76,28 @@ def test_workspace_root_resolution_uses_workspace_env_and_cwd(
     assert file_tools.get_workspace_root("otterfall") == tmp_path
 
 
+def test_find_workspace_root_finds_repository_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The marker-file search should find the checked-out workspace root."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+
+    root = file_tools._find_workspace_root()
+
+    assert root is not None
+    assert (root / "pyproject.toml").exists()
+    assert (root / "packages").is_dir()
+
+
+def test_find_workspace_root_returns_none_without_markers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The marker-file search should return None for installed modules outside a workspace."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+    module_path = tmp_path / "installed" / "file_tools.py"
+    module_path.parent.mkdir()
+    module_path.write_text("# module\n", encoding="utf-8")
+    monkeypatch.setattr(file_tools, "__file__", str(module_path))
+
+    assert file_tools._find_workspace_root() is None
+
+
 def test_clean_relative_path_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
     """Relative path cleaning should reject empty, absolute, and traversal paths."""
     file_tools = import_file_tools_with_fake_crewai(monkeypatch)
@@ -166,3 +188,17 @@ def test_file_tools_convert_permission_and_unexpected_errors(monkeypatch: pytest
     assert "Error writing file: boom" in file_tools.GameCodeWriterTool()._run("src/ecs/data/file.ts", "")
     assert "Error reading file: boom" in file_tools.GameCodeReaderTool()._run("src/ecs/data/file.ts")
     assert "Error listing directory: boom" in file_tools.DirectoryListTool()._run("src/ecs/data")
+
+
+def test_file_tools_convert_path_validation_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ValueError path validation failures should be returned as agent-readable errors."""
+    file_tools = import_file_tools_with_fake_crewai(monkeypatch)
+
+    def raise_value_error(path_value: str) -> tuple[str, Path]:
+        raise ValueError("bad path")
+
+    monkeypatch.setattr(file_tools, "_resolve_workspace_path", raise_value_error)
+
+    assert file_tools.GameCodeWriterTool()._run("../file.ts", "") == "Error: bad path"
+    assert file_tools.GameCodeReaderTool()._run("../file.ts") == "Error: bad path"
+    assert file_tools.DirectoryListTool()._run("../") == "Error: bad path"

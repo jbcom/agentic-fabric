@@ -6,6 +6,7 @@ without requiring the actual frameworks to be installed.
 
 from __future__ import annotations
 
+import builtins
 import sys
 
 from typing import TYPE_CHECKING, Any
@@ -15,8 +16,33 @@ if TYPE_CHECKING:
     from tests._crew_mocker import CrewMocker
 
 
+def reject_imports(*blocked_names: str):
+    """Return an import hook that raises for selected top-level packages."""
+    real_import = builtins.__import__
+
+    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name in blocked_names:
+            raise ImportError(name)
+        return real_import(name, *args, **kwargs)
+
+    return fake_import
+
+
 class TestCrewAIRunner:
     """Tests for CrewAI runner implementation."""
+
+    def test_init_reports_missing_crewai(self, crew_mocker: CrewMocker) -> None:
+        """CrewAI runner construction should explain how to install CrewAI."""
+        from agentic_fabric.runners.crewai_runner import CrewAIRunner
+
+        crew_mocker.patch("builtins.__import__", side_effect=reject_imports("crewai"))
+
+        try:
+            CrewAIRunner()
+        except RuntimeError as exc:
+            assert "pip install crewai[tools]" in str(exc)
+        else:  # pragma: no cover - defensive if CrewAI import mocking stops working
+            raise AssertionError("CrewAIRunner did not report missing CrewAI")
 
     def test_build_agent_creates_crewai_agent(self, crew_mocker: CrewMocker) -> None:
         """Test that build_agent creates a CrewAI Agent."""
@@ -286,9 +312,69 @@ class TestCrewAIRunner:
         runner._resolve_tools.assert_called_once_with(["FileWriteTool"])
         assert MockAgent.call_args[1]["tools"] == [resolved_tool]
 
+    def test_build_crew_rejects_tasks_with_unknown_agents(self, crew_mocker: CrewMocker) -> None:
+        """CrewAI tasks must reference agents declared in the crew config."""
+        crew_mocker.mock_crewai()
+
+        from agentic_fabric.runners.crewai_runner import CrewAIRunner
+
+        runner = CrewAIRunner()
+
+        crew_config = {
+            "agents": {},
+            "tasks": {"task1": {"description": "Task", "agent": "missing"}},
+        }
+
+        try:
+            runner.build_crew(crew_config)
+        except ValueError as exc:
+            assert "invalid agent: missing" in str(exc)
+        else:  # pragma: no cover - defensive
+            raise AssertionError("CrewAIRunner accepted a task with an unknown agent")
+
+    def test_load_knowledge_skips_non_directories_and_logs_read_errors(
+        self,
+        crew_mocker: CrewMocker,
+        tmp_path,
+    ) -> None:
+        """Knowledge loading should skip bad paths and tolerate unreadable files."""
+        crew_mocker.mock_crewai()
+
+        from agentic_fabric.runners.crewai_runner import CrewAIRunner
+
+        crew_mocker.patch_knowledge_source()
+        runner = CrewAIRunner()
+        knowledge_dir = tmp_path / "knowledge"
+        knowledge_dir.mkdir()
+        bad_file = knowledge_dir / "bad.md"
+        bad_file.write_text("content", encoding="utf-8")
+        original_read_text = type(bad_file).read_text
+
+        def fake_read_text(self, *args: Any, **kwargs: Any) -> str:
+            if self == bad_file:
+                raise OSError("cannot read")
+            return original_read_text(self, *args, **kwargs)
+
+        crew_mocker.patch.object(type(bad_file), "read_text", fake_read_text)
+
+        assert runner._load_knowledge([tmp_path / "missing", knowledge_dir]) == []
+
 
 class TestLangGraphRunner:
     """Tests for LangGraph runner implementation."""
+
+    def test_init_reports_missing_langgraph(self, crew_mocker: CrewMocker) -> None:
+        """LangGraph runner construction should explain how to install LangGraph."""
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        crew_mocker.patch("builtins.__import__", side_effect=reject_imports("langgraph"))
+
+        try:
+            LangGraphRunner()
+        except RuntimeError as exc:
+            assert "pip install langgraph" in str(exc)
+        else:  # pragma: no cover - defensive if LangGraph import mocking stops working
+            raise AssertionError("LangGraphRunner did not report missing LangGraph")
 
     def test_build_agent_creates_react_agent(self, crew_mocker: CrewMocker) -> None:
         """Test that build_agent creates a LangGraph ReAct agent."""
@@ -372,6 +458,18 @@ class TestLangGraphRunner:
         invoke_args = mock_graph.invoke.call_args[0][0]
         assert "messages" in invoke_args
         assert any("test task" in str(msg) for msg in invoke_args["messages"])
+
+    def test_run_returns_raw_result_when_no_messages(self, crew_mocker: CrewMocker) -> None:
+        """LangGraph runner should stringify results that do not contain messages."""
+        crew_mocker.mock_langgraph()
+
+        from agentic_fabric.runners.langgraph_runner import LangGraphRunner
+
+        runner = LangGraphRunner()
+        mock_graph = crew_mocker.MagicMock()
+        mock_graph.invoke.return_value = {"state": "done"}
+
+        assert runner.run(mock_graph, {"other": "value"}) == "{'state': 'done'}"
 
     def test_get_llm_returns_chat_anthropic(self, crew_mocker: CrewMocker) -> None:
         """Test that get_llm returns ChatAnthropic instance."""
@@ -472,6 +570,19 @@ class TestLangGraphRunner:
 
 class TestStrandsRunner:
     """Tests for Strands runner implementation."""
+
+    def test_init_reports_missing_strands(self, crew_mocker: CrewMocker) -> None:
+        """Strands runner construction should explain how to install Strands."""
+        from agentic_fabric.runners.strands_runner import StrandsRunner
+
+        crew_mocker.patch("builtins.__import__", side_effect=reject_imports("strands"))
+
+        try:
+            StrandsRunner()
+        except RuntimeError as exc:
+            assert "pip install strands-agents" in str(exc)
+        else:  # pragma: no cover - defensive if Strands import mocking stops working
+            raise AssertionError("StrandsRunner did not report missing Strands")
 
     def test_build_agent_creates_strands_agent(self, crew_mocker: CrewMocker) -> None:
         """Test that build_agent creates a Strands Agent."""

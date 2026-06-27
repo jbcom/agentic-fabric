@@ -120,7 +120,7 @@ def cmd_run(args):
 
     # Get input
     if args.file:
-        input_text = Path(args.file).read_text()
+        input_text = Path(args.file).read_text(encoding="utf-8")
     elif args.input:
         input_text = args.input
     else:
@@ -218,7 +218,7 @@ def _cmd_run_single_agent(args, use_json: bool, start_time: float):
 
     # Get input
     if args.file:
-        input_text = Path(args.file).read_text()
+        input_text = Path(args.file).read_text(encoding="utf-8")
     elif args.input:
         input_text = args.input
     else:

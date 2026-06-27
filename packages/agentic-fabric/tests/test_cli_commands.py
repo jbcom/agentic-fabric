@@ -140,6 +140,17 @@ def test_cmd_run_json_uses_file_input_and_requested_framework(
     assert run_crew_auto.call_args.kwargs["framework"] == "strands"
 
 
+def test_cmd_run_dispatches_single_agent_runner(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(json=False, runner="fake", package=None, crew=None)
+    calls: list[tuple[SimpleNamespace, bool]] = []
+
+    with patch.object(cli, "_cmd_run_single_agent", side_effect=lambda args, use_json, start_time: calls.append((args, use_json))):
+        cli.cmd_run(args)
+
+    assert calls == [(args, False)]
+    assert capsys.readouterr().out == ""
+
+
 def test_cmd_run_json_reports_missing_package(capsys: pytest.CaptureFixture[str]) -> None:
     args = SimpleNamespace(
         json=True,
@@ -188,6 +199,126 @@ def test_cmd_run_json_reports_execution_errors(
     assert json.loads(capsys.readouterr().out)["error"] == "bad crew"
 
 
+def test_cmd_run_text_reports_missing_arguments(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(json=False, runner=None, package=None, crew=None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.cmd_run(args)
+
+    assert exc_info.value.code == 2
+    assert "Package and crew are required" in capsys.readouterr().out
+
+
+def test_cmd_run_json_reports_missing_arguments(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(json=True, runner=None, package=None, crew=None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.cmd_run(args)
+
+    assert exc_info.value.code == 2
+    assert json.loads(capsys.readouterr().out)["error"].startswith("Package and crew are required")
+
+
+def test_cmd_run_text_reports_missing_package(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(
+        json=False,
+        runner=None,
+        package="missing",
+        crew="reviewer",
+        file=None,
+        input="task",
+        framework="auto",
+    )
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_run(args)
+
+    assert exc_info.value.code == 2
+    output = capsys.readouterr().out
+    assert "Package 'missing' not found" in output
+    assert "known" in output
+
+
+def test_cmd_run_text_uses_empty_input_and_requested_or_auto_framework(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    args = SimpleNamespace(
+        json=False,
+        runner=None,
+        package="pkg",
+        crew="reviewer",
+        file=None,
+        input=None,
+        framework="langgraph",
+    )
+    calls: list[dict[str, Any]] = []
+
+    def fake_run_crew_auto(crew_config: dict[str, Any], inputs: dict[str, str], framework: str | None = None) -> str:
+        calls.append({"crew_config": crew_config, "inputs": inputs, "framework": framework})
+        return "done"
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crew"}),
+        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
+        patch("agentic_fabric.core.decomposer.run_crew_auto", side_effect=fake_run_crew_auto),
+    ):
+        cli.cmd_run(args)
+
+    output = capsys.readouterr().out
+    assert "Framework: langgraph (requested)" in output
+    assert calls[0]["inputs"] == {"spec": "", "component_spec": "", "input": ""}
+    assert calls[0]["framework"] == "langgraph"
+
+    args.framework = "auto"
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crew"}),
+        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
+        patch("agentic_fabric.core.decomposer.detect_framework", return_value="strands"),
+        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done"),
+    ):
+        cli.cmd_run(args)
+
+    assert "Framework: strands (auto-detected)" in capsys.readouterr().out
+
+
+def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(
+        json=False,
+        runner=None,
+        package="pkg",
+        crew="reviewer",
+        file=None,
+        input="task",
+        framework="auto",
+    )
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "get_crew_config", return_value={"name": "reviewer", "required_framework": "crewai"}),
+        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done"),
+    ):
+        cli.cmd_run(args)
+
+    output = capsys.readouterr().out
+    assert "Running pkg/reviewer" in output
+    assert "Framework: crewai" in output
+    assert "done" in output
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "get_crew_config", side_effect=RuntimeError("boom")),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_run(args)
+
+    assert exc_info.value.code == 1
+    assert "Error: boom" in capsys.readouterr().out
+
+
 def test_cmd_info_json_success(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     args = SimpleNamespace(package="pkg", crew="reviewer", json=True)
     config = {
@@ -225,6 +356,61 @@ def test_cmd_info_json_reports_config_error(tmp_path: Path, capsys: pytest.Captu
     assert json.loads(capsys.readouterr().out) == {"error": "missing crew"}
 
 
+def test_cmd_info_json_reports_missing_package(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(package="missing", crew="reviewer", json=True)
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_info(args)
+
+    assert exc_info.value.code == 2
+    data = json.loads(capsys.readouterr().out)
+    assert data["error"] == "Package 'missing' not found"
+    assert data["available_packages"] == ["known"]
+
+
+def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(package="pkg", crew="reviewer", json=False)
+    config = {
+        "description": "Reviews code",
+        "agents": {"reviewer": {"role": "Code Reviewer"}},
+        "tasks": {"review": {"description": "Review the change in detail"}},
+        "knowledge_paths": [tmp_path / "knowledge"],
+    }
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "get_crew_config", return_value=config),
+    ):
+        cli.cmd_info(args)
+
+    output = capsys.readouterr().out
+    assert "CREW: pkg/reviewer" in output
+    assert "Code Reviewer" in output
+    assert "Review the change" in output
+
+    with (
+        patch.object(cli, "discover_packages", return_value={}),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_info(args)
+
+    assert exc_info.value.code == 2
+    assert "Package 'pkg' not found" in capsys.readouterr().out
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
+        patch.object(cli, "get_crew_config", side_effect=ValueError("missing crew")),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_info(args)
+
+    assert exc_info.value.code == 2
+    assert "missing crew" in capsys.readouterr().out
+
+
 def test_cmd_list_runners_json_skips_bad_profiles(capsys: pytest.CaptureFixture[str]) -> None:
     fake_runner = FakeCliRunner()
 
@@ -254,6 +440,43 @@ def test_cmd_list_runners_reports_missing_profiles(capsys: pytest.CaptureFixture
 
     assert exc_info.value.code == 2
     assert json.loads(capsys.readouterr().out) == {"error": "no profiles"}
+
+
+def test_cmd_list_runners_text_lists_available_unavailable_and_bad_profiles(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    good_runner = FakeCliRunner(available=True)
+    bad_runner = FakeCliRunner(available=False)
+
+    def fake_get_cli_runner(profile: str) -> FakeCliRunner:
+        if profile == "broken":
+            raise RuntimeError("broken profile")
+        return good_runner if profile == "good" else bad_runner
+
+    with (
+        patch("agentic_fabric.core.decomposer.get_available_cli_runners", return_value=["good", "bad", "broken"]),
+        patch("agentic_fabric.core.decomposer.get_cli_runner", side_effect=fake_get_cli_runner),
+    ):
+        cli.cmd_list_runners(SimpleNamespace(json=False))
+
+    captured = capsys.readouterr()
+    assert "AVAILABLE SINGLE-AGENT CLI RUNNERS" in captured.out
+    assert "good: Runs fake tasks" in captured.out
+    assert "bad: Runs fake tasks" in captured.out
+    assert "Install: install fake" in captured.out
+    assert "Requires: FAKE_API_KEY" in captured.out
+    assert "Warning: Could not load profile 'broken'" in captured.err
+
+
+def test_cmd_list_runners_text_reports_missing_profiles(capsys: pytest.CaptureFixture[str]) -> None:
+    with (
+        patch("agentic_fabric.core.decomposer.get_available_cli_runners", side_effect=FileNotFoundError("no profiles")),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli.cmd_list_runners(SimpleNamespace(json=False))
+
+    assert exc_info.value.code == 2
+    assert "Error: no profiles" in capsys.readouterr().out
 
 
 def test_single_agent_json_success_uses_package_workdir(
@@ -301,6 +524,16 @@ def test_single_agent_json_requires_input(capsys: pytest.CaptureFixture[str]) ->
     assert json.loads(capsys.readouterr().out)["error"] == "No input provided. Use --input or --file"
 
 
+def test_single_agent_text_requires_input(capsys: pytest.CaptureFixture[str]) -> None:
+    args = SimpleNamespace(json=False, runner="fake", input=None, file=None, package=None)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli._cmd_run_single_agent(args, use_json=False, start_time=0)
+
+    assert exc_info.value.code == 2
+    assert "No input provided" in capsys.readouterr().out
+
+
 def test_single_agent_json_reports_unavailable_runner(capsys: pytest.CaptureFixture[str]) -> None:
     args = SimpleNamespace(json=True, runner="fake", input="task", file=None, package=None, model=None)
     fake_runner = FakeCliRunner(available=False)
@@ -316,6 +549,63 @@ def test_single_agent_json_reports_unavailable_runner(capsys: pytest.CaptureFixt
     data = json.loads(capsys.readouterr().out)
     assert data["success"] is False
     assert data["available_runners"] == ["other"]
+
+
+def test_single_agent_text_success_unavailable_and_error_paths(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    input_file = tmp_path / "task.txt"
+    input_file.write_text("from file", encoding="utf-8")
+    package_dir = tmp_path / "pkg" / ".crew"
+    fake_runner = FakeCliRunner(result="fixed")
+    args = SimpleNamespace(
+        json=False,
+        runner="fake",
+        input=None,
+        file=str(input_file),
+        package="pkg",
+        model=None,
+        auto_approve=True,
+    )
+
+    with (
+        patch.object(cli, "discover_packages", return_value={"pkg": package_dir}),
+        patch("agentic_fabric.core.decomposer.get_cli_runner", return_value=fake_runner),
+    ):
+        cli._cmd_run_single_agent(args, use_json=False, start_time=0)
+
+    output = capsys.readouterr().out
+    assert "Running single-agent: fake" in output
+    assert "Runner: Fake Runner" in output
+    assert "fixed" in output
+    assert fake_runner.calls[0]["task"] == "from file"
+
+    unavailable_runner = FakeCliRunner(available=False)
+    args.input = "task"
+    args.file = None
+    with (
+        patch("agentic_fabric.core.decomposer.get_cli_runner", return_value=unavailable_runner),
+        patch("agentic_fabric.core.decomposer.get_available_cli_runners", return_value=["other"]),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli._cmd_run_single_agent(args, use_json=False, start_time=0)
+
+    assert exc_info.value.code == 2
+    assert "Runner 'fake' not available" in capsys.readouterr().out
+
+    def broken_run(**kwargs: Any) -> str:
+        raise FileNotFoundError("missing binary")
+
+    fake_runner.run = broken_run
+    with (
+        patch("agentic_fabric.core.decomposer.get_cli_runner", return_value=fake_runner),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        cli._cmd_run_single_agent(args, use_json=False, start_time=0)
+
+    assert exc_info.value.code == 1
+    assert "missing binary" in capsys.readouterr().out
 
 
 def test_single_agent_json_reports_runner_errors(capsys: pytest.CaptureFixture[str]) -> None:

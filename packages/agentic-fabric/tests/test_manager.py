@@ -159,6 +159,22 @@ class TestManagerAgent:
             # Should have tried pkg1 (failed), then found in pkg2 (config is cached)
             assert mock_get_config.call_count == 2
 
+    def test_delegate_uses_cached_crew_config(self):
+        """Repeated delegation to the same crew should reuse the cached config."""
+        manager = ManagerAgent(crews={"design": "game_design"}, package_name="test_pkg")
+        mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
+
+        with (
+            patch("agentic_fabric.core.manager.discover_packages", return_value={"test_pkg": Path("/test/.crewai")}),
+            patch("agentic_fabric.core.manager.get_crew_config", return_value=mock_config) as mock_get_config,
+            patch("agentic_fabric.core.manager.run_crew_auto", side_effect=["first", "second"]) as mock_run,
+        ):
+            assert manager.delegate("design", "first task", framework="crewai") == "first"
+            assert manager.delegate("design", {"task": "second task"}, framework="langgraph") == "second"
+
+        mock_get_config.assert_called_once_with(Path("/test/.crewai"), "game_design")
+        assert mock_run.call_args_list[1].kwargs == {"inputs": {"task": "second task"}, "framework": "langgraph"}
+
     def test_delegate_crew_not_found_raises_error(self):
         """Test that crew not found in any package raises ValueError."""
         manager = ManagerAgent(crews={"design": "nonexistent_crew"})

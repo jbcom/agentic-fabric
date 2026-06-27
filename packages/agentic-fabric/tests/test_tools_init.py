@@ -32,6 +32,22 @@ def test_getattr_lazily_loads_declared_tool(monkeypatch: pytest.MonkeyPatch) -> 
     ]
 
 
+def test_load_attr_imports_module_attribute(monkeypatch: pytest.MonkeyPatch) -> None:
+    imported: list[str] = []
+
+    class FakeModule:
+        Tool = FakeTool
+
+    def fake_import_module(module_name: str) -> type[FakeModule]:
+        imported.append(module_name)
+        return FakeModule
+
+    monkeypatch.setattr(tools, "import_module", fake_import_module)
+
+    assert tools._load_attr("example.tools", "Tool") is FakeTool
+    assert imported == ["example.tools"]
+
+
 def test_getattr_rejects_unknown_name() -> None:
     with pytest.raises(AttributeError, match="does-not-exist"):
         tools.__getattr__("does-not-exist")

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+import types
+
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -46,6 +51,14 @@ def test_select_runtime_rejects_active_manifest_conflict(monkeypatch: pytest.Mon
 
     with pytest.raises(ValueError, match="conflicts"):
         data.select_runtime(crew_config={"required_framework": "crewai"})
+
+
+def test_select_runtime_uses_active_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An active runtime should be selected when no explicit runtime is requested."""
+    monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: runtime == "strands")
+    data = AgenticData(active_runtime="strands")
+
+    assert data.select_runtime() == "strands"
 
 
 def test_run_agent_uses_registered_crew_and_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -96,6 +109,42 @@ def test_fallback_vendor_records_provider_when_not_strict() -> None:
 
     with pytest.raises(ImportError, match="Vendor operation 'sync' requires vendor-fabric"):
         data.call("sync")
+
+
+def test_agentic_data_import_branch_with_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The module should subclass real VendorData when vendor-fabric is importable."""
+    import agentic_fabric.agentic_data as current_agentic_data
+
+    fake_vendor_fabric = types.ModuleType("vendor_fabric")
+    fake_vendor_data = types.ModuleType("vendor_fabric.vendor_data")
+
+    class VendorData:
+        def __init__(self, value: Any = None, **_: Any) -> None:
+            self.value = value
+
+        def cast(self, value: Any) -> VendorData:
+            self.value = value
+            return self
+
+    fake_vendor_data.VendorData = VendorData
+    monkeypatch.setitem(sys.modules, "vendor_fabric", fake_vendor_fabric)
+    monkeypatch.setitem(sys.modules, "vendor_fabric.vendor_data", fake_vendor_data)
+
+    spec = importlib.util.spec_from_file_location(
+        "_agentic_data_vendor_branch",
+        Path(current_agentic_data.__file__),
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    data = module.AgenticData("value")
+
+    assert module._VENDOR_FABRIC_AVAILABLE is True
+    assert data.vendor_fabric_available is True
+    assert isinstance(data, VendorData)
+    assert data.value == "value"
 
 
 def test_agent_registry_is_read_only_and_unregister_is_chainable() -> None:

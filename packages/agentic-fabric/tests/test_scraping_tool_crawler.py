@@ -72,3 +72,19 @@ def test_crawler_marks_failed_url_visited_before_retry(monkeypatch: pytest.Monke
 
     assert "duplicate-fail" in result
     assert scraping_tools.requests.get.call_count == 2
+
+
+def test_scrape_content_removes_script_and_style_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The scraper should remove script/style nodes before reading text."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+    script = MagicMock()
+    style = MagicMock()
+    soup = MagicMock()
+    soup.return_value = [script, style]
+    soup.stripped_strings = ["Visible", "content"]
+
+    result = scraping_tools.CrawlWebsiteTool()._scrape_content(soup)
+
+    script.decompose.assert_called_once_with()
+    style.decompose.assert_called_once_with()
+    assert result == "Visible content"

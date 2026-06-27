@@ -6,6 +6,8 @@ import os
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from agentic_fabric.tools.registry import register_tool_factory, resolve_tool, resolve_tools
 from agentic_fabric.tools.vendor import VendorCapabilityTool
 
@@ -56,6 +58,36 @@ class TestResolveTool:
         assert result is None
         mock_import_module.assert_not_called()
 
+    @patch("agentic_fabric.tools.registry.importlib.import_module")
+    def test_resolves_allowed_dotted_reference(self, mock_import_module: MagicMock) -> None:
+        """Allowed dotted references should resolve module and attribute names."""
+        tool = object()
+        mock_tool_class = MagicMock(return_value=tool)
+        mock_module = MagicMock()
+        mock_module.CustomTool = mock_tool_class
+        mock_import_module.return_value = mock_module
+
+        result = resolve_tool("agentic_fabric.custom.CustomTool")
+
+        mock_import_module.assert_called_once_with("agentic_fabric.custom")
+        assert result is tool
+
+    @patch("agentic_fabric.tools.registry.importlib.import_module")
+    def test_skips_unallowed_dotted_reference(self, mock_import_module: MagicMock) -> None:
+        """Unallowlisted dotted references should not be imported."""
+        result = resolve_tool("external_package.tools.CustomTool")
+
+        assert result is None
+        mock_import_module.assert_not_called()
+
+    @pytest.mark.parametrize("side_effect", [ImportError("missing"), AttributeError("missing attr")])
+    @patch("agentic_fabric.tools.registry.importlib.import_module")
+    def test_returns_none_when_dynamic_import_fails(self, mock_import_module: MagicMock, side_effect: Exception) -> None:
+        """Failed dynamic imports should be skipped cleanly."""
+        mock_import_module.side_effect = side_effect
+
+        assert resolve_tool("agentic_fabric.missing:Tool") is None
+
     def test_resolves_registered_factory_alias(self) -> None:
         """Application code can register safe tool factories directly."""
         tool = object()
@@ -86,6 +118,15 @@ class TestResolveTool:
         assert tool.provider == "slack"
         assert tool.operation == "list_messages"
 
+    @pytest.mark.parametrize("tool_name", ["vendor://github", "vendor:github"])
+    def test_skips_malformed_vendor_tool_references(self, tool_name: str) -> None:
+        """Malformed vendor references should behave like unresolved tools."""
+        assert resolve_tool(tool_name) is None
+
+    def test_skips_malformed_dotted_reference(self) -> None:
+        """Malformed dotted references should resolve to None without importing."""
+        assert resolve_tool(".Tool") is None
+
     @patch("agentic_fabric.tools.registry.importlib.import_module")
     def test_resolve_tools_deduplicates_aliases(self, mock_import_module: MagicMock) -> None:
         """Aliases pointing to the same tool should not instantiate duplicates."""
@@ -101,6 +142,14 @@ class TestResolveTool:
         assert len(tools) == 1
         mock_tool_class.assert_called_once_with()
 
+    def test_resolve_tools_skips_unresolved_unique_names(self) -> None:
+        """Unresolved tools should not block later unique tools."""
+        tool = object()
+        factory = MagicMock(return_value=tool)
+        register_tool_factory("UnitTestResolvedTool", factory)
+
+        assert resolve_tools(["mcp://missing/tool", "UnitTestResolvedTool"]) == [tool]
+
 
 class TestVendorCapabilityTool:
     """Tests for the generic vendor-backed tool wrapper."""
@@ -115,3 +164,17 @@ class TestVendorCapabilityTool:
 
         assert result == {"ok": True}
         data.call.assert_called_once_with("get_file", "github", path="README.md")
+
+    def test_runs_operation_through_default_agentic_data(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Without supplied data, the wrapper should create AgenticData lazily."""
+        fake_data = MagicMock()
+
+        class FakeAgenticData:
+            def __new__(cls) -> MagicMock:
+                return fake_data
+
+        monkeypatch.setattr("agentic_fabric.agentic_data.AgenticData", FakeAgenticData)
+
+        VendorCapabilityTool("github", "get_file")(path="README.md")
+
+        fake_data.call.assert_called_once_with("get_file", "github", path="README.md")

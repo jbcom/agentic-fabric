@@ -82,6 +82,34 @@ class TestDiscovery:
         assert None in configs["multi"]  # .crew -> None (agnostic)
         assert "crewai" in configs["multi"]
 
+    def test_discover_all_framework_configs_uses_default_root_and_skips_files(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """All-framework discovery should use the default root and skip non-package files."""
+        from agentic_fabric.core.discovery import discover_all_framework_configs
+
+        packages_dir = tmp_path / "packages"
+        packages_dir.mkdir()
+        (packages_dir / "README.md").write_text("not a package", encoding="utf-8")
+
+        pkg_dir = packages_dir / "multi"
+        (pkg_dir / ".crew").mkdir(parents=True)
+        (pkg_dir / ".crew" / "manifest.yaml").write_text("name: multi\ncrews: {}\n", encoding="utf-8")
+        (pkg_dir / ".strands").mkdir()
+        (pkg_dir / ".strands" / "manifest.yaml").write_text("name: multi\ncrews: {}\n", encoding="utf-8")
+
+        (tmp_path / ".langgraph").mkdir()
+        (tmp_path / ".langgraph" / "manifest.yaml").write_text("name: root\ncrews: {}\n", encoding="utf-8")
+        monkeypatch.setattr("agentic_fabric.core.discovery.get_workspace_root", lambda: tmp_path)
+
+        configs = discover_all_framework_configs()
+
+        assert configs["multi"][None] == pkg_dir / ".crew"
+        assert configs["multi"]["strands"] == pkg_dir / ".strands"
+        assert configs[tmp_path.name]["langgraph"] == tmp_path / ".langgraph"
+
     def test_list_crews_returns_crews_from_manifest(self, temp_workspace: Path) -> None:
         """Test that list_crews returns crew definitions from manifest."""
         from agentic_fabric.core.discovery import list_crews
@@ -142,6 +170,18 @@ class TestDiscovery:
 
         # Verify it looks like a workspace root
         assert (root / "packages").exists() or root == Path.cwd()
+
+    def test_get_workspace_root_falls_back_to_cwd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Workspace root discovery should fall back when no markers are found."""
+        from agentic_fabric.core import discovery
+
+        module_path = tmp_path / "installed" / "module.py"
+        module_path.parent.mkdir()
+        module_path.write_text("# module\n", encoding="utf-8")
+        monkeypatch.setattr(discovery, "__file__", str(module_path))
+        monkeypatch.chdir(tmp_path)
+
+        assert discovery.get_workspace_root() == tmp_path
 
     def test_get_framework_from_config_dir(self) -> None:
         """Test framework detection from directory name."""

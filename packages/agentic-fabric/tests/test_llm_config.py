@@ -77,6 +77,21 @@ def test_get_llm_can_force_openrouter_and_normalizes_model(monkeypatch: pytest.M
     }
 
 
+def test_get_llm_can_force_anthropic(monkeypatch: pytest.MonkeyPatch) -> None:
+    clear_llm_env(monkeypatch)
+    enable_fake_llm(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
+
+    result = llm_config.get_llm("claude-haiku-4-5-20251001", temperature=0.1, provider=LLMProvider.ANTHROPIC)
+
+    assert isinstance(result, FakeLLM)
+    assert result.kwargs == {
+        "model": "claude-haiku-4-5-20251001",
+        "api_key": "anthropic-key",
+        "temperature": 0.1,
+    }
+
+
 def test_get_llm_preserves_openrouter_model_in_auto_detection(monkeypatch: pytest.MonkeyPatch) -> None:
     enable_fake_llm(monkeypatch)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-key")
@@ -109,6 +124,17 @@ def test_get_llm_or_raise_reports_install_guidance(monkeypatch: pytest.MonkeyPat
 
     with pytest.raises(ValueError, match="ANTHROPIC_API_KEY or OPENROUTER_API_KEY"):
         llm_config.get_llm_or_raise()
+
+
+def test_get_llm_or_raise_returns_configured_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    clear_llm_env(monkeypatch)
+    enable_fake_llm(monkeypatch)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-key")
+
+    result = llm_config.get_llm_or_raise(provider=LLMProvider.OPENROUTER)
+
+    assert isinstance(result, FakeLLM)
+    assert result.kwargs["api_key"] == "openrouter-key"
 
 
 def test_task_helpers_use_declared_configs(monkeypatch: pytest.MonkeyPatch) -> None:

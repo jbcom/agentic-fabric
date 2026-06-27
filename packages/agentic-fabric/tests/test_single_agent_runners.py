@@ -149,6 +149,13 @@ profiles:
             with pytest.raises(PermissionError, match="writable by group or other"):
                 LocalCLIRunner._load_profiles()
 
+    def test_profiles_permission_check_is_noop_on_non_posix(self, mock_profiles_file: Path):
+        """Non-POSIX platforms should skip POSIX mode checks."""
+        from agentic_fabric.runners import local_cli_runner
+
+        with patch.object(local_cli_runner.os, "name", "nt"):
+            local_cli_runner._validate_profiles_file_permissions(mock_profiles_file)
+
     def test_init_with_profile_name(self, mock_profiles_file: Path):
         """Should initialize with a profile name."""
         with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
@@ -192,6 +199,18 @@ profiles:
         with pytest.raises(ValueError, match="unsupported fields"):
             LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "shell": True})
 
+    @pytest.mark.parametrize(
+        "config,error_type,match",
+        [
+            ({"command": "", "task_flag": "--prompt"}, ValueError, "non-empty command"),
+            ({"command": "my-tool", "task_flag": None}, TypeError, "task_flag as a string"),
+        ],
+    )
+    def test_rejects_invalid_required_scalar_fields(self, config, error_type, match):
+        """Required scalar profile fields should have strict types."""
+        with pytest.raises(error_type, match=match):
+            LocalCLIRunner(config)
+
     def test_rejects_shell_operator_in_command(self):
         """Profile commands should be direct executable invocations."""
         with pytest.raises(ValueError, match="direct executable"):
@@ -202,10 +221,27 @@ profiles:
         with pytest.raises(ValueError, match="additional_flags"):
             LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "additional_flags": ["--ok", ""]})
 
+    def test_rejects_invalid_optional_scalar_field(self):
+        """Optional string fields should reject non-string values."""
+        with pytest.raises(ValueError, match="working_dir_flag"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "working_dir_flag": 123})
+
     def test_rejects_invalid_timeout(self):
         """Timeouts should stay within the bounded execution range."""
         with pytest.raises(ValueError, match="timeout"):
             LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "timeout": 0})
+
+    def test_load_profiles_reports_missing_profiles_file(self, tmp_path: Path):
+        """Missing bundled profiles should raise clear guidance."""
+        missing_profiles_file = tmp_path / "local_cli_profiles.yaml"
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+            mock_path.return_value.__truediv__.return_value = missing_profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(FileNotFoundError, match=r"Expected local_cli_profiles\.yaml"):
+                LocalCLIRunner._load_profiles()
 
     def test_init_with_config_object(self):
         """Should initialize with a LocalCLIConfig object."""
@@ -448,3 +484,23 @@ profiles:
         assert cmd[0] == "ollama"
         assert cmd[1] == "run"
         assert "codellama" in cmd
+
+    @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
+    @patch("subprocess.run")
+    def test_build_command_with_positional_model_and_working_dir_flag(self, mock_run: MagicMock):
+        """Positional models and supported working-dir flags should be included."""
+        config = LocalCLIConfig(
+            command="ollama",
+            subcommand="run",
+            task_flag="",
+            auth_env=["TEST_API_KEY"],
+            working_dir_flag="--cwd",
+        )
+        runner = LocalCLIRunner(config, model="deepseek-coder")
+
+        mock_run.return_value = MagicMock(returncode=0, stdout="Output", stderr="")
+
+        runner.run("Test task", working_dir="/tmp/work")
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd == ["ollama", "run", "deepseek-coder", "Test task", "--cwd", "/tmp/work"]

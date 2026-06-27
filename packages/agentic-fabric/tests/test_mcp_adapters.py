@@ -222,6 +222,25 @@ def test_meshy_mcp_handles_tool_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "failed cube" in result[0].text
 
 
+def test_meshy_mcp_awaits_async_provider_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_fake_mcp(monkeypatch)
+
+    async def generate(prompt: str) -> dict[str, str]:
+        return {"async": prompt}
+
+    tools_module = types.ModuleType("vendor_fabric.meshy.tools")
+    tools_module.TOOL_DEFINITIONS = [{"name": "async_generate", "schema": None, "func": generate}]
+    monkeypatch.setitem(sys.modules, "vendor_fabric", types.ModuleType("vendor_fabric"))
+    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", types.ModuleType("vendor_fabric.meshy"))
+    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy.tools", tools_module)
+
+    server = meshy_mcp.create_server()
+    result = asyncio.run(server.call_tool_handler("async_generate", {"prompt": "cube"}))
+
+    assert "cube" in result[0].text
+    assert "coroutine" not in result[0].text
+
+
 def test_meshy_mcp_helper_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
     reject_imports(monkeypatch, "extended_data")
 

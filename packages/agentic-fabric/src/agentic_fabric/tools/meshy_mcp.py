@@ -7,6 +7,7 @@ decides how those provider capabilities become MCP tools.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 
 from collections.abc import Callable, Iterable, Mapping
@@ -170,6 +171,8 @@ def create_server() -> Any:
 
         try:
             result = handler(**tool_arguments)
+            if inspect.isawaitable(result):
+                result = await result
             return [TextContent(type="text", text=_tool_result_text(result))]
         except Exception as exc:
             return [

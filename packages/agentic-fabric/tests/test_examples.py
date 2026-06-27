@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from examples.discovery_workflow import DEFAULT_WORKSPACE, summarize_workspace
+from examples.mcp_adapters import inspect_mcp_adapters
 from examples.runtime_context import inspect_runtime_context
 from examples.tool_registry import inspect_registry
 
@@ -41,6 +42,21 @@ def test_runtime_context_example_inspects_agentic_data() -> None:
     assert summary["active_runtime"] == "crewai"
     assert summary["registered_fabric_agents"] == ["reviewer"]
     assert summary["runtime_names"] == ["crewai", "langgraph", "strands"]
+
+
+def test_mcp_adapters_example_inspects_owned_entry_points() -> None:
+    summary = inspect_mcp_adapters()
+
+    assert summary["extra"] == "mcp"
+    assert summary["entry_points"] == {
+        "vendor": "agentic-fabric-vendor-mcp",
+        "meshy": "agentic-fabric-meshy-mcp",
+    }
+    assert "agentic-fabric[mcp]" in summary["install_guidance"]["mcp"]
+    assert "vendor-fabric" in summary["install_guidance"]["vendor"]
+    assert "vendor-fabric[meshy]" in summary["install_guidance"]["meshy"]
+    assert summary["client_config"]["mcpServers"]["vendor-fabric"]["command"] == "agentic-fabric-vendor-mcp"
+    assert summary["client_config"]["mcpServers"]["meshy"]["command"] == "agentic-fabric-meshy-mcp"
 
 
 def test_discovery_workflow_script_outputs_json() -> None:
@@ -77,3 +93,15 @@ def test_runtime_context_script_outputs_json() -> None:
 
     parsed = json.loads(result.stdout)
     assert parsed["active_runtime"] == "crewai"
+
+
+def test_mcp_adapters_script_outputs_json() -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "examples" / "mcp_adapters.py")],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    parsed = json.loads(result.stdout)
+    assert parsed["entry_points"]["vendor"] == "agentic-fabric-vendor-mcp"

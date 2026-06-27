@@ -148,6 +148,23 @@ class TestGetCrewConfigErrors:
         config = get_crew_config(tmp_path, "test_crew")
         assert config["knowledge_paths"] == []
 
+    def test_knowledge_file_paths_excluded(self, tmp_path: Path) -> None:
+        """Knowledge paths must be directories, not plain files."""
+        (tmp_path / "knowledge.md").write_text("# Not a directory")
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "crews:\n"
+            "  test_crew:\n"
+            "    agents: agents.yaml\n"
+            "    tasks: tasks.yaml\n"
+            "    knowledge:\n"
+            "      - knowledge.md\n"
+        )
+
+        config = get_crew_config(tmp_path, "test_crew")
+
+        assert config["knowledge_paths"] == []
+
     def test_agents_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
         """Manifest agents paths must stay inside the config directory."""
         manifest_file = tmp_path / "manifest.yaml"

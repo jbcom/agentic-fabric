@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 
 from pathlib import Path
@@ -134,6 +135,19 @@ profiles:
             assert "aider" in profiles
             assert profiles["test-tool"].command == "test-tool"
             assert profiles["aider"].auth_env == ["OPENAI_API_KEY"]
+
+    @pytest.mark.skipif(os.name != "posix", reason="POSIX file mode check")
+    def test_rejects_group_writable_profiles_file(self, mock_profiles_file: Path):
+        """Bundled local CLI profiles should not be group or world writable."""
+        mock_profiles_file.chmod(0o664)
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = mock_profiles_file.parent
+            mock_path.return_value.__truediv__.return_value = mock_profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(PermissionError, match="writable by group or other"):
+                LocalCLIRunner._load_profiles()
 
     def test_init_with_profile_name(self, mock_profiles_file: Path):
         """Should initialize with a profile name."""

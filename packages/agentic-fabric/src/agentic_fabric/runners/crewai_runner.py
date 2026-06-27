@@ -180,7 +180,7 @@ class CrewAIRunner(BaseRunner):
         sources = []
         for knowledge_path_value in knowledge_paths:
             knowledge_path = knowledge_path_value if isinstance(knowledge_path_value, Path) else Path(knowledge_path_value)
-            if not knowledge_path.exists():
+            if not knowledge_path.is_dir():
                 continue
 
             for ext in ["*.md", "*.txt", "*.py", "*.ts"]:

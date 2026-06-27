@@ -85,7 +85,7 @@ def discover_packages(
 
     # Check packages/ directory
     packages_dir = workspace_root / "packages"
-    if packages_dir.exists():
+    if packages_dir.is_dir():
         for pkg_dir in packages_dir.iterdir():
             if not pkg_dir.is_dir():
                 continue
@@ -132,7 +132,7 @@ def discover_all_framework_configs(
 
     # Check packages/ directory
     packages_dir = workspace_root / "packages"
-    if packages_dir.exists():
+    if packages_dir.is_dir():
         for pkg_dir in packages_dir.iterdir():
             if not pkg_dir.is_dir():
                 continue
@@ -173,7 +173,7 @@ def load_manifest(crewai_dir: Path) -> dict[str, Any]:
         Parsed manifest as a dictionary.
     """
     manifest_path = crewai_dir / "manifest.yaml"
-    with open(manifest_path) as f:
+    with open(manifest_path, encoding="utf-8") as f:
         result = yaml.safe_load(f)
         return result or {}
 
@@ -240,7 +240,7 @@ def get_crew_config(config_dir: Path, crew_name: str) -> dict:
     knowledge_paths = []
     for kp in crew_config.get("knowledge", []):
         full_path = _resolve_config_path(config_dir, kp)
-        if full_path.exists():
+        if full_path.is_dir():
             knowledge_paths.append(full_path)
 
     # Determine required framework from directory name

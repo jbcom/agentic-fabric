@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from collections import deque
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -36,18 +37,18 @@ class CrawlWebsiteTool(ScrapeWebsiteTool):
         """
         scraped_content = ""
         visited_urls = set()
-        urls_to_visit = [url]
+        urls_to_visit = deque([url])
         base_netloc = urlparse(url).netloc
 
         while urls_to_visit:
-            current_url = urls_to_visit.pop(0)
+            current_url = urls_to_visit.popleft()
             if current_url in visited_urls:
                 continue
+            visited_urls.add(current_url)
 
             try:
                 response = requests.get(current_url, timeout=30)
                 response.raise_for_status()
-                visited_urls.add(current_url)
 
                 soup = BeautifulSoup(response.content, "html.parser")
                 scraped_content += self._scrape_content(soup)

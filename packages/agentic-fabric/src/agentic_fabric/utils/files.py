@@ -17,6 +17,6 @@ def load_config(path: Path | str) -> dict[str, Any]:
     Returns:
         A dictionary containing the configuration.
     """
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         loaded = yaml.safe_load(f) or {}
     return cast(dict[str, Any], loaded)

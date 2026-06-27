@@ -39,7 +39,7 @@ def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
     sources = []
 
     for knowledge_path in knowledge_paths:
-        if not knowledge_path.exists():
+        if not knowledge_path.is_dir():
             continue
 
         # Load .md and .ts files

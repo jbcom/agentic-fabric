@@ -65,6 +65,14 @@ class TestDiscoverPackagesNested:
         packages = discover_packages(workspace_root=tmp_path)
         assert packages == {}
 
+    def test_packages_path_as_file_is_ignored(self, tmp_path: Path) -> None:
+        """A file named packages should not crash package discovery."""
+        (tmp_path / "packages").write_text("not a directory")
+
+        packages = discover_packages(workspace_root=tmp_path)
+
+        assert packages == {}
+
     def test_framework_filter_crewai(self, tmp_path: Path) -> None:
         """Filtering by framework='crewai' should only find .crewai dirs."""
         pkg_dir = tmp_path / "packages" / "test_pkg"
@@ -146,6 +154,14 @@ class TestDiscoverAllFrameworkConfigs:
     def test_empty_workspace(self, tmp_path: Path) -> None:
         """An empty workspace should return empty dict."""
         configs = discover_all_framework_configs(workspace_root=tmp_path)
+        assert configs == {}
+
+    def test_packages_path_as_file_is_ignored(self, tmp_path: Path) -> None:
+        """A file named packages should not crash all-framework discovery."""
+        (tmp_path / "packages").write_text("not a directory")
+
+        configs = discover_all_framework_configs(workspace_root=tmp_path)
+
         assert configs == {}
 
 

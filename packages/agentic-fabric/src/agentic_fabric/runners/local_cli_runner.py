@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import shlex
+import stat
 import subprocess
 
 from dataclasses import dataclass, field, fields
@@ -120,6 +121,17 @@ def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str
     return config_dict
 
 
+def _validate_profiles_file_permissions(profiles_file: Path) -> None:
+    """Reject local CLI profile files writable by group or other users."""
+    if os.name != "posix":
+        return
+
+    mode = profiles_file.stat().st_mode
+    if mode & (stat.S_IWGRP | stat.S_IWOTH):
+        msg = f"Profiles file is writable by group or other users: {profiles_file}"
+        raise PermissionError(msg)
+
+
 class LocalCLIRunner(SingleAgentRunner):
     """Universal runner for CLI-based coding agents.
 
@@ -192,9 +204,10 @@ class LocalCLIRunner(SingleAgentRunner):
             raise FileNotFoundError(
                 f"Profiles file not found: {profiles_file}\nExpected local_cli_profiles.yaml in runners directory."
             )
+        _validate_profiles_file_permissions(profiles_file)
 
         # Load and parse YAML
-        with open(profiles_file) as f:
+        with open(profiles_file, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         profiles = {}

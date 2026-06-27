@@ -27,7 +27,11 @@ autodoc2_packages = [
     {
         "path": "../packages/agentic-fabric/src/agentic_fabric",
         "module": "agentic_fabric",
-    }
+    },
+    {
+        "path": "../packages/pytest-agentic-fabric/src/pytest_agentic_fabric",
+        "module": "pytest_agentic_fabric",
+    },
 ]
 autodoc2_output_dir = "apidocs"
 autodoc2_render_plugin = "rst"

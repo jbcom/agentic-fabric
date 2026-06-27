@@ -13,7 +13,7 @@ This file locks the intended SecretSync boundary for `agentic-fabric`.
 
 - PyPI distribution: `secrets-sync-python-binding`
 - Python import/module: `secrets_sync`
-- This repository should not import `secretssync` directly; it should consume
+- This repository should not import `secrets_sync` directly; it should consume
   SecretSync through `vendor-fabric`.
 
 ## This Repository's Role

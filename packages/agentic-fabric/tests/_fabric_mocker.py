@@ -399,7 +399,7 @@ class FabricMocker:
             The mock for get_fabric_agent_config.
         """
         mock = self.mocker.patch("agentic_fabric.core.discovery.get_fabric_agent_config")
-        mock.return_value = config or {"name": "test", "agents": {}, "tasks": {}}
+        mock.return_value = {"name": "test", "agents": {}, "tasks": {}} if config is None else config
         return mock
 
     def patch_run_fabric_agent_auto(self, result: str = "Test result") -> Any:

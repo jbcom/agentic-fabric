@@ -81,12 +81,17 @@ jobs:
           version: "0.11.19"
           enable-cache: true
       - name: Validate package input
+        env:
+          PACKAGE: ${{ inputs.package }}
         run: |
-          case "${{ inputs.package }}" in
+          case "$PACKAGE" in
             agentic-fabric|pytest-agentic-fabric) ;;
-            *) echo "unsupported package: ${{ inputs.package }}" >&2; exit 1 ;;
+            *) echo "unsupported package: $PACKAGE" >&2; exit 1 ;;
           esac
-      - run: uv build --package "${{ inputs.package }}" --out-dir dist --clear
+      - name: Build package
+        env:
+          PACKAGE: ${{ inputs.package }}
+        run: uv build --package "$PACKAGE" --out-dir dist --clear
       - run: uv publish --trusted-publishing always dist/*
 
   publish-docs:

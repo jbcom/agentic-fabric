@@ -16,6 +16,12 @@ from agentic_fabric.core.discovery import (
 )
 
 
+def write_empty_agent_task_files(config_dir: Path) -> None:
+    """Write minimal valid agents/tasks YAML files for config-loading tests."""
+    (config_dir / "agents.yaml").write_text("{}\n", encoding="utf-8")
+    (config_dir / "tasks.yaml").write_text("{}\n", encoding="utf-8")
+
+
 class TestLoadManifestErrors:
     """Test error handling in load_manifest."""
 
@@ -43,6 +49,14 @@ class TestLoadManifestErrors:
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(":\n  bad:\n    - ][invalid yaml")
         with pytest.raises(yaml.YAMLError):
+            load_manifest(tmp_path)
+
+    def test_non_mapping_manifest_raises_type_error(self, tmp_path: Path) -> None:
+        """Manifest root must be a mapping."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text("- not\n- a mapping\n", encoding="utf-8")
+
+        with pytest.raises(TypeError, match="must contain a mapping"):
             load_manifest(tmp_path)
 
     def test_manifest_with_no_fabric_agents_key(self, tmp_path: Path) -> None:
@@ -86,30 +100,74 @@ class TestGetFabricAgentConfigErrors:
             get_fabric_agent_config(tmp_path, "missing")
         assert "beta_fabric_agent" in str(exc_info.value)
 
-    def test_missing_agents_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
-        """If agents YAML file doesn't exist, agents should be empty dict."""
+    def test_missing_agents_yaml_raises_file_not_found(self, tmp_path: Path) -> None:
+        """Missing agents YAML should fail as a manifest contract error."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
             "fabric_agents:\n"
             "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: nonexistent_agents.yaml\n"
-            "    tasks: nonexistent_tasks.yaml\n"
+            "    tasks: tasks.yaml\n"
         )
-        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
-        assert config["agents"] == {}
+        (tmp_path / "tasks.yaml").write_text("{}\n", encoding="utf-8")
 
-    def test_missing_tasks_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
-        """If tasks YAML file doesn't exist, tasks should be empty dict."""
+        with pytest.raises(FileNotFoundError, match="Agents file not found"):
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
+
+    def test_missing_tasks_yaml_raises_file_not_found(self, tmp_path: Path) -> None:
+        """Missing tasks YAML should fail as a manifest contract error."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
             "fabric_agents:\n"
             "  test_fabric_agent:\n"
             "    description: Test\n"
-            "    agents: nonexistent_agents.yaml\n"
+            "    agents: agents.yaml\n"
             "    tasks: nonexistent_tasks.yaml\n"
         )
+        (tmp_path / "agents.yaml").write_text("{}\n", encoding="utf-8")
+
+        with pytest.raises(FileNotFoundError, match="Tasks file not found"):
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
+
+    def test_non_mapping_agents_or_tasks_yaml_raises_type_error(self, tmp_path: Path) -> None:
+        """Agents and tasks YAML roots must be mappings."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
+            "    agents: agents.yaml\n"
+            "    tasks: tasks.yaml\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "agents.yaml").write_text("- not\n- a mapping\n", encoding="utf-8")
+        (tmp_path / "tasks.yaml").write_text("{}\n", encoding="utf-8")
+
+        with pytest.raises(TypeError, match="mapping of agents"):
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
+
+        (tmp_path / "agents.yaml").write_text("{}\n", encoding="utf-8")
+        (tmp_path / "tasks.yaml").write_text("- not\n- a mapping\n", encoding="utf-8")
+
+        with pytest.raises(TypeError, match="mapping of tasks"):
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
+
+    def test_empty_agents_and_tasks_yaml_return_empty_mappings(self, tmp_path: Path) -> None:
+        """Empty but present agents/tasks files should load as empty mappings."""
+        manifest_file = tmp_path / "manifest.yaml"
+        manifest_file.write_text(
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
+            "    agents: agents.yaml\n"
+            "    tasks: tasks.yaml\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "agents.yaml").write_text("", encoding="utf-8")
+        (tmp_path / "tasks.yaml").write_text("", encoding="utf-8")
+
         config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
+
+        assert config["agents"] == {}
         assert config["tasks"] == {}
 
     def test_agents_and_tasks_yaml_are_read_as_utf8(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -158,6 +216,7 @@ class TestGetFabricAgentConfigErrors:
         manifest_file.write_text(
             "fabric_agents:\n  test_fabric_agent:\n    agents: agents.yaml\n    tasks: tasks.yaml\n    knowledge:\n      - knowledge\n"
         )
+        write_empty_agent_task_files(tmp_path)
         config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert len(config["knowledge_paths"]) == 1
         assert config["knowledge_paths"][0] == knowledge_dir
@@ -173,6 +232,7 @@ class TestGetFabricAgentConfigErrors:
             "    knowledge:\n"
             "      - missing_dir\n"
         )
+        write_empty_agent_task_files(tmp_path)
         config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert config["knowledge_paths"] == []
 
@@ -188,6 +248,7 @@ class TestGetFabricAgentConfigErrors:
             "    knowledge:\n"
             "      - knowledge.md\n"
         )
+        write_empty_agent_task_files(tmp_path)
 
         config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
 
@@ -241,6 +302,7 @@ class TestGetFabricAgentConfigErrors:
             "    knowledge:\n"
             "      - ../knowledge\n"
         )
+        write_empty_agent_task_files(tmp_path)
 
         with pytest.raises(ValueError, match="Manifest path must be relative"):
             get_fabric_agent_config(tmp_path, "test_fabric_agent")
@@ -289,6 +351,7 @@ class TestCrewConfigFrameworkConflict:
             "    tasks: tasks.yaml\n"
             "    preferred_framework: strands\n"
         )
+        write_empty_agent_task_files(crewai_dir)
         with caplog.at_level(logging.WARNING):
             config = get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework=strands" in caplog.text
@@ -310,6 +373,7 @@ class TestCrewConfigFrameworkConflict:
             "    tasks: tasks.yaml\n"
             "    preferred_framework: crewai\n"
         )
+        write_empty_agent_task_files(crewai_dir)
         with caplog.at_level(logging.WARNING):
             get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework" not in caplog.text
@@ -328,6 +392,7 @@ class TestCrewConfigFrameworkConflict:
             "    tasks: tasks.yaml\n"
             "    preferred_framework: auto\n"
         )
+        write_empty_agent_task_files(crewai_dir)
         with caplog.at_level(logging.WARNING):
             get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework" not in caplog.text

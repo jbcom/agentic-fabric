@@ -1777,6 +1777,7 @@ version = "0.1.0"
 source = { editable = "packages/pytest-agentic-fabric" }
 dependencies = [
     { name = "pytest" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
@@ -1801,6 +1802,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.0.3" },
     { name = "pytest-agentic-fabric", extras = ["tests", "typing"], marker = "extra == 'dev'", editable = "packages/pytest-agentic-fabric" },
     { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.23.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
 ]
 provides-extras = ["tests", "typing", "dev"]

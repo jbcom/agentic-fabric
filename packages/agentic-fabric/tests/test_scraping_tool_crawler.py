@@ -82,6 +82,7 @@ def test_crawler_enforces_page_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """Crawl breadth should stay bounded."""
     scraping_tools = import_scraping_tools(monkeypatch)
     monkeypatch.setattr(scraping_tools, "MAX_CRAWL_PAGES", 3)
+    monkeypatch.setattr(scraping_tools, "MAX_CRAWL_DEPTH", 2)
     root_response = MagicMock()
     root_response.content = b"".join([f"<a href='/page-{index}'>Page {index}</a>".encode() for index in range(10)])
     root_response.raise_for_status.return_value = None
@@ -94,6 +95,21 @@ def test_crawler_enforces_page_limit(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert "Page" in result
     assert scraping_tools.requests.get.call_count == 3
+
+
+def test_scrapers_disable_redirects(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Scraping requests should not follow redirects to unvalidated hosts."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+    response = MagicMock()
+    response.status_code = 302
+    response.content = b"redirect body"
+    response.raise_for_status.return_value = None
+    scraping_tools.requests.get.return_value = response
+
+    assert scraping_tools.ScrapeWebsiteTool()._run("https://example.test") == ""
+    assert scraping_tools.CrawlWebsiteTool()._run("https://example.test") == ""
+    assert scraping_tools.requests.get.call_args_list[0].kwargs["allow_redirects"] is False
+    assert scraping_tools.requests.get.call_args_list[1].kwargs["allow_redirects"] is False
 
 
 def test_crawler_enforces_depth_limit(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -80,7 +80,10 @@ def discover_packages(
     # Determine which directories to look for
     if framework:
         dir_name = FRAMEWORK_TO_DIR.get(framework)
-        dirs_to_check = [dir_name] if dir_name else FRAMEWORK_DIRS
+        if dir_name is None:
+            msg = f"Unknown framework: {framework}"
+            raise ValueError(msg)
+        dirs_to_check = [dir_name]
     else:
         dirs_to_check = FRAMEWORK_DIRS
 
@@ -176,7 +179,27 @@ def load_manifest(config_dir: Path) -> dict[str, Any]:
     manifest_path = config_dir / "manifest.yaml"
     with open(manifest_path, encoding="utf-8") as f:
         result = yaml.safe_load(f)
-        return result or {}
+        if result is None:
+            return {}
+        if not isinstance(result, dict):
+            msg = f"{manifest_path} must contain a mapping at the document root"
+            raise TypeError(msg)
+        return result
+
+
+def _load_yaml_mapping(path: Path, description: str) -> dict[str, Any]:
+    """Load a required YAML mapping from disk."""
+    if not path.is_file():
+        msg = f"{description} file not found: {path}"
+        raise FileNotFoundError(msg)
+
+    result = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if result is None:
+        return {}
+    if not isinstance(result, dict):
+        msg = f"{path} must contain a mapping of {description.lower()}"
+        raise TypeError(msg)
+    return result
 
 
 def _resolve_config_path(config_dir: Path, relative_path: str) -> Path:
@@ -241,8 +264,8 @@ def get_fabric_agent_config(config_dir: Path, fabric_agent_name: str) -> dict:
     agents_path = _resolve_config_path(config_dir, agents_rel)
     tasks_path = _resolve_config_path(config_dir, tasks_rel)
 
-    agents = yaml.safe_load(agents_path.read_text(encoding="utf-8")) if agents_path.exists() else {}
-    tasks = yaml.safe_load(tasks_path.read_text(encoding="utf-8")) if tasks_path.exists() else {}
+    agents = _load_yaml_mapping(agents_path, "Agents")
+    tasks = _load_yaml_mapping(tasks_path, "Tasks")
 
     # Resolve knowledge paths
     knowledge_paths = []

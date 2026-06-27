@@ -46,6 +46,22 @@ def _is_safe_crawl_url(url: str) -> bool:
     )
 
 
+def _get_safe_response(url: str) -> requests.Response | None:
+    """Request a safe URL without following redirects to unvalidated hosts."""
+    try:
+        response = requests.get(url, timeout=30, allow_redirects=False)
+        response.raise_for_status()
+    except requests.RequestException:
+        log.exception("Error requesting %s", url)
+        return None
+
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int) and 300 <= status_code < 400:
+        log.warning("Skipping redirected URL %s", url)
+        return None
+    return response
+
+
 class ScrapeWebsiteTool:
     """A small first-party website scraping tool with CrewAI-compatible shape."""
 
@@ -58,11 +74,8 @@ class ScrapeWebsiteTool:
             log.warning("Skipping unsafe scrape URL %s", url)
             return ""
 
-        try:
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-        except requests.RequestException:
-            log.exception("Error scraping %s", url)
+        response = _get_safe_response(url)
+        if response is None:
             return ""
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -109,31 +122,27 @@ class CrawlWebsiteTool(ScrapeWebsiteTool):
             queued_urls.discard(current_url)
             visited_urls.add(current_url)
 
-            try:
-                response = requests.get(current_url, timeout=30)
-                response.raise_for_status()
+            response = _get_safe_response(current_url)
+            if response is None:
+                continue
+            soup = BeautifulSoup(response.content, "html.parser")
+            page_content = self._scrape_content(soup)
+            if page_content:
+                scraped_content.append(page_content)
 
-                soup = BeautifulSoup(response.content, "html.parser")
-                page_content = self._scrape_content(soup)
-                if page_content:
-                    scraped_content.append(page_content)
+            if depth >= MAX_CRAWL_DEPTH:
+                continue
 
-                if depth >= MAX_CRAWL_DEPTH:
-                    continue
-
-                for link in soup.find_all("a", href=True):
-                    next_url = urljoin(current_url, link["href"])
-                    if (
-                        next_url not in visited_urls
-                        and next_url not in queued_urls
-                        and len(visited_urls) + len(queued_urls) < MAX_CRAWL_PAGES
-                        and urlparse(next_url).netloc == base_netloc
-                        and _is_safe_crawl_url(next_url)
-                    ):
-                        urls_to_visit.append((next_url, depth + 1))
-                        queued_urls.add(next_url)
-
-            except requests.RequestException:
-                log.exception("Error crawling %s", current_url)
+            for link in soup.find_all("a", href=True):
+                next_url = urljoin(current_url, link["href"])
+                if (
+                    next_url not in visited_urls
+                    and next_url not in queued_urls
+                    and len(visited_urls) + len(queued_urls) < MAX_CRAWL_PAGES
+                    and urlparse(next_url).netloc == base_netloc
+                    and _is_safe_crawl_url(next_url)
+                ):
+                    urls_to_visit.append((next_url, depth + 1))
+                    queued_urls.add(next_url)
 
         return " ".join(scraped_content)

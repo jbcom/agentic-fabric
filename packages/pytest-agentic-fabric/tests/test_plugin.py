@@ -12,6 +12,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+import yaml
 
 
 pytest_plugins = ("pytester",)
@@ -84,8 +85,68 @@ def test_agentic_fabric_agent_config_fixture(agentic_fabric_agent_config: dict[s
 def test_agentic_workspace_fixture(agentic_workspace: Path) -> None:
     """Workspace fixture should create a discoverable .fabric package."""
     manifest = agentic_workspace / "packages" / "sample" / ".fabric" / "manifest.yaml"
+    agents = agentic_workspace / "packages" / "sample" / ".fabric" / "fabric_agents" / "test_fabric_agent" / "agents.yaml"
+    tasks = agentic_workspace / "packages" / "sample" / ".fabric" / "fabric_agents" / "test_fabric_agent" / "tasks.yaml"
+
     assert manifest.exists()
-    assert "test_fabric_agent" in manifest.read_text(encoding="utf-8")
+    assert yaml.safe_load(manifest.read_text(encoding="utf-8"))["fabric_agents"]["test_fabric_agent"][
+        "description"
+    ] == "A test fabric agent"
+    assert yaml.safe_load(agents.read_text(encoding="utf-8"))["tester"]["role"] == "Tester"
+    assert yaml.safe_load(tasks.read_text(encoding="utf-8"))["verify"]["agent"] == "tester"
+
+
+def test_agentic_workspace_fixture_uses_overridden_config(pytester: pytest.Pytester) -> None:
+    """Workspace fixture should serialize overridden fabric agent configs."""
+    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
+    pytester.makeconftest(
+        """
+        import pytest
+
+        @pytest.fixture
+        def agentic_fabric_agent_config():
+            return {
+                "name": "custom_agent",
+                "description": "Custom description",
+                "preferred_framework": "langgraph",
+                "agents": {
+                    "custom": {
+                        "role": "Custom",
+                        "goal": "Check override",
+                        "backstory": "Fixture override",
+                    },
+                },
+                "tasks": {
+                    "custom_task": {
+                        "description": "Use override",
+                        "expected_output": "Override result",
+                        "agent": "custom",
+                    },
+                },
+            }
+        """
+    )
+    pytester.makepyfile(
+        """
+        import yaml
+
+        def test_workspace_uses_override(agentic_workspace):
+            fabric_dir = agentic_workspace / "packages" / "sample" / ".fabric"
+            manifest = yaml.safe_load((fabric_dir / "manifest.yaml").read_text(encoding="utf-8"))
+            agent_config = manifest["fabric_agents"]["custom_agent"]
+            agents = yaml.safe_load((fabric_dir / "fabric_agents" / "custom_agent" / "agents.yaml").read_text(encoding="utf-8"))
+            tasks = yaml.safe_load((fabric_dir / "fabric_agents" / "custom_agent" / "tasks.yaml").read_text(encoding="utf-8"))
+
+            assert agent_config["description"] == "Custom description"
+            assert agent_config["preferred_framework"] == "langgraph"
+            assert agents["custom"]["role"] == "Custom"
+            assert tasks["custom_task"]["agent"] == "custom"
+        """
+    )
+
+    result = pytester.runpytest("-q")
+
+    result.assert_outcomes(passed=1)
 
 
 def test_agentic_e2e_marker_skips_by_default(pytester: pytest.Pytester) -> None:

@@ -65,6 +65,13 @@ class TestDiscovery:
 
         assert packages == {}
 
+    def test_discover_packages_rejects_unknown_framework(self, tmp_path: Path) -> None:
+        """Unknown framework filters should not widen discovery to all directories."""
+        from agentic_fabric.core.discovery import discover_packages
+
+        with pytest.raises(ValueError, match="Unknown framework: crewaii"):
+            discover_packages(workspace_root=tmp_path, framework="crewaii")
+
     def test_discover_all_framework_configs(self, tmp_path: Path) -> None:
         """Test discovering all framework configs for a package."""
         from agentic_fabric.core.discovery import discover_all_framework_configs

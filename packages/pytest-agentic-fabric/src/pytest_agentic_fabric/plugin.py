@@ -9,6 +9,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+import yaml
 
 
 RUNTIME_MODULES: dict[str, tuple[str, ...]] = {
@@ -136,37 +137,29 @@ def agentic_workspace(tmp_path: Path, agentic_fabric_agent_config: dict[str, Any
     """Create a minimal workspace with a ``.fabric`` package."""
     workspace = tmp_path / "workspace"
     fabric_dir = workspace / "packages" / "sample" / ".fabric"
-    config_dir = fabric_dir / "fabric_agents" / "test_fabric_agent"
+    fabric_agent_name = str(agentic_fabric_agent_config.get("name", "test_fabric_agent"))
+    config_dir = fabric_dir / "fabric_agents" / fabric_agent_name
     config_dir.mkdir(parents=True)
-    fabric_dir.joinpath("manifest.yaml").write_text(
-        """
-name: sample
-description: Test package
-fabric_agents:
-  test_fabric_agent:
-    description: A test fabric agent
-    agents: fabric_agents/test_fabric_agent/agents.yaml
-    tasks: fabric_agents/test_fabric_agent/tasks.yaml
-""".strip(),
-        encoding="utf-8",
-    )
+    manifest_agent_config: dict[str, Any] = {
+        "description": agentic_fabric_agent_config.get("description", ""),
+        "agents": f"fabric_agents/{fabric_agent_name}/agents.yaml",
+        "tasks": f"fabric_agents/{fabric_agent_name}/tasks.yaml",
+    }
+    if "preferred_framework" in agentic_fabric_agent_config:
+        manifest_agent_config["preferred_framework"] = agentic_fabric_agent_config["preferred_framework"]
+
+    manifest = {
+        "name": "sample",
+        "description": "Test package",
+        "fabric_agents": {fabric_agent_name: manifest_agent_config},
+    }
+    fabric_dir.joinpath("manifest.yaml").write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
     config_dir.joinpath("agents.yaml").write_text(
-        """
-tester:
-  role: Tester
-  goal: Verify behavior
-  backstory: Careful runtime test agent.
-""".strip(),
+        yaml.safe_dump(agentic_fabric_agent_config.get("agents", {}), sort_keys=False),
         encoding="utf-8",
     )
     config_dir.joinpath("tasks.yaml").write_text(
-        """
-verify:
-  description: Verify the requested behavior.
-  expected_output: A concise result
-  agent: tester
-""".strip(),
+        yaml.safe_dump(agentic_fabric_agent_config.get("tasks", {}), sort_keys=False),
         encoding="utf-8",
     )
-    _ = agentic_fabric_agent_config
     return workspace

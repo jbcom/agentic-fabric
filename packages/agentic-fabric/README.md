@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/pypi/pyversions/agentic-fabric.svg)](https://pypi.org/project/agentic-fabric/)
 
-Framework-agnostic agent crew orchestration. Declare crews once in YAML, then
+Framework-agnostic agent fabric orchestration. Declare fabric agents once in YAML, then
 run them on CrewAI, LangGraph, Strands, or local CLI runners without changing a
-single crew definition. Runtime frameworks are optional and are detected lazily
+single fabric agent definition. Runtime frameworks are optional and are detected lazily
 from what is installed.
 
 [Documentation](https://jonbogaty.com/agentic-fabric/) | [Source](https://github.com/jbcom/agentic-fabric) | [Issues](https://github.com/jbcom/agentic-fabric/issues)
@@ -44,10 +44,10 @@ installs are unaffected.
 
 ## Quick Start
 
-### 1. Define a Crew (YAML)
+### 1. Define a Fabric Agent (YAML)
 
 ```yaml
-# .crewai/crews/analyzer/agents.yaml
+# .crewai/fabric_agents/analyzer/agents.yaml
 code_reviewer:
   role: Senior Code Reviewer
   goal: Find bugs and improvements
@@ -55,7 +55,7 @@ code_reviewer:
 ```
 
 ```yaml
-# .crewai/crews/analyzer/tasks.yaml
+# .crewai/fabric_agents/analyzer/tasks.yaml
 review_code:
   description: Review the provided code for issues
   expected_output: List of findings with severity
@@ -67,16 +67,16 @@ review_code:
 ```python
 from pathlib import Path
 
-from agentic_fabric import detect_framework, get_crew_config, run_crew_auto
+from agentic_fabric import detect_framework, get_fabric_agent_config, run_fabric_agent_auto
 
 # See what framework is available
 framework = detect_framework()
 
-# Load a crew manifest discovered in a package or workspace
-config = get_crew_config(Path(".crew"), "analyzer")
+# Load a fabric agent manifest discovered in a package or workspace
+config = get_fabric_agent_config(Path(".fabric"), "analyzer")
 
 # Auto-detect best framework and run
-result = run_crew_auto(config, inputs={"code": "..."})
+result = run_fabric_agent_auto(config, inputs={"code": "..."})
 ```
 
 Or from the CLI:
@@ -91,8 +91,8 @@ agentic-fabric run my-package analyzer --input "Review this code: ..."
 from agentic_fabric import get_runner
 
 runner = get_runner("langgraph")  # Force LangGraph
-crew = runner.build_crew(config)
-result = runner.run(crew, inputs)
+fabric_agent = runner.build_fabric_agent(config)
+result = runner.run(fabric_agent, inputs)
 ```
 
 ### 4. Carry Runtime Context with Data
@@ -103,13 +103,13 @@ from agentic_fabric import AgenticData, get_framework_info
 print(get_framework_info())
 
 session = AgenticData({"repo": "jbcom/agentic-fabric"})
-session.register_agent("reviewer", config)
-result = session.run_agent("reviewer", runtime="crewai")
+session.register_fabric_agent("reviewer", config)
+result = session.run_fabric_agent("reviewer", runtime="crewai")
 ```
 
 ## Key Features
 
-- Framework agnostic: one crew definition, multiple runtime backends.
+- Framework agnostic: one fabric agent definition, multiple runtime backends.
 - Lazy imports: core package import does not require CrewAI, LangGraph,
   Strands, or vendor SDKs.
 - Framework-neutral file tools: built-in filesystem tools can be resolved
@@ -117,7 +117,7 @@ result = session.run_agent("reviewer", runtime="crewai")
   only when their optional dependencies are present.
 - Focused extras: `langgraph`, `strands`, `mcp`, `scraping`,
   `tests`, `typing`, `docs`, and `dev`.
-- `AgenticData`: carries data, registered crews, active runtime selection, and
+- `AgenticData`: carries data, registered fabric agents, active runtime selection, and
   vendor-layer context together.
 - Capability decorators: runners and tools expose declared capabilities through
   read-only metadata and deterministic dispatch.
@@ -126,9 +126,9 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Vendor tool catalogs: `AgenticData.vendor_tools()` adapts inherited
   `VendorData` capability metadata into agent-facing tools without importing
   provider SDKs directly.
-- YAML-first: crew configuration in YAML, not Python boilerplate.
-- Hierarchical orchestration: `ManagerAgent` delegates across crews.
-- Package discovery: finds `.crew/`, `.crewai/`, `.langgraph/`, and
+- YAML-first: fabric agent configuration in YAML, not Python boilerplate.
+- Hierarchical orchestration: `ManagerAgent` delegates across fabric agents.
+- Package discovery: finds `.fabric/`, `.crewai/`, `.langgraph/`, and
   `.strands/` directories.
 - Vendor passthrough extras are deferred until `vendor-fabric` is published
   with a stable optional-extra contract.
@@ -145,7 +145,7 @@ You can always force a specific runner with `get_runner("langgraph")` or
 
 If the selected runtime is not installed, errors point to the matching
 `agentic-fabric[...]` extra. Framework-specific config directories also enforce
-their runtime: a crew in `.langgraph/` will not silently run on CrewAI.
+their runtime: a fabric agent in `.langgraph/` will not silently run on CrewAI.
 
 ## Local CLI Runners
 
@@ -161,6 +161,22 @@ Profiles are loaded from the packaged `local_cli_profiles.yaml`, validated
 before use, and rejected on POSIX systems if the profiles file is group- or
 world-writable.
 
+## MCP Adapters
+
+The `mcp` extra installs the MCP transport dependency and enables two console
+entry points:
+
+```bash
+agentic-fabric-vendor-mcp
+agentic-fabric-meshy-mcp
+```
+
+`agentic-fabric-vendor-mcp` exposes credential-free vendor catalog tools and
+public `vendor-fabric` data methods. `agentic-fabric-meshy-mcp` converts
+Meshy capability metadata from `vendor-fabric[meshy]` into MCP tools. Both
+servers import provider code lazily; install the matching `vendor-fabric`
+package/extras in the same environment before running provider-backed tools.
+
 ## Repository Boundary
 
 - `extended-data` owns base data containers, logging, input handling, files,
@@ -168,7 +184,7 @@ world-writable.
 - `vendor-fabric` owns vendor connectors, provider-backed sync, the SecretSync
   Python facade/capability surfaces, provider capability metadata, and provider
   dispatch.
-- `agentic-fabric` owns crew discovery, runner selection, framework adapters,
+- `agentic-fabric` owns fabric agent discovery, runner selection, framework adapters,
   agent-facing tool wrappers, and orchestration.
 
 Full guides and API documentation are published at

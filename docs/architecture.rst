@@ -7,10 +7,10 @@ source of truth for agent runtime architecture in this repository.
 Boundary
 --------
 
-``agentic-fabric`` owns agent and crew orchestration:
+``agentic-fabric`` owns agent and fabric agent orchestration:
 
 - discovery and manifest loading
-- universal crew decomposition
+- universal fabric agent composition
 - runner adapters for optional agent frameworks
 - tool resolution for built-in, MCP-style, fully qualified, and
   vendor-backed tools
@@ -52,8 +52,8 @@ together:
 
 .. code:: python
 
-   session.register_agent("repo_summarizer", crew_config)
-   result = session.run_agent("repo_summarizer", repo="jbcom/extended-data")
+   session.register_fabric_agent("repo_summarizer", fabric_agent_config)
+   result = session.run_fabric_agent("repo_summarizer", repo="jbcom/extended-data")
 
 Agent Capability Registry
 -------------------------
@@ -97,7 +97,7 @@ Runtime selection should follow explicit precedence when the caller does
 not choose a runtime:
 
 1. a runtime already active on ``AgenticData``
-2. a runtime requested in the crew manifest
+2. a runtime requested in the fabric agent manifest
 3. the first installed runtime in documented priority order
 4. a clear unavailable-runtime error with install guidance
 
@@ -121,7 +121,7 @@ Testing Package
 
 ``pytest-agentic-fabric`` is a sibling package in this repository. It
 provides runtime availability fixtures, runtime module mocking, minimal
-crew/workspace fixtures, and opt-in E2E controls.
+fabric agent/workspace fixtures, and opt-in E2E controls.
 
 Provider fixtures belong in ``pytest-vendor-fabric``. Base data fixtures
 belong in ``pytest-extended-data``.

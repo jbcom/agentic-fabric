@@ -17,7 +17,7 @@ from agentic_fabric.tools.adapters import resolve_langgraph_tools
 
 
 class LangGraphRunner(BaseRunner):
-    """Runner that uses LangGraph for crew execution."""
+    """Runner that uses LangGraph for fabric agent execution."""
 
     framework_name = "langgraph"
 
@@ -28,38 +28,38 @@ class LangGraphRunner(BaseRunner):
         except ImportError as e:
             raise RuntimeError(f"LangGraph not installed. Install with: {install_command(self.framework_name)}") from e
 
-    def build_crew(self, crew_config: dict[str, Any]) -> Any:
-        """Build a LangGraph ReAct agent from crew configuration.
+    def build_fabric_agent(self, fabric_agent_config: dict[str, Any]) -> Any:
+        """Build a LangGraph ReAct agent from fabric agent configuration.
 
-        The current adapter condenses the universal crew configuration into a
+        The current adapter condenses the universal fabric agent configuration into a
         LangGraph prebuilt ReAct agent with the declared tools attached.
 
         Args:
-            crew_config: Universal crew configuration.
+            fabric_agent_config: Universal fabric agent configuration.
 
         Returns:
             LangGraph runnable agent.
         """
         from langgraph.prebuilt import create_react_agent
 
-        # For simple crews, create a ReAct agent
-        # More complex crews could be converted to full StateGraphs
+        # For simple fabric agents, create a ReAct agent.
+        # More complex fabric agents could be converted to full StateGraphs.
 
         # Get LLM from config (respects the framework's configuration)
-        llm_config = crew_config.get("llm", {})
+        llm_config = fabric_agent_config.get("llm", {})
         model = llm_config.get("model") if isinstance(llm_config, dict) else llm_config
         llm = self.get_llm(model)
 
         # Build tools declared by agents in the universal config
-        tools = self._build_tools_from_config(crew_config)
+        tools = self._build_tools_from_config(fabric_agent_config)
 
         return create_react_agent(llm, tools)
 
-    def run(self, crew: Any, inputs: dict[str, Any]) -> str:
+    def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
         """Execute the LangGraph workflow.
 
         Args:
-            crew: Compiled LangGraph.
+            fabric_agent: Compiled LangGraph.
             inputs: Inputs for the workflow.
 
         Returns:
@@ -68,7 +68,7 @@ class LangGraphRunner(BaseRunner):
         # Convert inputs to messages format
         user_message = inputs.get("input", inputs.get("task", str(inputs)))
 
-        result = crew.invoke({"messages": [("user", user_message)]})
+        result = fabric_agent.invoke({"messages": [("user", user_message)]})
 
         # Extract final message
         messages = result.get("messages", [])
@@ -128,9 +128,9 @@ class LangGraphRunner(BaseRunner):
             "agent": agent,
         }
 
-    def _build_tools_from_config(self, crew_config: dict[str, Any]) -> list:
+    def _build_tools_from_config(self, fabric_agent_config: dict[str, Any]) -> list:
         """Resolve configured agent tools into LangGraph-compatible tools."""
         tool_names: list[str] = []
-        for agent_cfg in crew_config.get("agents", {}).values():
+        for agent_cfg in fabric_agent_config.get("agents", {}).values():
             tool_names.extend(agent_cfg.get("tools", []))
         return resolve_langgraph_tools(tool_names)

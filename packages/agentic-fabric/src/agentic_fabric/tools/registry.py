@@ -1,4 +1,4 @@
-"""Tool resolution helpers for configured crew tools.
+"""Tool resolution helpers for configured fabric agent tools.
 
 This module turns YAML-declared tool names into instantiated tool objects
 without forcing every optional dependency to import at module load time.
@@ -143,7 +143,7 @@ def resolve_tool(tool_name: str) -> Any | None:
 def resolve_tools(tool_names: list[str]) -> list[Any]:
     """Resolve configured tool names to instantiated tool objects.
 
-    Unknown or unavailable tools are skipped with a warning so that crews can
+    Unknown or unavailable tools are skipped with a warning so that fabric agents can
     continue to run with the capabilities available in the current environment.
     """
     resolved: list[Any] = []

@@ -12,7 +12,7 @@ import pytest
 
 
 if TYPE_CHECKING:
-    from tests._crew_mocker import CrewMocker
+    from tests._fabric_mocker import FabricMocker
 
 
 pytest.importorskip("crewai", reason="crewai not installed")
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.crewai
 class TestCreateAgentFromConfig:
     """Tests for create_agent_from_config function."""
 
-    def test_creates_agent_with_config(self, crew_mocker: CrewMocker) -> None:
+    def test_creates_agent_with_config(self, fabric_mocker: FabricMocker) -> None:
         """Test that create_agent_from_config creates an Agent."""
         from agentic_fabric.core.loader import create_agent_from_config
 
@@ -32,8 +32,8 @@ class TestCreateAgentFromConfig:
             "backstory": "Test backstory",
         }
 
-        MockAgent = crew_mocker.patch("crewai.Agent")
-        crew_mocker.patch_get_llm()
+        MockAgent = fabric_mocker.patch("crewai.Agent")
+        fabric_mocker.patch_get_llm()
 
         create_agent_from_config("test_agent", config)
 
@@ -43,14 +43,14 @@ class TestCreateAgentFromConfig:
         assert call_kwargs["goal"] == "Test goal"
         assert call_kwargs["backstory"] == "Test backstory"
 
-    def test_uses_agent_name_as_default_role(self, crew_mocker: CrewMocker) -> None:
+    def test_uses_agent_name_as_default_role(self, fabric_mocker: FabricMocker) -> None:
         """Test that agent name is used as default role."""
         from agentic_fabric.core.loader import create_agent_from_config
 
         config = {"goal": "Test goal", "backstory": "Test backstory"}
 
-        MockAgent = crew_mocker.patch("crewai.Agent")
-        crew_mocker.patch_get_llm()
+        MockAgent = fabric_mocker.patch("crewai.Agent")
+        fabric_mocker.patch_get_llm()
 
         create_agent_from_config("custom_agent_name", config)
 
@@ -61,7 +61,7 @@ class TestCreateAgentFromConfig:
 class TestCreateTaskFromConfig:
     """Tests for create_task_from_config function."""
 
-    def test_creates_task_with_config(self, crew_mocker: CrewMocker) -> None:
+    def test_creates_task_with_config(self, fabric_mocker: FabricMocker) -> None:
         """Test that create_task_from_config creates a Task."""
         from agentic_fabric.core.loader import create_task_from_config
 
@@ -69,9 +69,9 @@ class TestCreateTaskFromConfig:
             "description": "Test task description",
             "expected_output": "Test output",
         }
-        mock_agent = crew_mocker.MagicMock()
+        mock_agent = fabric_mocker.MagicMock()
 
-        MockTask = crew_mocker.patch("crewai.Task")
+        MockTask = fabric_mocker.patch("crewai.Task")
 
         create_task_from_config("test_task", config, mock_agent)
 
@@ -85,7 +85,7 @@ class TestCreateTaskFromConfig:
 class TestLoadKnowledgeSources:
     """Tests for load_knowledge_sources function."""
 
-    def test_loads_md_files(self, crew_mocker: CrewMocker, tmp_path: Path) -> None:
+    def test_loads_md_files(self, fabric_mocker: FabricMocker, tmp_path: Path) -> None:
         """Test that .md files are loaded as knowledge sources."""
         from agentic_fabric.core.loader import load_knowledge_sources
 
@@ -94,7 +94,7 @@ class TestLoadKnowledgeSources:
         knowledge_dir.mkdir()
         (knowledge_dir / "test.md").write_text("# Test Knowledge\nSome content")
 
-        MockKnowledgeSource = crew_mocker.patch_knowledge_source()
+        MockKnowledgeSource = fabric_mocker.patch_knowledge_source()
 
         load_knowledge_sources([knowledge_dir])
 
@@ -111,14 +111,14 @@ class TestLoadKnowledgeSources:
 
 
 class TestLoadCrewFromConfig:
-    """Tests for load_crew_from_config function."""
+    """Tests for load_fabric_agent_from_config function."""
 
-    def test_creates_crew_with_agents_and_tasks(self, crew_mocker: CrewMocker) -> None:
-        """Test that load_crew_from_config creates a complete Crew."""
-        from agentic_fabric.core.loader import load_crew_from_config
+    def test_creates_crewai_crew_with_agents_and_tasks(self, fabric_mocker: FabricMocker) -> None:
+        """Test that load_fabric_agent_from_config creates a complete Crew."""
+        from agentic_fabric.core.loader import load_fabric_agent_from_config
 
         config = {
-            "name": "test_crew",
+            "name": "test_fabric_agent",
             "agents": {
                 "test_agent": {
                     "role": "Test Agent",
@@ -136,19 +136,19 @@ class TestLoadCrewFromConfig:
             "knowledge_paths": [],
         }
 
-        MockCrew = crew_mocker.patch_crewai_crew()
-        MockAgent = crew_mocker.patch_crewai_agent()
-        MockTask = crew_mocker.patch_crewai_task()
-        crew_mocker.patch_crewai_process()
-        crew_mocker.patch_get_llm()
+        MockCrew = fabric_mocker.patch_crewai_crew()
+        MockAgent = fabric_mocker.patch_crewai_agent()
+        MockTask = fabric_mocker.patch_crewai_task()
+        fabric_mocker.patch_crewai_process()
+        fabric_mocker.patch_get_llm()
 
-        mock_agent = crew_mocker.MagicMock()
+        mock_agent = fabric_mocker.MagicMock()
         MockAgent.return_value = mock_agent
 
-        mock_task = crew_mocker.MagicMock()
+        mock_task = fabric_mocker.MagicMock()
         MockTask.return_value = mock_task
 
-        load_crew_from_config(config)
+        load_fabric_agent_from_config(config)
 
         # Verify Agent was created
         MockAgent.assert_called()

@@ -36,20 +36,20 @@ class TestLangGraphReActAgent:
     def test_react_agent_execution(
         self,
         check_api_key: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test simple ReAct agent execution.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.langgraph_runner import LangGraphRunner
 
         runner = LangGraphRunner()
 
-        # Build the agent/crew
-        agent = runner.build_crew(simple_crew_config)
+        # Build the agent/fabric_agent
+        agent = runner.build_fabric_agent(simple_fabric_agent_config)
         assert agent is not None
 
         # Run with simple input
@@ -66,13 +66,13 @@ class TestLangGraphReActAgent:
     def test_build_and_run(
         self,
         check_api_key: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test the convenience build_and_run method.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.langgraph_runner import LangGraphRunner
 
@@ -80,7 +80,7 @@ class TestLangGraphReActAgent:
 
         # Use build_and_run convenience method
         inputs = {"input": "What is the largest ocean on Earth?"}
-        result = runner.build_and_run(simple_crew_config, inputs)
+        result = runner.build_and_run(simple_fabric_agent_config, inputs)
 
         # Verify we got a response about Pacific Ocean
         assert result is not None
@@ -145,7 +145,7 @@ class TestLangGraphMultiStepPrompt:
     def test_agent_handles_multi_step_prompt(
         self,
         check_api_key: None,
-        multi_agent_crew_config: dict[str, Any],
+        multi_agent_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test that the LangGraph agent can handle a multi-step prompt.
 
@@ -154,19 +154,19 @@ class TestLangGraphMultiStepPrompt:
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            multi_agent_crew_config: Multi-agent crew configuration fixture.
+            multi_agent_fabric_agent_config: Multi-agent fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.langgraph_runner import LangGraphRunner
 
         runner = LangGraphRunner()
 
-        # Build a crew from config
-        crew = runner.build_crew(multi_agent_crew_config)
-        assert crew is not None
+        # Build a fabric_agent from config
+        fabric_agent = runner.build_fabric_agent(multi_agent_fabric_agent_config)
+        assert fabric_agent is not None
 
         # Execute with input that requires multi-step reasoning with distinct answers
         inputs = {"input": "First, tell me what 5 + 3 equals, then tell me what 10 - 3 equals."}
-        result = runner.run(crew, inputs)
+        result = runner.run(fabric_agent, inputs)
 
         # Verify the runner properly managed state through the workflow
         assert result is not None

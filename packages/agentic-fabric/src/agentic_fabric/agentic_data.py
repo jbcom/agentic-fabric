@@ -61,7 +61,7 @@ else:
 
 
 class AgenticData(_VendorDataBase):
-    """VendorData extension with active runtime and agent registry context."""
+    """VendorData extension with active runtime and fabric agent registry context."""
 
     runtime_priority: ClassVar[tuple[str, ...]] = tuple(runtime_names())
 
@@ -70,24 +70,24 @@ class AgenticData(_VendorDataBase):
         value: Any = None,
         *,
         fabric: Any | None = None,
-        agent_registry: Mapping[str, Mapping[str, Any]] | None = None,
+        fabric_agents: Mapping[str, Mapping[str, Any]] | None = None,
         logger: Any | None = None,
         active_runtime: str | None = None,
         **fabric_kwargs: Any,
     ) -> None:
-        """Initialize data, registered crews, and optional active runtime."""
+        """Initialize data, registered fabric agents, and optional active runtime."""
         super().__init__(value, fabric=fabric, logger=logger, **fabric_kwargs)
-        self._agent_registry: dict[str, dict[str, Any]] = {
-            name: dict(config) for name, config in (agent_registry or {}).items()
+        self._fabric_agents: dict[str, dict[str, Any]] = {
+            name: dict(config) for name, config in (fabric_agents or {}).items()
         }
         self._active_runtime: str | None = None
         if active_runtime is not None:
             self.use_runtime(active_runtime, strict=False)
 
     @property
-    def agent_registry(self) -> Mapping[str, Mapping[str, Any]]:
-        """Return registered agent/crew definitions."""
-        return MappingProxyType(self._agent_registry)
+    def fabric_agents(self) -> Mapping[str, Mapping[str, Any]]:
+        """Return registered fabric agent definitions."""
+        return MappingProxyType(self._fabric_agents)
 
     @property
     def active_runtime(self) -> str | None:
@@ -104,14 +104,14 @@ class AgenticData(_VendorDataBase):
         super().cast(value)
         return self
 
-    def register_agent(self, name: str, crew_config: Mapping[str, Any]) -> AgenticData:
-        """Register a named crew config for ``run_agent`` lookup."""
-        self._agent_registry[name] = dict(crew_config)
+    def register_fabric_agent(self, name: str, fabric_agent_config: Mapping[str, Any]) -> AgenticData:
+        """Register a named fabric agent config for ``run_fabric_agent`` lookup."""
+        self._fabric_agents[name] = dict(fabric_agent_config)
         return self
 
-    def unregister_agent(self, name: str) -> AgenticData:
-        """Remove a named crew config if it exists."""
-        self._agent_registry.pop(name, None)
+    def unregister_fabric_agent(self, name: str) -> AgenticData:
+        """Remove a named fabric agent config if it exists."""
+        self._fabric_agents.pop(name, None)
         return self
 
     def use_runtime(self, runtime: str, *, strict: bool = True) -> AgenticData:
@@ -148,15 +148,15 @@ class AgenticData(_VendorDataBase):
         self,
         runtime: str | None = None,
         *,
-        crew_config: Mapping[str, Any] | None = None,
+        fabric_agent_config: Mapping[str, Any] | None = None,
     ) -> str:
         """Select a runtime using explicit, active, manifest, then auto priority."""
-        required_runtime = _manifest_runtime(crew_config)
+        required_runtime = _manifest_runtime(fabric_agent_config)
         requested = _normalize_runtime(runtime)
         active = _normalize_runtime(self._active_runtime)
 
         if requested is not None and required_runtime is not None and requested != required_runtime:
-            msg = f"Crew requires {required_runtime} but {requested} was requested"
+            msg = f"Fabric agent requires {required_runtime} but {requested} was requested"
             raise ValueError(msg)
 
         if requested is not None:
@@ -164,7 +164,7 @@ class AgenticData(_VendorDataBase):
 
         if active is not None:
             if required_runtime is not None and active != required_runtime:
-                msg = f"Active runtime {active} conflicts with crew requirement {required_runtime}"
+                msg = f"Active runtime {active} conflicts with fabric agent requirement {required_runtime}"
                 raise ValueError(msg)
             return _require_available(active)
 
@@ -175,32 +175,22 @@ class AgenticData(_VendorDataBase):
 
         return detect_framework()
 
-    def run_crew(
+    def run_fabric_agent(
         self,
-        crew_config: Mapping[str, Any],
-        inputs: Mapping[str, Any] | None = None,
-        *,
-        runtime: str | None = None,
-    ) -> str:
-        """Run one crew config through the selected runtime."""
-        from agentic_fabric.core.decomposer import run_crew_auto
-
-        selected_runtime = self.select_runtime(runtime, crew_config=crew_config)
-        return run_crew_auto(dict(crew_config), inputs=dict(inputs or {}), framework=selected_runtime)
-
-    def run_agent(
-        self,
-        agent: str | Mapping[str, Any],
+        fabric_agent: str | Mapping[str, Any],
         inputs: Mapping[str, Any] | None = None,
         *,
         runtime: str | None = None,
         **input_kwargs: Any,
     ) -> str:
-        """Run a registered agent/crew by name or a direct crew config."""
-        crew_config = self._lookup_agent(agent)
+        """Run a registered fabric agent by name or a direct fabric agent config."""
+        from agentic_fabric.core.decomposer import run_fabric_agent_auto
+
+        fabric_agent_config = self._lookup_fabric_agent(fabric_agent)
         merged_inputs = dict(inputs or {})
         merged_inputs.update(input_kwargs)
-        return self.run_crew(crew_config, merged_inputs, runtime=runtime)
+        selected_runtime = self.select_runtime(runtime, fabric_agent_config=fabric_agent_config)
+        return run_fabric_agent_auto(fabric_agent_config, inputs=merged_inputs, framework=selected_runtime)
 
     def call_runtime(self, capability: str, *args: Any, runtime: str | None = None, **kwargs: Any) -> Any:
         """Call a declared capability on a selected runtime runner."""
@@ -222,11 +212,11 @@ class AgenticData(_VendorDataBase):
         return vendor_capability_tools(self, provider=provider, include_unavailable=include_unavailable)
 
     def __getattr__(self, name: str) -> Any:
-        """Expose ``run_<agent>`` helpers while preserving VendorData dispatch."""
+        """Expose ``run_<fabric_agent>`` helpers while preserving VendorData dispatch."""
         if name.startswith("run_"):
-            agent_name = name.removeprefix("run_")
-            if agent_name in self._agent_registry:
-                return lambda *args, **kwargs: self.run_agent(agent_name, *args, **kwargs)
+            fabric_agent_name = name.removeprefix("run_")
+            if fabric_agent_name in self._fabric_agents:
+                return lambda *args, **kwargs: self.run_fabric_agent(fabric_agent_name, *args, **kwargs)
 
         try:
             return super().__getattr__(name)  # type: ignore[misc]
@@ -234,19 +224,19 @@ class AgenticData(_VendorDataBase):
             raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}") from None
 
     def __dir__(self) -> list[str]:
-        """Include dynamic registered-agent helpers in introspection."""
-        dynamic = [f"run_{name}" for name in self._agent_registry]
+        """Include dynamic registered-fabric-agent helpers in introspection."""
+        dynamic = [f"run_{name}" for name in self._fabric_agents]
         return sorted({*super().__dir__(), *dynamic})
 
-    def _lookup_agent(self, agent: str | Mapping[str, Any]) -> dict[str, Any]:
-        """Return a crew config from a name or direct mapping."""
-        if isinstance(agent, Mapping):
-            return dict(agent)
+    def _lookup_fabric_agent(self, fabric_agent: str | Mapping[str, Any]) -> dict[str, Any]:
+        """Return a fabric agent config from a name or direct mapping."""
+        if isinstance(fabric_agent, Mapping):
+            return dict(fabric_agent)
         try:
-            return dict(self._agent_registry[agent])
+            return dict(self._fabric_agents[fabric_agent])
         except KeyError as exc:
-            options = ", ".join(sorted(self._agent_registry)) or "none registered"
-            msg = f"Unknown agent '{agent}'. Registered agents: {options}"
+            options = ", ".join(sorted(self._fabric_agents)) or "none registered"
+            msg = f"Unknown fabric agent '{fabric_agent}'. Registered fabric agents: {options}"
             raise KeyError(msg) from exc
 
 
@@ -258,11 +248,11 @@ def _normalize_runtime(runtime: str | None) -> str | None:
     return None if normalized == "auto" else normalized
 
 
-def _manifest_runtime(crew_config: Mapping[str, Any] | None) -> str | None:
-    """Read runtime requirements from a crew manifest/config mapping."""
-    if crew_config is None:
+def _manifest_runtime(fabric_agent_config: Mapping[str, Any] | None) -> str | None:
+    """Read runtime requirements from a fabric agent manifest/config mapping."""
+    if fabric_agent_config is None:
         return None
-    runtime = crew_config.get("required_framework") or crew_config.get("runtime") or crew_config.get("framework")
+    runtime = fabric_agent_config.get("required_framework") or fabric_agent_config.get("runtime") or fabric_agent_config.get("framework")
     return _normalize_runtime(str(runtime)) if runtime else None
 
 

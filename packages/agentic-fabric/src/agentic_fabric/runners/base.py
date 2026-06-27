@@ -16,8 +16,8 @@ To create a new runner for a framework:
    ```
 
 2. **Implement required methods**:
-   - `build_crew()` - Convert universal config to framework crew
-   - `run()` - Execute the crew and return string output
+   - `build_fabric_agent()` - Convert universal config to a runtime-native fabric agent
+   - `run()` - Execute the fabric agent and return string output
    - `build_agent()` - Create framework-specific agent
    - `build_task()` - Create framework-specific task
 
@@ -43,22 +43,22 @@ class SimpleRunner(BaseRunner):
         except ImportError as e:
             raise RuntimeError("simple_framework not installed") from e
 
-    def build_crew(self, crew_config):
+    def build_fabric_agent(self, fabric_agent_config):
         # Use dict to allow lookup by agent name
         agents = {
             name: self.build_agent(cfg)
-            for name, cfg in crew_config.get("agents", {}).items()
+            for name, cfg in fabric_agent_config.get("agents", {}).items()
         }
 
         tasks = []
-        for task_name, task_cfg in crew_config.get("tasks", {}).items():
+        for task_name, task_cfg in fabric_agent_config.get("tasks", {}).items():
             agent_name = task_cfg.get("agent")
             agent = agents[agent_name]
             tasks.append(self.build_task(task_cfg, agent))
 
         return {"agents": list(agents.values()), "tasks": tasks}
 
-    def run(self, crew, inputs):
+    def run(self, fabric_agent, inputs):
         # Execute and return string
         return "Result from simple framework"
 
@@ -81,7 +81,7 @@ from agentic_fabric.capabilities import AgentCapabilityProviderMixin, runtime_ca
 class BaseRunner(AgentCapabilityProviderMixin, ABC):
     """Abstract base class for framework runners.
 
-    Each framework runner converts agentic-fabric's universal crew format
+    Each framework runner converts agentic-fabric's universal fabric agent format
     into framework-specific objects and executes them.
 
     Attributes:
@@ -97,8 +97,8 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
         # Auto-detect best available framework
         runner = get_runner()
 
-        crew_config = {
-            "name": "research_crew",
+        fabric_agent_config = {
+            "name": "research_fabric_agent",
             "agents": {
                 "researcher": {
                     "role": "Senior Researcher",
@@ -116,7 +116,7 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
         }
 
         # Build and run in one step
-        result = runner.build_and_run(crew_config, {"topic": "AI safety"})
+        result = runner.build_and_run(fabric_agent_config, {"topic": "AI safety"})
         print(result)
         ```
     """
@@ -124,20 +124,20 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
     framework_name: str = "base"
 
     @runtime_capability(
-        "build_crew",
-        description="Convert universal crew configuration into a runtime-native crew object.",
+        "build_fabric_agent",
+        description="Convert universal fabric agent configuration into a runtime-native fabric agent object.",
     )
     @abstractmethod
-    def build_crew(self, crew_config: dict[str, Any]) -> Any:
-        """Build a framework-specific crew from configuration.
+    def build_fabric_agent(self, fabric_agent_config: dict[str, Any]) -> Any:
+        """Build a framework-specific fabric agent from configuration.
 
         This is the main method that converts agentic-fabric's universal
-        YAML-based crew configuration into the framework's native objects.
+        YAML-based fabric agent configuration into the framework's native objects.
 
         Args:
-            crew_config: Universal crew configuration dict containing:
-                - name (str): Crew name for identification
-                - description (str): What the crew does
+            fabric_agent_config: Universal fabric agent configuration dict containing:
+                - name (str): Fabric agent name for identification
+                - description (str): What the fabric agent does
                 - agents (dict): Dict mapping agent names to agent configs.
                   Each agent config has:
                     - role (str): Agent's role/title
@@ -158,7 +158,7 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
                 - required_framework (str, optional): Enforced framework
 
         Returns:
-            Framework-specific crew object. Type varies by framework:
+            Framework-specific fabric agent object. Type varies by framework:
                 - CrewAI: crewai.Crew
                 - LangGraph: Compiled StateGraph
                 - Strands: strands.Agent
@@ -171,8 +171,8 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
         Example:
             ```python
             runner = CrewAIRunner()
-            crew = runner.build_crew({
-                "name": "writer_crew",
+            fabric_agent = runner.build_fabric_agent({
+                "name": "writer_fabric_agent",
                 "agents": {
                     "writer": {
                         "role": "Technical Writer",
@@ -191,36 +191,36 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
             ```
         """
 
-    @runtime_capability("run", description="Execute a runtime-native crew object.")
+    @runtime_capability("run", description="Execute a runtime-native fabric agent object.")
     @abstractmethod
-    def run(self, crew: Any, inputs: dict[str, Any]) -> str:
-        r"""Execute the crew with inputs.
+    def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
+        r"""Execute the fabric agent with inputs.
 
-        Runs the previously built crew with the given inputs. This method
+        Runs the previously built fabric agent with the given inputs. This method
         handles the framework-specific execution and normalizes the output
         to a string.
 
         Args:
-            crew: Framework-specific crew object from build_crew().
+            fabric_agent: Framework-specific fabric agent object from build_fabric_agent().
                 Type depends on framework:
                 - CrewAI: crewai.Crew instance
                 - LangGraph: Compiled StateGraph
                 - Strands: strands.Agent instance
-            inputs: Input dict to pass to the crew. Keys are typically
+            inputs: Input dict to pass to the fabric agent. Keys are typically
                 variable names used in task descriptions (e.g., {topic}
                 in description becomes inputs["topic"]).
 
         Returns:
-            Crew output as a string. For complex outputs, the raw text
+            Fabric agent output as a string. For complex outputs, the raw text
             is returned; parsing is left to the caller.
 
         Raises:
-            RuntimeError: If crew execution fails.
+            RuntimeError: If fabric agent execution fails.
 
         Example:
             ```python
             # CrewAI runner example
-            result = runner.run(crew, {"topic": "machine learning"})
+            result = runner.run(fabric_agent, {"topic": "machine learning"})
             print(result)  # "## Machine Learning Report\\n\\n..."
 
             # LangGraph runner example
@@ -228,23 +228,23 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
             ```
         """
 
-    @runtime_capability("build_and_run", aliases=("run_crew",), description="Build and execute a crew in one call.")
+    @runtime_capability("build_and_run", aliases=("run_fabric_agent",), description="Build and execute a fabric agent in one call.")
     def build_and_run(
         self,
-        crew_config: dict[str, Any],
+        fabric_agent_config: dict[str, Any],
         inputs: dict[str, Any] | None = None,
     ) -> str:
         """Convenience method to build and run in one step.
 
         Args:
-            crew_config: Crew configuration.
-            inputs: Optional inputs for the crew.
+            fabric_agent_config: Fabric agent configuration.
+            inputs: Optional inputs for the fabric agent.
 
         Returns:
-            Crew output as string.
+            Fabric agent output as string.
         """
-        crew = self.build_crew(crew_config)
-        return self.run(crew, inputs or {})
+        fabric_agent = self.build_fabric_agent(fabric_agent_config)
+        return self.run(fabric_agent, inputs or {})
 
     @runtime_capability("build_agent", description="Create one runtime-native agent object.")
     @abstractmethod
@@ -252,7 +252,7 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
         """Build a framework-specific agent.
 
         Creates a single agent from the universal configuration. Called by
-        build_crew() for each agent in the crew.
+        build_fabric_agent() for each agent in the fabric agent.
 
         Args:
             agent_config: Agent configuration dict containing:
@@ -288,7 +288,7 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
         """Build a framework-specific task.
 
         Creates a single task from the universal configuration. Called by
-        build_crew() for each task in the crew.
+        build_fabric_agent() for each task in the fabric agent.
 
         Note: Some frameworks (like CrewAI) support additional parameters
         beyond the base signature. Subclasses may extend this method with

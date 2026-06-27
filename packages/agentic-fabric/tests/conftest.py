@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests._crew_mocker import crew_mocker, mock_crewai, mock_frameworks, mock_langgraph, mock_strands  # noqa: F401
+from tests._fabric_mocker import fabric_mocker, mock_crewai, mock_frameworks, mock_langgraph, mock_strands  # noqa: F401
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -88,26 +88,26 @@ def temp_workspace(tmp_path: Path) -> Path:
     manifest.write_text("""
 name: sample
 description: Test package
-crews:
-  test_crew:
-    description: A test crew
-    agents: crews/test_crew/agents.yaml
-    tasks: crews/test_crew/tasks.yaml
+fabric_agents:
+  test_fabric_agent:
+    description: A test fabric agent
+    agents: fabric_agents/test_fabric_agent/agents.yaml
+    tasks: fabric_agents/test_fabric_agent/tasks.yaml
 """)
 
-    # Create crews directory
-    crews_dir = crewai_dir / "crews" / "test_crew"
-    crews_dir.mkdir(parents=True)
+    # Create fabric_agents directory
+    fabric_agents_dir = crewai_dir / "fabric_agents" / "test_fabric_agent"
+    fabric_agents_dir.mkdir(parents=True)
 
     # Create minimal agent and task configs
-    (crews_dir / "agents.yaml").write_text("""
+    (fabric_agents_dir / "agents.yaml").write_text("""
 test_agent:
   role: Test Agent
   goal: Test goal
   backstory: Test backstory
 """)
 
-    (crews_dir / "tasks.yaml").write_text("""
+    (fabric_agents_dir / "tasks.yaml").write_text("""
 test_task:
   description: Test task description
   expected_output: Test output
@@ -118,8 +118,8 @@ test_task:
 
 
 @pytest.fixture
-def mock_crew() -> MagicMock:
-    """Create a mock crew result."""
+def mock_fabric_agent_result() -> MagicMock:
+    """Create a mock fabric agent result."""
     result = MagicMock()
     result.raw = {"output": "test output", "success": True}
     return result
@@ -142,12 +142,12 @@ def check_aws_credentials() -> None:
 
 
 @pytest.fixture
-def temp_crew_dir(tmp_path: Path) -> Path:
-    """Create a temporary crew directory with minimal structure."""
-    crew_dir = tmp_path / "test_package" / ".crewai"
-    crew_dir.mkdir(parents=True)
-    (crew_dir / "crews").mkdir()
-    return crew_dir
+def temp_crewai_dir(tmp_path: Path) -> Path:
+    """Create a temporary CrewAI config directory with minimal structure."""
+    crewai_dir = tmp_path / "test_package" / ".crewai"
+    crewai_dir.mkdir(parents=True)
+    (crewai_dir / "fabric_agents").mkdir()
+    return crewai_dir
 
 
 @pytest.fixture
@@ -170,14 +170,14 @@ def simple_task_config() -> dict[str, Any]:
 
 
 @pytest.fixture
-def simple_crew_config(
+def simple_fabric_agent_config(
     simple_agent_config: dict[str, Any],
     simple_task_config: dict[str, Any],
 ) -> dict[str, Any]:
-    """Get a simple crew configuration for runner tests."""
+    """Get a simple fabric agent configuration for runner tests."""
     return {
-        "name": "test_crew",
-        "description": "A simple test crew",
+        "name": "test_fabric_agent",
+        "description": "A simple test fabric agent",
         "agents": {"test_agent": simple_agent_config},
         "tasks": {
             "test_task": {
@@ -190,11 +190,11 @@ def simple_crew_config(
 
 
 @pytest.fixture
-def multi_agent_crew_config() -> dict[str, Any]:
-    """Get a multi-agent crew configuration for runner tests."""
+def multi_agent_fabric_agent_config() -> dict[str, Any]:
+    """Get a multi-agent fabric agent configuration for runner tests."""
     return {
-        "name": "multi_agent_crew",
-        "description": "A crew with multiple collaborating agents",
+        "name": "multi_agent_fabric_agent",
+        "description": "A fabric agent with multiple collaborating agents",
         "agents": {
             "researcher": {
                 "role": "Researcher",
@@ -225,8 +225,8 @@ def multi_agent_crew_config() -> dict[str, Any]:
 
 
 @pytest.fixture
-def crew_with_knowledge(tmp_path: Path) -> dict[str, Any]:
-    """Get a crew configuration with a local knowledge source."""
+def fabric_agent_with_knowledge(tmp_path: Path) -> dict[str, Any]:
+    """Get a fabric agent configuration with a local knowledge source."""
     knowledge_dir = tmp_path / "knowledge"
     knowledge_dir.mkdir()
     (knowledge_dir / "test_info.md").write_text(
@@ -239,8 +239,8 @@ It is often associated with calmness and stability.
     )
 
     return {
-        "name": "knowledge_crew",
-        "description": "A crew with knowledge sources",
+        "name": "knowledge_fabric_agent",
+        "description": "A fabric agent with knowledge sources",
         "agents": {
             "knowledgeable_agent": {
                 "role": "Knowledge Expert",

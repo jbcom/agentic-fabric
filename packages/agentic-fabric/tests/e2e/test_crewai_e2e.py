@@ -31,30 +31,30 @@ pytestmark = [
 
 
 class TestCrewAISimpleExecution:
-    """Test simple crew execution with CrewAI."""
+    """Test simple fabric_agent execution with CrewAI."""
 
     def test_simple_crew_execution(
         self,
         check_api_key: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
-        """Test execution of a simple single-agent, single-task crew.
+        """Test execution of a simple single-agent, single-task fabric_agent.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.crewai_runner import CrewAIRunner
 
         runner = CrewAIRunner()
 
-        # Build the crew
-        crew = runner.build_crew(simple_crew_config)
-        assert crew is not None
+        # Build the fabric_agent
+        fabric_agent = runner.build_fabric_agent(simple_fabric_agent_config)
+        assert fabric_agent is not None
 
-        # Run the crew with a simple input
+        # Run the fabric_agent with a simple input
         inputs = {"input": "What is 2 + 2?"}
-        result = runner.run(crew, inputs)
+        result = runner.run(fabric_agent, inputs)
 
         # Verify we got a response
         assert result is not None
@@ -63,16 +63,16 @@ class TestCrewAISimpleExecution:
         # The answer should contain '4' somewhere
         assert "4" in result
 
-    def test_crew_build_and_run(
+    def test_fabric_agent_build_and_run(
         self,
         check_api_key: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test the convenience build_and_run method.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.crewai_runner import CrewAIRunner
 
@@ -80,7 +80,7 @@ class TestCrewAISimpleExecution:
 
         # Use build_and_run convenience method
         inputs = {"input": "What is the capital of France?"}
-        result = runner.build_and_run(simple_crew_config, inputs)
+        result = runner.build_and_run(simple_fabric_agent_config, inputs)
 
         # Verify we got a response about Paris
         assert result is not None
@@ -92,24 +92,24 @@ class TestCrewAISimpleExecution:
 class TestCrewAIMultiAgent:
     """Test multi-agent collaboration with CrewAI."""
 
-    def test_multi_agent_crew(
+    def test_multi_agent_fabric_agent(
         self,
         check_api_key: None,
-        multi_agent_crew_config: dict[str, Any],
+        multi_agent_fabric_agent_config: dict[str, Any],
     ) -> None:
-        """Test multi-agent crew with sequential task execution.
+        """Test multi-agent fabric_agent with sequential task execution.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            multi_agent_crew_config: Multi-agent crew configuration fixture.
+            multi_agent_fabric_agent_config: Multi-agent fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.crewai_runner import CrewAIRunner
 
         runner = CrewAIRunner()
 
-        # Build and run multi-agent crew
+        # Build and run multi-agent fabric_agent
         inputs = {"input": "Tell me about Python programming"}
-        result = runner.build_and_run(multi_agent_crew_config, inputs)
+        result = runner.build_and_run(multi_agent_fabric_agent_config, inputs)
 
         # Verify we got a result from the collaborative effort
         assert result is not None
@@ -125,23 +125,23 @@ class TestCrewAIKnowledge:
     def test_knowledge_source_integration(
         self,
         check_api_key: None,
-        crew_with_knowledge: dict[str, Any],
+        fabric_agent_with_knowledge: dict[str, Any],
     ) -> None:
-        """Test crew with knowledge sources loaded from files.
+        """Test fabric agent with knowledge sources loaded from files.
 
         Args:
             check_api_key: Fixture to check for required API keys.
-            crew_with_knowledge: Crew config with knowledge sources fixture.
+            fabric_agent_with_knowledge: Fabric agent config with knowledge sources fixture.
         """
         from agentic_fabric.runners.crewai_runner import CrewAIRunner
 
         runner = CrewAIRunner()
 
-        # Build and run crew with knowledge
+        # Build and run fabric agent with knowledge.
         inputs = {"question": "What color is mentioned in the knowledge base?"}
-        result = runner.build_and_run(crew_with_knowledge, inputs)
+        result = runner.build_and_run(fabric_agent_with_knowledge, inputs)
 
-        # Verify the crew accessed the knowledge
+        # Verify the fabric agent accessed the knowledge.
         assert result is not None
         assert isinstance(result, str)
         assert len(result) > 0
@@ -157,7 +157,7 @@ class TestCrewAITools:
         check_api_key: None,
         simple_agent_config: dict[str, Any],
     ) -> None:
-        """Test crew with tools assigned to agents.
+        """Test fabric_agent with tools assigned to agents.
 
         Args:
             check_api_key: Fixture to check for required API keys.
@@ -195,18 +195,18 @@ class TestCrewAITools:
         task = runner.build_task(task_config, agent)
         assert task is not None
 
-        # Create a minimal crew
+        # Create a minimal fabric_agent
         from crewai import Crew, Process
 
-        crew = Crew(
+        fabric_agent = Crew(
             agents=[agent],
             tasks=[task],
             process=Process.sequential,
             verbose=True,
         )
 
-        # Run the crew
-        result = crew.kickoff()
+        # Run the fabric_agent
+        result = fabric_agent.kickoff()
 
         # Verify the tool was used
         assert result is not None

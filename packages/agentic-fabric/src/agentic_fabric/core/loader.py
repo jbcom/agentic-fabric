@@ -127,11 +127,11 @@ def create_task_from_config(
     )
 
 
-def load_crew_from_config(crew_config: dict) -> Crew:
+def load_fabric_agent_from_config(fabric_agent_config: dict) -> Crew:
     """Load a complete Crew from configuration.
 
     Args:
-        crew_config: Configuration dict from get_crew_config().
+        fabric_agent_config: Configuration dict from get_fabric_agent_config().
 
     Returns:
         Configured Crew instance ready to kickoff.
@@ -155,7 +155,7 @@ def load_crew_from_config(crew_config: dict) -> Crew:
     read_tools = [code_reader, dir_lister]
 
     # Create agents
-    agents_config = crew_config.get("agents", {})
+    agents_config = fabric_agent_config.get("agents", {})
     agents: dict[str, Any] = {}
 
     for agent_name, agent_cfg in agents_config.items():
@@ -170,7 +170,7 @@ def load_crew_from_config(crew_config: dict) -> Crew:
         agents[agent_name] = create_agent_from_config(agent_name, agent_cfg, tools)
 
     # Create tasks
-    tasks_config = crew_config.get("tasks", {})
+    tasks_config = fabric_agent_config.get("tasks", {})
     tasks = []
 
     for task_name, task_cfg in tasks_config.items():
@@ -188,9 +188,9 @@ def load_crew_from_config(crew_config: dict) -> Crew:
         tasks.append(create_task_from_config(task_name, task_cfg, agent))
 
     # Load knowledge sources
-    knowledge_sources = load_knowledge_sources(crew_config.get("knowledge_paths", []))
+    knowledge_sources = load_knowledge_sources(fabric_agent_config.get("knowledge_paths", []))
 
-    # Create and return the crew
+    # Create and return the fabric_agent
     return Crew(
         agents=list(agents.values()),
         tasks=tasks,

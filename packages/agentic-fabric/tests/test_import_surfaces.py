@@ -58,4 +58,4 @@ def test_cli_script_entrypoint_prints_help(monkeypatch: pytest.MonkeyPatch, caps
 
     runpy.run_path(str(cli_main.__file__), run_name="__main__")
 
-    assert "agentic-fabric - Framework-Agnostic Crew Runner" in capsys.readouterr().out
+    assert "agentic-fabric - framework-agnostic fabric agent runner" in capsys.readouterr().out

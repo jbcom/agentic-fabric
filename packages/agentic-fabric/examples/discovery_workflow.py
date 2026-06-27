@@ -1,4 +1,4 @@
-"""Discover and inspect a framework-agnostic crew workspace."""
+"""Discover and inspect a framework-agnostic fabric workspace."""
 
 from __future__ import annotations
 
@@ -8,32 +8,32 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from agentic_fabric.core.discovery import discover_packages, get_crew_config, load_manifest
+from agentic_fabric.core.discovery import discover_packages, get_fabric_agent_config, load_manifest
 
 
 DEFAULT_WORKSPACE = Path(__file__).parent / "sample_workspace"
 
 
 def summarize_workspace(workspace_root: Path = DEFAULT_WORKSPACE) -> dict[str, Any]:
-    """Return a deterministic summary of crews in a workspace."""
+    """Return a deterministic summary of fabric agents in a workspace."""
     packages = discover_packages(workspace_root=workspace_root)
     summary: dict[str, Any] = {"workspace": str(workspace_root), "packages": {}}
 
     for package_name, config_dir in sorted(packages.items()):
         manifest = load_manifest(config_dir)
-        crew_summaries = {}
-        for crew_name in sorted(manifest.get("crews", {})):
-            crew_config = get_crew_config(config_dir, crew_name)
-            crew_summaries[crew_name] = {
-                "description": crew_config.get("description", ""),
-                "required_framework": crew_config.get("required_framework"),
-                "agents": sorted(crew_config.get("agents", {})),
-                "tasks": sorted(crew_config.get("tasks", {})),
+        fabric_agent_summaries = {}
+        for fabric_agent_name in sorted(manifest.get("fabric_agents", {})):
+            fabric_agent_config = get_fabric_agent_config(config_dir, fabric_agent_name)
+            fabric_agent_summaries[fabric_agent_name] = {
+                "description": fabric_agent_config.get("description", ""),
+                "required_framework": fabric_agent_config.get("required_framework"),
+                "agents": sorted(fabric_agent_config.get("agents", {})),
+                "tasks": sorted(fabric_agent_config.get("tasks", {})),
             }
 
         summary["packages"][package_name] = {
             "config_dir": config_dir.name,
-            "crews": crew_summaries,
+            "fabric_agents": fabric_agent_summaries,
         }
 
     return summary

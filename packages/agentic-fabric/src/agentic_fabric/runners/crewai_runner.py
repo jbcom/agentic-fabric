@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class CrewAIRunner(BaseRunner):
-    """Runner that uses CrewAI for crew execution."""
+    """Runner that uses CrewAI for fabric agent execution."""
 
     framework_name = "crewai"
 
@@ -36,11 +36,11 @@ class CrewAIRunner(BaseRunner):
         except ImportError as e:
             raise RuntimeError(f"CrewAI not installed. Install with: {install_command(self.framework_name)}") from e
 
-    def build_crew(self, crew_config: dict[str, Any]) -> Any:
+    def build_fabric_agent(self, fabric_agent_config: dict[str, Any]) -> Any:
         """Build a CrewAI Crew from configuration.
 
         Args:
-            crew_config: Universal crew configuration.
+            fabric_agent_config: Universal fabric agent configuration.
 
         Returns:
             CrewAI Crew object.
@@ -48,7 +48,7 @@ class CrewAIRunner(BaseRunner):
         from crewai import Crew, Process
 
         # Build agents with their tools from config
-        agents_config = crew_config.get("agents", {})
+        agents_config = fabric_agent_config.get("agents", {})
         agents = {}
         for agent_name, agent_cfg in agents_config.items():
             # Extract tools from agent config
@@ -56,7 +56,7 @@ class CrewAIRunner(BaseRunner):
             agents[agent_name] = self.build_agent(agent_cfg, tools=agent_tools)
 
         # Build tasks, tracking them for context dependencies
-        tasks_config = crew_config.get("tasks", {})
+        tasks_config = fabric_agent_config.get("tasks", {})
         tasks = []
         tasks_by_name: dict[str, Any] = {}
         for task_name, task_cfg in tasks_config.items():
@@ -85,33 +85,33 @@ class CrewAIRunner(BaseRunner):
             tasks_by_name[task_name] = task
 
         # Load knowledge sources
-        knowledge_sources = self._load_knowledge(crew_config.get("knowledge_paths", []))
+        knowledge_sources = self._load_knowledge(fabric_agent_config.get("knowledge_paths", []))
 
         # Determine process type
-        process_type = crew_config.get("process", "sequential")
+        process_type = fabric_agent_config.get("process", "sequential")
         process = Process.hierarchical if process_type == "hierarchical" else Process.sequential
 
         return Crew(
             agents=list(agents.values()),
             tasks=tasks,
             process=process,
-            planning=crew_config.get("planning", True),
-            memory=crew_config.get("memory", True),
+            planning=fabric_agent_config.get("planning", True),
+            memory=fabric_agent_config.get("memory", True),
             knowledge_sources=knowledge_sources or None,
-            verbose=crew_config.get("verbose", True),
+            verbose=fabric_agent_config.get("verbose", True),
         )
 
-    def run(self, crew: Any, inputs: dict[str, Any]) -> str:
-        """Execute the CrewAI crew.
+    def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
+        """Execute the CrewAI fabric agent.
 
         Args:
-            crew: CrewAI Crew object.
-            inputs: Inputs for the crew.
+            fabric_agent: CrewAI Crew object.
+            inputs: Inputs for the fabric agent.
 
         Returns:
-            Crew output as string.
+            Fabric agent output as string.
         """
-        result = crew.kickoff(inputs=inputs)
+        result = fabric_agent.kickoff(inputs=inputs)
         return result.raw if hasattr(result, "raw") else str(result)
 
     def build_agent(self, agent_config: dict[str, Any], tools: list | None = None) -> Any:

@@ -15,25 +15,25 @@ from agentic_fabric.core.manager import ManagerAgent
 class TestManagerAgent:
     """Tests for ManagerAgent base class."""
 
-    def test_init_with_crews(self):
-        """Test manager initialization with crew mappings."""
-        crews = {"design": "game_design", "qa": "quality_assurance"}
-        manager = ManagerAgent(crews=crews)
+    def test_init_with_fabric_agents(self):
+        """Test manager initialization with fabric agent mappings."""
+        fabric_agents = {"design": "game_design", "qa": "quality_assurance"}
+        manager = ManagerAgent(fabric_agents=fabric_agents)
 
-        assert manager.crews == crews
+        assert manager.fabric_agents == fabric_agents
         assert manager.package_name is None
         assert manager.workspace_root is None
 
     def test_init_with_package_name(self):
         """Test manager initialization with package name."""
-        crews = {"design": "game_design"}
-        manager = ManagerAgent(crews=crews, package_name="my_package")
+        fabric_agents = {"design": "game_design"}
+        manager = ManagerAgent(fabric_agents=fabric_agents, package_name="my_package")
 
         assert manager.package_name == "my_package"
 
     def test_get_packages_caches_result(self):
         """Test that package discovery is cached."""
-        manager = ManagerAgent(crews={"test": "test_crew"})
+        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
 
         with patch("agentic_fabric.core.manager.discover_packages") as mock_discover:
             mock_packages = {"pkg1": Path("/path/pkg1")}
@@ -52,7 +52,7 @@ class TestManagerAgent:
     def test_delegate_with_string_input(self):
         """Test delegation with string input."""
         manager = ManagerAgent(
-            crews={"design": "game_design"},
+            fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
 
@@ -65,8 +65,8 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config
@@ -83,7 +83,7 @@ class TestManagerAgent:
     def test_delegate_with_dict_input(self):
         """Test delegation with dict input."""
         manager = ManagerAgent(
-            crews={"design": "game_design"},
+            fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
 
@@ -92,8 +92,8 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config
@@ -109,15 +109,15 @@ class TestManagerAgent:
 
     def test_delegate_unknown_role_raises_error(self):
         """Test that delegating to unknown role raises ValueError."""
-        manager = ManagerAgent(crews={"design": "game_design"})
+        manager = ManagerAgent(fabric_agents={"design": "game_design"})
 
-        with pytest.raises(ValueError, match="Unknown crew role 'unknown'"):
+        with pytest.raises(ValueError, match="Unknown fabric agent role 'unknown'"):
             manager.delegate("unknown", "test task")
 
     def test_delegate_package_not_found_raises_error(self):
         """Test that missing package raises ValueError."""
         manager = ManagerAgent(
-            crews={"design": "game_design"},
+            fabric_agents={"design": "game_design"},
             package_name="nonexistent",
         )
 
@@ -127,9 +127,9 @@ class TestManagerAgent:
             with pytest.raises(ValueError, match="Package 'nonexistent' not found"):
                 manager.delegate("design", "test task")
 
-    def test_delegate_auto_discover_crew(self):
-        """Test auto-discovery of crew in packages when package_name not specified."""
-        manager = ManagerAgent(crews={"design": "game_design"})
+    def test_delegate_auto_discovers_fabric_agent(self):
+        """Test auto-discovery of a fabric agent when package_name is not specified."""
+        manager = ManagerAgent(fabric_agents={"design": "game_design"})
 
         mock_packages = {
             "pkg1": Path("/pkg1/.crewai"),
@@ -139,15 +139,15 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
 
-            # First package doesn't have the crew
-            def get_config_side_effect(pkg_dir, crew_name):
+            # First package doesn't have the fabric agent.
+            def get_config_side_effect(pkg_dir, fabric_agent_name):
                 if pkg_dir == Path("/pkg1/.crewai"):
-                    raise ValueError("Crew not found")
+                    raise ValueError("Fabric agent not found")
                 return mock_config
 
             mock_get_config.side_effect = get_config_side_effect
@@ -159,15 +159,15 @@ class TestManagerAgent:
             # Should have tried pkg1 (failed), then found in pkg2 (config is cached)
             assert mock_get_config.call_count == 2
 
-    def test_delegate_uses_cached_crew_config(self):
-        """Repeated delegation to the same crew should reuse the cached config."""
-        manager = ManagerAgent(crews={"design": "game_design"}, package_name="test_pkg")
+    def test_delegate_uses_cached_fabric_agent_config(self):
+        """Repeated delegation to the same fabric agent should reuse the cached config."""
+        manager = ManagerAgent(fabric_agents={"design": "game_design"}, package_name="test_pkg")
         mock_config = {"name": "game_design", "agents": {}, "tasks": {}}
 
         with (
             patch("agentic_fabric.core.manager.discover_packages", return_value={"test_pkg": Path("/test/.crewai")}),
-            patch("agentic_fabric.core.manager.get_crew_config", return_value=mock_config) as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto", side_effect=["first", "second"]) as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config", return_value=mock_config) as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto", side_effect=["first", "second"]) as mock_run,
         ):
             assert manager.delegate("design", "first task", framework="crewai") == "first"
             assert manager.delegate("design", {"task": "second task"}, framework="langgraph") == "second"
@@ -175,27 +175,27 @@ class TestManagerAgent:
         mock_get_config.assert_called_once_with(Path("/test/.crewai"), "game_design")
         assert mock_run.call_args_list[1].kwargs == {"inputs": {"task": "second task"}, "framework": "langgraph"}
 
-    def test_delegate_crew_not_found_raises_error(self):
-        """Test that crew not found in any package raises ValueError."""
-        manager = ManagerAgent(crews={"design": "nonexistent_crew"})
+    def test_delegate_fabric_agent_not_found_raises_error(self):
+        """Test that fabric agent not found in any package raises ValueError."""
+        manager = ManagerAgent(fabric_agents={"design": "missing_fabric_agent"})
 
         mock_packages = {"pkg1": Path("/pkg1/.crewai")}
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
         ):
             mock_discover.return_value = mock_packages
-            mock_get_config.side_effect = ValueError("Crew not found")
+            mock_get_config.side_effect = ValueError("Fabric agent not found")
 
-            with pytest.raises(ValueError, match="Crew 'nonexistent_crew' not found"):
+            with pytest.raises(ValueError, match="Fabric agent 'missing_fabric_agent' not found"):
                 manager.delegate("design", "test task")
 
     @pytest.mark.asyncio
     async def test_delegate_async(self):
         """Test async delegation."""
         manager = ManagerAgent(
-            crews={"design": "game_design"},
+            fabric_agents={"design": "game_design"},
             package_name="test_pkg",
         )
 
@@ -204,8 +204,8 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config
@@ -217,9 +217,9 @@ class TestManagerAgent:
 
     @pytest.mark.asyncio
     async def test_delegate_parallel(self):
-        """Test parallel delegation to multiple crews."""
+        """Test parallel delegation to multiple fabric agents."""
         manager = ManagerAgent(
-            crews={"design": "game_design", "assets": "asset_gen"},
+            fabric_agents={"design": "game_design", "assets": "asset_gen"},
             package_name="test_pkg",
         )
 
@@ -227,25 +227,25 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
 
-            # Return different configs for different crews to distinguish them
-            def get_config_side_effect(pkg_dir, crew_name):
-                return {"name": crew_name, "agents": {}, "tasks": {}}
+            # Return different configs for different fabric agents to distinguish them.
+            def get_config_side_effect(pkg_dir, fabric_agent_name):
+                return {"name": fabric_agent_name, "agents": {}, "tasks": {}}
 
             mock_get_config.side_effect = get_config_side_effect
 
-            # Mock different results based on crew name in config
+            # Mock different results based on fabric agent name in config.
             def run_side_effect(config, inputs, framework=None):
-                crew_name = config["name"]
-                if crew_name == "game_design":
+                fabric_agent_name = config["name"]
+                if fabric_agent_name == "game_design":
                     return "Design done"
-                elif crew_name == "asset_gen":
+                elif fabric_agent_name == "asset_gen":
                     return "Assets done"
-                return f"Unknown crew: {crew_name}"
+                return f"Unknown fabric agent: {fabric_agent_name}"
 
             mock_run.side_effect = run_side_effect
 
@@ -262,9 +262,9 @@ class TestManagerAgent:
             assert mock_run.call_count == 2
 
     def test_delegate_sequential(self):
-        """Test sequential delegation to multiple crews."""
+        """Test sequential delegation to multiple fabric agents."""
         manager = ManagerAgent(
-            crews={"design": "game_design", "impl": "implementation"},
+            fabric_agents={"design": "game_design", "impl": "implementation"},
             package_name="test_pkg",
         )
 
@@ -273,8 +273,8 @@ class TestManagerAgent:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config
@@ -296,7 +296,7 @@ class TestManagerAgent:
 
     def test_checkpoint_auto_approve(self):
         """Test checkpoint with auto_approve=True."""
-        manager = ManagerAgent(crews={"test": "test_crew"})
+        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
 
         approved, result = manager.checkpoint(
             "Review design",
@@ -309,7 +309,7 @@ class TestManagerAgent:
 
     def test_checkpoint_base_implementation_auto_approves(self):
         """Test that base checkpoint implementation auto-approves."""
-        manager = ManagerAgent(crews={"test": "test_crew"})
+        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
 
         approved, result = manager.checkpoint(
             "Review design",
@@ -322,7 +322,7 @@ class TestManagerAgent:
 
     def test_execute_workflow_not_implemented(self):
         """Test that execute_workflow raises NotImplementedError in base class."""
-        manager = ManagerAgent(crews={"test": "test_crew"})
+        manager = ManagerAgent(fabric_agents={"test": "test_fabric_agent"})
 
         with pytest.raises(NotImplementedError, match="Subclasses must implement"):
             asyncio.run(manager.execute_workflow("test task"))
@@ -342,7 +342,7 @@ class TestManagerAgentSubclass:
                 return await self.delegate_async("impl", design)
 
         manager = TestManager(
-            crews={"design": "game_design", "impl": "implementation"},
+            fabric_agents={"design": "game_design", "impl": "implementation"},
             package_name="test_pkg",
         )
 
@@ -351,8 +351,8 @@ class TestManagerAgentSubclass:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config
@@ -386,7 +386,7 @@ class TestManagerAgentSubclass:
                 )
 
         manager = ParallelManager(
-            crews={"design": "design", "assets": "assets", "qa": "qa"},
+            fabric_agents={"design": "design", "assets": "assets", "qa": "qa"},
             package_name="test_pkg",
         )
 
@@ -395,8 +395,8 @@ class TestManagerAgentSubclass:
 
         with (
             patch("agentic_fabric.core.manager.discover_packages") as mock_discover,
-            patch("agentic_fabric.core.manager.get_crew_config") as mock_get_config,
-            patch("agentic_fabric.core.manager.run_crew_auto") as mock_run,
+            patch("agentic_fabric.core.manager.get_fabric_agent_config") as mock_get_config,
+            patch("agentic_fabric.core.manager.run_fabric_agent_auto") as mock_run,
         ):
             mock_discover.return_value = mock_packages
             mock_get_config.return_value = mock_config

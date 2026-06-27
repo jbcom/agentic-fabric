@@ -48,12 +48,12 @@ ALL_FRAMEWORK_MODULES = CREWAI_MODULES + LANGGRAPH_MODULES + STRANDS_MODULES
 
 
 # =============================================================================
-# CrewMocker Class - Enhanced mocker for agentic-fabric testing
+# FabricMocker Class - Enhanced mocker for agentic-fabric testing
 # =============================================================================
 
 
 @dataclass
-class CrewMocker:
+class FabricMocker:
     """Enhanced mocker specifically for agentic-fabric testing.
 
     This class wraps pytest-mock's MockerFixture and provides convenience
@@ -64,10 +64,10 @@ class CrewMocker:
         mocked_modules: Dictionary of currently mocked framework modules.
 
     Example:
-        def test_crewai_runner(crew_mocker):
+        def test_crewai_runner(fabric_mocker):
             # Mock CrewAI components
-            mock_agent = crew_mocker.mock_crewai_agent()
-            mock_crew = crew_mocker.mock_crewai_crew()
+            mock_agent = fabric_mocker.mock_crewai_agent()
+            mock_crew = fabric_mocker.mock_crewai_crew()
 
             # Test runner behavior
             from agentic_fabric.runners.crewai_runner import CrewAIRunner
@@ -389,29 +389,29 @@ class CrewMocker:
         mock.return_value = packages or {}
         return mock
 
-    def patch_get_crew_config(self, config: dict[str, Any] | None = None) -> Any:
-        """Patch agentic_fabric.core.discovery.get_crew_config.
+    def patch_get_fabric_agent_config(self, config: dict[str, Any] | None = None) -> Any:
+        """Patch agentic_fabric.core.discovery.get_fabric_agent_config.
 
         Args:
             config: Config to return. If None, returns minimal valid config.
 
         Returns:
-            The mock for get_crew_config.
+            The mock for get_fabric_agent_config.
         """
-        mock = self.mocker.patch("agentic_fabric.core.discovery.get_crew_config")
+        mock = self.mocker.patch("agentic_fabric.core.discovery.get_fabric_agent_config")
         mock.return_value = config or {"name": "test", "agents": {}, "tasks": {}}
         return mock
 
-    def patch_run_crew_auto(self, result: str = "Test result") -> Any:
-        """Patch agentic_fabric.core.decomposer.run_crew_auto.
+    def patch_run_fabric_agent_auto(self, result: str = "Test result") -> Any:
+        """Patch agentic_fabric.core.decomposer.run_fabric_agent_auto.
 
         Args:
-            result: Result string to return from run_crew_auto.
+            result: Result string to return from run_fabric_agent_auto.
 
         Returns:
-            The mock for run_crew_auto.
+            The mock for run_fabric_agent_auto.
         """
-        mock = self.mocker.patch("agentic_fabric.core.decomposer.run_crew_auto")
+        mock = self.mocker.patch("agentic_fabric.core.decomposer.run_fabric_agent_auto")
         mock.return_value = result
         return mock
 
@@ -422,27 +422,27 @@ class CrewMocker:
 
 
 @pytest.fixture
-def crew_mocker(mocker: MockerFixture) -> Generator[CrewMocker, None, None]:
-    """Fixture providing CrewMocker for agentic-fabric testing.
+def fabric_mocker(mocker: MockerFixture) -> Generator[FabricMocker, None, None]:
+    """Fixture providing FabricMocker for agentic-fabric testing.
 
     This fixture builds on pytest-mock's mocker fixture and provides
     specialized methods for mocking AI framework components.
 
     Yields:
-        CrewMocker instance with access to all mocking utilities.
+        FabricMocker instance with access to all mocking utilities.
 
     Example:
-        def test_my_runner(crew_mocker):
+        def test_my_runner(fabric_mocker):
             # Mock CrewAI
-            crew_mocker.mock_crewai()
-            mock_llm = crew_mocker.patch_get_llm()
+            fabric_mocker.mock_crewai()
+            mock_llm = fabric_mocker.patch_get_llm()
 
             # Test code
             from agentic_fabric.runners.crewai_runner import CrewAIRunner
             runner = CrewAIRunner()
             ...
     """
-    cm = CrewMocker(mocker=mocker)
+    cm = FabricMocker(mocker=mocker)
     yield cm
     cm.restore_modules()
 
@@ -464,7 +464,7 @@ def mock_frameworks(mocker: MockerFixture) -> Generator[dict[str, Any], None, No
             runner = CrewAIRunner()
             # Test runner behavior with mocked framework
     """
-    cm = CrewMocker(mocker=mocker)
+    cm = FabricMocker(mocker=mocker)
     mocks = cm.mock_all_frameworks()
     yield mocks
     cm.restore_modules()
@@ -477,7 +477,7 @@ def mock_crewai(mocker: MockerFixture) -> Generator[dict[str, Any], None, None]:
     Yields:
         Dictionary with CrewAI mock objects.
     """
-    cm = CrewMocker(mocker=mocker)
+    cm = FabricMocker(mocker=mocker)
     mocks = cm.mock_crewai()
     yield mocks
     cm.restore_modules()
@@ -490,7 +490,7 @@ def mock_langgraph(mocker: MockerFixture) -> Generator[dict[str, Any], None, Non
     Yields:
         Dictionary with LangGraph mock objects.
     """
-    cm = CrewMocker(mocker=mocker)
+    cm = FabricMocker(mocker=mocker)
     mocks = cm.mock_langgraph()
     yield mocks
     cm.restore_modules()
@@ -503,7 +503,7 @@ def mock_strands(mocker: MockerFixture) -> Generator[dict[str, Any], None, None]
     Yields:
         Dictionary with Strands mock objects.
     """
-    cm = CrewMocker(mocker=mocker)
+    cm = FabricMocker(mocker=mocker)
     mocks = cm.mock_strands()
     yield mocks
     cm.restore_modules()

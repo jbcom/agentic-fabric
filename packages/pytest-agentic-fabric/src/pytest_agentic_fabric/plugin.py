@@ -108,11 +108,11 @@ def agentic_mock_runtime(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], dic
 
 
 @pytest.fixture
-def agentic_crew_config() -> dict[str, Any]:
-    """Return a minimal framework-neutral crew config."""
+def agentic_fabric_agent_config() -> dict[str, Any]:
+    """Return a minimal framework-neutral fabric agent config."""
     return {
-        "name": "test_crew",
-        "description": "A test crew",
+        "name": "test_fabric_agent",
+        "description": "A test fabric agent",
         "agents": {
             "tester": {
                 "role": "Tester",
@@ -132,21 +132,21 @@ def agentic_crew_config() -> dict[str, Any]:
 
 
 @pytest.fixture
-def agentic_workspace(tmp_path: Path, agentic_crew_config: dict[str, Any]) -> Path:
-    """Create a minimal workspace with a ``.crew`` package."""
+def agentic_workspace(tmp_path: Path, agentic_fabric_agent_config: dict[str, Any]) -> Path:
+    """Create a minimal workspace with a ``.fabric`` package."""
     workspace = tmp_path / "workspace"
-    crew_dir = workspace / "packages" / "sample" / ".crew"
-    config_dir = crew_dir / "crews" / "test_crew"
+    fabric_dir = workspace / "packages" / "sample" / ".fabric"
+    config_dir = fabric_dir / "fabric_agents" / "test_fabric_agent"
     config_dir.mkdir(parents=True)
-    crew_dir.joinpath("manifest.yaml").write_text(
+    fabric_dir.joinpath("manifest.yaml").write_text(
         """
 name: sample
 description: Test package
-crews:
-  test_crew:
-    description: A test crew
-    agents: crews/test_crew/agents.yaml
-    tasks: crews/test_crew/tasks.yaml
+fabric_agents:
+  test_fabric_agent:
+    description: A test fabric agent
+    agents: fabric_agents/test_fabric_agent/agents.yaml
+    tasks: fabric_agents/test_fabric_agent/tasks.yaml
 """.strip(),
         encoding="utf-8",
     )
@@ -168,5 +168,5 @@ verify:
 """.strip(),
         encoding="utf-8",
     )
-    _ = agentic_crew_config
+    _ = agentic_fabric_agent_config
     return workspace

@@ -56,12 +56,8 @@ def get_all_tools() -> list[Any]:
     with suppress(ImportError):
         tools.extend(get_scraping_tools())
 
-    try:
-        from mesh_toolkit.agent_tools.crewai import get_tools as get_meshy_tools
-
-        tools.extend(get_meshy_tools())
-    except ImportError:
-        pass
+    with suppress(AttributeError, ImportError, RuntimeError):
+        tools.extend(__getattr__("vendor_capability_tools")(include_unavailable=False))
 
     return tools
 

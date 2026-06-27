@@ -6,14 +6,15 @@
 
 ### Initial Stable Release
 
-Framework-agnostic AI crew orchestration is now production-ready!
+Framework-agnostic AI fabric agent orchestration is now production-ready!
 
 ### Features
 
-- **Multi-Framework Support**: Run crews on CrewAI, LangGraph, or Strands
+- **Multi-Framework Support**: Run fabric agents on CrewAI, LangGraph, or Strands
 - **Auto-Detection**: Automatically selects best available framework
 - **Universal YAML Format**: Define once, run anywhere
 - **Single-Agent CLI Runners**: Support for aider, claude-code, ollama, and more
+- **MCP Adapters**: Expose vendor-fabric catalog/data methods and Meshy capability metadata over MCP
 - **Knowledge Base Integration**: Load domain knowledge from markdown files
 - **Agent Archetypes**: Reusable agent templates
 - **Comprehensive Testing**: 122+ unit tests, E2E test suite

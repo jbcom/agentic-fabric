@@ -11,4 +11,4 @@ python examples/runtime_context.py
 ```
 
 The bundled `sample_workspace/` directory demonstrates a framework-agnostic
-`.crew/` layout.
+`.fabric/` layout.

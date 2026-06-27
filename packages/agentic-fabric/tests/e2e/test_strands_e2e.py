@@ -40,20 +40,20 @@ class TestStrandsAgentExecution:
     def test_strands_agent_execution(
         self,
         check_aws_credentials: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test simple Strands agent execution.
 
         Args:
             check_aws_credentials: Fixture to check for required AWS credentials.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.strands_runner import StrandsRunner
 
         runner = StrandsRunner()
 
-        # Build the agent from crew config
-        agent = runner.build_crew(simple_crew_config)
+        # Build the agent from fabric_agent config
+        agent = runner.build_fabric_agent(simple_fabric_agent_config)
         assert agent is not None
 
         # Run with simple input
@@ -70,13 +70,13 @@ class TestStrandsAgentExecution:
     def test_build_and_run(
         self,
         check_aws_credentials: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test the convenience build_and_run method.
 
         Args:
             check_aws_credentials: Fixture to check for required AWS credentials.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.strands_runner import StrandsRunner
 
@@ -84,7 +84,7 @@ class TestStrandsAgentExecution:
 
         # Use build_and_run convenience method
         inputs = {"input": "What is the smallest prime number?"}
-        result = runner.build_and_run(simple_crew_config, inputs)
+        result = runner.build_and_run(simple_fabric_agent_config, inputs)
 
         # Verify we got a response
         assert result is not None
@@ -157,20 +157,20 @@ class TestStrandsSystemPrompt:
     def test_system_prompt_generation(
         self,
         check_aws_credentials: None,
-        multi_agent_crew_config: dict[str, Any],
+        multi_agent_fabric_agent_config: dict[str, Any],
     ) -> None:
-        """Test that system prompts are generated correctly from crew config.
+        """Test that system prompts are generated correctly from fabric_agent config.
 
         Args:
             check_aws_credentials: Fixture to check for required AWS credentials.
-            multi_agent_crew_config: Multi-agent crew configuration fixture.
+            multi_agent_fabric_agent_config: Multi-agent fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.strands_runner import StrandsRunner
 
         runner = StrandsRunner()
 
-        # Build system prompt (internal method, testing through crew build)
-        agent = runner.build_crew(multi_agent_crew_config)
+        # Build system prompt (internal method, testing through fabric_agent build)
+        agent = runner.build_fabric_agent(multi_agent_fabric_agent_config)
         assert agent is not None
 
         # Run the agent to verify the system prompt is working
@@ -190,7 +190,7 @@ class TestStrandsBedrockIntegration:
     def test_bedrock_integration(
         self,
         check_aws_credentials: None,
-        simple_crew_config: dict[str, Any],
+        simple_fabric_agent_config: dict[str, Any],
     ) -> None:
         """Test Strands with AWS Bedrock model provider.
 
@@ -198,13 +198,13 @@ class TestStrandsBedrockIntegration:
 
         Args:
             check_aws_credentials: Fixture to check for required AWS credentials.
-            simple_crew_config: Simple crew configuration fixture.
+            simple_fabric_agent_config: Simple fabric_agent configuration fixture.
         """
         from agentic_fabric.runners.strands_runner import StrandsRunner
 
         # Add Bedrock model configuration
         bedrock_config = {
-            **simple_crew_config,
+            **simple_fabric_agent_config,
             "llm": {
                 "provider": "bedrock",
                 "model": "anthropic.claude-haiku-4-5-20251001-v1:0",

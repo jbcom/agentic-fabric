@@ -44,26 +44,26 @@ their optional dependencies are installed.
    framework = detect_framework()
    runner = get_runner(framework)
 
-Crew definitions can live in ``.crew/``, ``.crewai/``, ``.langgraph/``,
-or ``.strands/`` directories. A ``.crew/`` directory is
+Fabric agent definitions can live in ``.fabric/``, ``.crewai/``, ``.langgraph/``,
+or ``.strands/`` directories. A ``.fabric/`` directory is
 framework-agnostic. A framework-specific directory requires that
 runtime.
 
 If a required runtime is unavailable, runtime errors include the matching
 install guidance. Automatic selection follows CrewAI, then LangGraph, then
-Strands, but explicit runtime selection always wins unless the crew is stored
+Strands, but explicit runtime selection always wins unless the fabric agent is stored
 in a framework-specific directory.
 
 Use ``AgenticData`` when runtime context should travel with data and
-registered crew definitions:
+registered fabric agent definitions:
 
 .. code:: python
 
    from agentic_fabric import AgenticData
 
    session = AgenticData({"repo": "jbcom/agentic-fabric"})
-   session.register_agent("reviewer", crew_config)
-   result = session.run_agent("reviewer", runtime="crewai")
+   session.register_fabric_agent("reviewer", fabric_agent_config)
+   result = session.run_fabric_agent("reviewer", runtime="crewai")
 
 CrewAI Dependency Note
 ----------------------

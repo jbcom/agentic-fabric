@@ -7,7 +7,7 @@ collaboration overhead. They're ideal for:
 - Local development
 - Sequential workflows
 
-Unlike multi-agent crews, single-agent runners:
+Unlike multi-agent fabric agents, single-agent runners:
 - Take a single task string as input
 - Execute in one pass without delegation
 - Return results directly
@@ -26,7 +26,7 @@ class SingleAgentRunner(AgentCapabilityProviderMixin, ABC):
     """Base class for single-agent runners.
 
     Single-agent runners provide a simpler execution model than multi-agent
-    crews. They execute a single task and return the result, without the
+    fabric agents. They execute a single task and return the result, without the
     complexity of agent collaboration, delegation, or hierarchical processes.
     """
 

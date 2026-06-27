@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import builtins
-
 from typing import Any
 
 import pytest
@@ -75,33 +73,20 @@ def test_tool_collection_helpers_instantiate_lazy_tools(monkeypatch: pytest.Monk
 def test_get_all_tools_suppresses_unavailable_optional_tools(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tools, "get_file_tools", lambda: ["file"])
     monkeypatch.setattr(tools, "get_scraping_tools", lambda: (_ for _ in ()).throw(ImportError("missing scraping")))
-    real_import = builtins.__import__
-
-    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "mesh_toolkit.agent_tools.crewai":
-            raise ImportError("missing meshy")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(tools, "_load_attr", lambda *_: (_ for _ in ()).throw(RuntimeError("missing")))
 
     assert tools.get_all_tools() == ["file"]
 
 
-def test_get_all_tools_includes_meshy_tools_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_all_tools_includes_vendor_capability_tools_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tools, "get_file_tools", lambda: ["file"])
     monkeypatch.setattr(tools, "get_scraping_tools", lambda: ["scrape"])
-    real_import = builtins.__import__
 
-    class FakeMeshModule:
-        @staticmethod
-        def get_tools() -> list[str]:
-            return ["mesh"]
+    def fake_load_attr(module_name: str, attr_name: str) -> Any:
+        assert module_name == "agentic_fabric.tools.vendor"
+        assert attr_name == "vendor_capability_tools"
+        return lambda **_: ["vendor"]
 
-    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "mesh_toolkit.agent_tools.crewai":
-            return FakeMeshModule
-        return real_import(name, *args, **kwargs)
+    monkeypatch.setattr(tools, "_load_attr", fake_load_attr)
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-
-    assert tools.get_all_tools() == ["file", "scrape", "mesh"]
+    assert tools.get_all_tools() == ["file", "scrape", "vendor"]

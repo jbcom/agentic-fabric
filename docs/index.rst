@@ -2,8 +2,8 @@ Agentic Fabric
 ==============
 
 ``agentic-fabric`` is the standalone orchestration package for
-framework-agnostic agent crews. It discovers YAML crew definitions,
-selects an installed runtime, and runs the same crew on CrewAI,
+framework-agnostic agent fabrics. It discovers YAML fabric agent definitions,
+selects an installed runtime, and runs the same fabric agent on CrewAI,
 LangGraph, Strands, or local CLI runners.
 
 .. code:: bash

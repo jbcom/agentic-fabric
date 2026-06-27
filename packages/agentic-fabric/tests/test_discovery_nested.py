@@ -1,4 +1,4 @@
-"""Tests for crew discovery in nested directories and edge cases."""
+"""Tests for fabric_agent discovery in nested directories and edge cases."""
 
 from __future__ import annotations
 
@@ -26,35 +26,35 @@ class TestDiscoverPackagesNested:
 
         # Create a real package too
         pkg_dir = packages_dir / "real_pkg"
-        crew_dir = pkg_dir / ".crew"
-        crew_dir.mkdir(parents=True)
-        (crew_dir / "manifest.yaml").write_text("name: real\ncrews: {}")
+        fabric_dir = pkg_dir / ".fabric"
+        fabric_dir.mkdir(parents=True)
+        (fabric_dir / "manifest.yaml").write_text("name: real\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
         assert "real_pkg" in packages
         assert "README.md" not in packages
 
     def test_standalone_project_at_root(self, tmp_path: Path) -> None:
-        """A .crew directory at workspace root should be discovered."""
-        crew_dir = tmp_path / ".crew"
-        crew_dir.mkdir()
-        (crew_dir / "manifest.yaml").write_text("name: root_project\ncrews: {}")
+        """A .fabric directory at workspace root should be discovered."""
+        fabric_dir = tmp_path / ".fabric"
+        fabric_dir.mkdir()
+        (fabric_dir / "manifest.yaml").write_text("name: root_project\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
         assert tmp_path.name in packages
 
     def test_standalone_and_packages_coexist(self, tmp_path: Path) -> None:
-        """Root .crew and packages/.crew should both be discovered."""
-        # Root level .crew
-        root_crew = tmp_path / ".crew"
-        root_crew.mkdir()
-        (root_crew / "manifest.yaml").write_text("name: root\ncrews: {}")
+        """Root .fabric and packages/.fabric should both be discovered."""
+        # Root level .fabric
+        root_fabric = tmp_path / ".fabric"
+        root_fabric.mkdir()
+        (root_fabric / "manifest.yaml").write_text("name: root\nfabric_agents: {}")
 
-        # Package level .crew
+        # Package level .fabric
         pkg_dir = tmp_path / "packages" / "sub_pkg"
-        pkg_crew = pkg_dir / ".crew"
-        pkg_crew.mkdir(parents=True)
-        (pkg_crew / "manifest.yaml").write_text("name: sub\ncrews: {}")
+        pkg_fabric = pkg_dir / ".fabric"
+        pkg_fabric.mkdir(parents=True)
+        (pkg_fabric / "manifest.yaml").write_text("name: sub\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
         assert "sub_pkg" in packages
@@ -77,14 +77,14 @@ class TestDiscoverPackagesNested:
         """Filtering by framework='crewai' should only find .crewai dirs."""
         pkg_dir = tmp_path / "packages" / "test_pkg"
 
-        # Create .crew (agnostic) and .crewai (specific)
-        crew_dir = pkg_dir / ".crew"
-        crew_dir.mkdir(parents=True)
-        (crew_dir / "manifest.yaml").write_text("name: test\ncrews: {}")
+        # Create .fabric (agnostic) and .crewai (specific)
+        fabric_dir = pkg_dir / ".fabric"
+        fabric_dir.mkdir(parents=True)
+        (fabric_dir / "manifest.yaml").write_text("name: test\nfabric_agents: {}")
 
         crewai_dir = pkg_dir / ".crewai"
         crewai_dir.mkdir()
-        (crewai_dir / "manifest.yaml").write_text("name: test\ncrews: {}")
+        (crewai_dir / "manifest.yaml").write_text("name: test\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path, framework="crewai")
         assert "test_pkg" in packages
@@ -93,9 +93,9 @@ class TestDiscoverPackagesNested:
     def test_framework_filter_no_match(self, tmp_path: Path) -> None:
         """Filtering by framework with no matching dirs returns empty."""
         pkg_dir = tmp_path / "packages" / "test_pkg"
-        crew_dir = pkg_dir / ".crewai"
-        crew_dir.mkdir(parents=True)
-        (crew_dir / "manifest.yaml").write_text("name: test\ncrews: {}")
+        fabric_dir = pkg_dir / ".crewai"
+        fabric_dir.mkdir(parents=True)
+        (fabric_dir / "manifest.yaml").write_text("name: test\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path, framework="strands")
         assert packages == {}
@@ -114,7 +114,7 @@ class TestDiscoverPackagesNested:
         """A file named like a config directory should not be discovered."""
         pkg_dir = tmp_path / "packages" / "test_pkg"
         pkg_dir.mkdir(parents=True)
-        (pkg_dir / ".crew").write_text("not a directory", encoding="utf-8")
+        (pkg_dir / ".fabric").write_text("not a directory", encoding="utf-8")
         (tmp_path / ".langgraph").write_text("not a directory", encoding="utf-8")
 
         packages = discover_packages(workspace_root=tmp_path)
@@ -125,9 +125,9 @@ class TestDiscoverPackagesNested:
         """Multiple packages should all be discovered."""
         packages_dir = tmp_path / "packages"
         for name in ["alpha", "beta", "gamma"]:
-            crew_dir = packages_dir / name / ".crew"
-            crew_dir.mkdir(parents=True)
-            (crew_dir / "manifest.yaml").write_text(f"name: {name}\ncrews: {{}}")
+            fabric_dir = packages_dir / name / ".fabric"
+            fabric_dir.mkdir(parents=True)
+            (fabric_dir / "manifest.yaml").write_text(f"name: {name}\nfabric_agents: {{}}")
 
         packages = discover_packages(workspace_root=tmp_path)
         assert set(packages.keys()) == {"alpha", "beta", "gamma"}
@@ -137,26 +137,26 @@ class TestDiscoverAllFrameworkConfigs:
     """Test discover_all_framework_configs."""
 
     def test_multiple_frameworks_per_package(self, tmp_path: Path) -> None:
-        """A package with .crew, .crewai, and .strands should return all."""
+        """A package with .fabric, .crewai, and .strands should return all."""
         pkg_dir = tmp_path / "packages" / "multi"
 
-        for dir_name in [".crew", ".crewai", ".strands"]:
+        for dir_name in [".fabric", ".crewai", ".strands"]:
             fw_dir = pkg_dir / dir_name
             fw_dir.mkdir(parents=True)
-            (fw_dir / "manifest.yaml").write_text(f"name: multi\nframework_dir: {dir_name}\ncrews: {{}}")
+            (fw_dir / "manifest.yaml").write_text(f"name: multi\nframework_dir: {dir_name}\nfabric_agents: {{}}")
 
         configs = discover_all_framework_configs(workspace_root=tmp_path)
 
         assert "multi" in configs
-        assert None in configs["multi"]  # .crew -> agnostic
+        assert None in configs["multi"]  # .fabric -> agnostic
         assert "crewai" in configs["multi"]
         assert "strands" in configs["multi"]
 
     def test_root_configs_discovered(self, tmp_path: Path) -> None:
         """Root-level framework configs should be discovered."""
-        crew_dir = tmp_path / ".langgraph"
-        crew_dir.mkdir()
-        (crew_dir / "manifest.yaml").write_text("name: root\ncrews: {}")
+        fabric_dir = tmp_path / ".langgraph"
+        fabric_dir.mkdir()
+        (fabric_dir / "manifest.yaml").write_text("name: root\nfabric_agents: {}")
 
         configs = discover_all_framework_configs(workspace_root=tmp_path)
         assert tmp_path.name in configs

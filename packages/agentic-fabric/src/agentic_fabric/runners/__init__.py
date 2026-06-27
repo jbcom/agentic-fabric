@@ -1,7 +1,7 @@
 """Framework-specific runners for agentic-fabric.
 
 Each runner implements the same interface but targets a different AI framework:
-- CrewAIRunner: Full-featured, best for complex crews
+- CrewAIRunner: Full-featured, best for complex fabric_agents
 - LangGraphRunner: Graph-based flows, good for conditional logic
 - StrandsRunner: Lightweight, AWS-native
 
@@ -9,12 +9,12 @@ Single-agent runners provide simpler execution without multi-agent overhead:
 - LocalCLIRunner: Universal runner for any CLI-based coding agent (aider, claude-code, ollama, etc.)
 
 Usage:
-    # Multi-agent crews
+    # Multi-agent fabric_agents
     from agentic_fabric.runners import get_runner
 
     runner = get_runner("crewai")  # Or "langgraph", "strands", "auto"
-    crew = runner.build_crew(config)
-    result = runner.run(crew, inputs)
+    fabric_agent = runner.build_fabric_agent(config)
+    result = runner.run(fabric_agent, inputs)
 
     # Single-agent CLI runners
     from agentic_fabric.core.decomposer import get_cli_runner

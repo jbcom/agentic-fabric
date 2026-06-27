@@ -20,37 +20,37 @@ class TestDiscovery:
         assert "sample" in packages
         assert packages["sample"].exists()
 
-    def test_discover_packages_finds_crew_directories(self, tmp_path: Path) -> None:
-        """Test that discover_packages finds framework-agnostic .crew directories."""
+    def test_discover_packages_finds_fabric_directories(self, tmp_path: Path) -> None:
+        """Test that discover_packages finds framework-agnostic .fabric directories."""
         from agentic_fabric.core.discovery import discover_packages
 
-        # Create packages with .crew directory
+        # Create packages with .fabric directory
         pkg_dir = tmp_path / "packages" / "strata"
-        crew_dir = pkg_dir / ".crew"
-        crew_dir.mkdir(parents=True)
-        (crew_dir / "manifest.yaml").write_text("name: strata\ncrews: {}")
+        fabric_dir = pkg_dir / ".fabric"
+        fabric_dir.mkdir(parents=True)
+        (fabric_dir / "manifest.yaml").write_text("name: strata\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
 
         assert "strata" in packages
-        assert packages["strata"].name == ".crew"
+        assert packages["strata"].name == ".fabric"
 
-    def test_discover_packages_prefers_crew_over_crewai(self, tmp_path: Path) -> None:
-        """Test that .crew takes priority over .crewai when both exist."""
+    def test_discover_packages_prefers_fabric_over_crewai(self, tmp_path: Path) -> None:
+        """Test that .fabric takes priority over .crewai when both exist."""
         from agentic_fabric.core.discovery import discover_packages
 
-        # Create package with both .crew and .crewai
+        # Create package with both .fabric and .crewai
         pkg_dir = tmp_path / "packages" / "hybrid"
-        (pkg_dir / ".crew").mkdir(parents=True)
-        (pkg_dir / ".crew" / "manifest.yaml").write_text("name: hybrid\ncrews: {}")
+        (pkg_dir / ".fabric").mkdir(parents=True)
+        (pkg_dir / ".fabric" / "manifest.yaml").write_text("name: hybrid\nfabric_agents: {}")
         (pkg_dir / ".crewai").mkdir(parents=True)
-        (pkg_dir / ".crewai" / "manifest.yaml").write_text("name: hybrid\ncrews: {}")
+        (pkg_dir / ".crewai" / "manifest.yaml").write_text("name: hybrid\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
 
         assert "hybrid" in packages
-        # .crew should be preferred (framework-agnostic first)
-        assert packages["hybrid"].name == ".crew"
+        # .fabric should be preferred (framework-agnostic first)
+        assert packages["hybrid"].name == ".fabric"
 
     def test_discover_packages_returns_empty_when_no_packages(self, tmp_path: Path) -> None:
         """Test that discover_packages returns empty dict when no config dirs exist."""
@@ -71,15 +71,15 @@ class TestDiscovery:
 
         # Create package with multiple framework configs
         pkg_dir = tmp_path / "packages" / "multi"
-        (pkg_dir / ".crew").mkdir(parents=True)
-        (pkg_dir / ".crew" / "manifest.yaml").write_text("name: multi\ncrews: {}")
+        (pkg_dir / ".fabric").mkdir(parents=True)
+        (pkg_dir / ".fabric" / "manifest.yaml").write_text("name: multi\nfabric_agents: {}")
         (pkg_dir / ".crewai").mkdir(parents=True)
-        (pkg_dir / ".crewai" / "manifest.yaml").write_text("name: multi\ncrews: {}")
+        (pkg_dir / ".crewai" / "manifest.yaml").write_text("name: multi\nfabric_agents: {}")
 
         configs = discover_all_framework_configs(workspace_root=tmp_path)
 
         assert "multi" in configs
-        assert None in configs["multi"]  # .crew -> None (agnostic)
+        assert None in configs["multi"]  # .fabric -> None (agnostic)
         assert "crewai" in configs["multi"]
 
     def test_discover_all_framework_configs_uses_default_root_and_skips_files(
@@ -95,60 +95,60 @@ class TestDiscovery:
         (packages_dir / "README.md").write_text("not a package", encoding="utf-8")
 
         pkg_dir = packages_dir / "multi"
-        (pkg_dir / ".crew").mkdir(parents=True)
-        (pkg_dir / ".crew" / "manifest.yaml").write_text("name: multi\ncrews: {}\n", encoding="utf-8")
+        (pkg_dir / ".fabric").mkdir(parents=True)
+        (pkg_dir / ".fabric" / "manifest.yaml").write_text("name: multi\nfabric_agents: {}\n", encoding="utf-8")
         (pkg_dir / ".strands").mkdir()
-        (pkg_dir / ".strands" / "manifest.yaml").write_text("name: multi\ncrews: {}\n", encoding="utf-8")
+        (pkg_dir / ".strands" / "manifest.yaml").write_text("name: multi\nfabric_agents: {}\n", encoding="utf-8")
 
         (tmp_path / ".langgraph").mkdir()
-        (tmp_path / ".langgraph" / "manifest.yaml").write_text("name: root\ncrews: {}\n", encoding="utf-8")
+        (tmp_path / ".langgraph" / "manifest.yaml").write_text("name: root\nfabric_agents: {}\n", encoding="utf-8")
         monkeypatch.setattr("agentic_fabric.core.discovery.get_workspace_root", lambda: tmp_path)
 
         configs = discover_all_framework_configs()
 
-        assert configs["multi"][None] == pkg_dir / ".crew"
+        assert configs["multi"][None] == pkg_dir / ".fabric"
         assert configs["multi"]["strands"] == pkg_dir / ".strands"
         assert configs[tmp_path.name]["langgraph"] == tmp_path / ".langgraph"
 
-    def test_list_crews_returns_crews_from_manifest(self, temp_workspace: Path) -> None:
-        """Test that list_crews returns crew definitions from manifest."""
-        from agentic_fabric.core.discovery import list_crews
+    def test_list_fabric_agents_returns_entries_from_manifest(self, temp_workspace: Path) -> None:
+        """Test that list_fabric_agents returns fabric agent definitions from manifest."""
+        from agentic_fabric.core.discovery import list_fabric_agents
 
         with patch(
             "agentic_fabric.core.discovery.discover_packages",
             return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
         ):
-            crews_by_package = list_crews()
+            fabric_agents_by_package = list_fabric_agents()
 
-        assert "sample" in crews_by_package
-        crews = crews_by_package["sample"]
-        assert len(crews) == 1
-        assert crews[0]["name"] == "test_crew"
+        assert "sample" in fabric_agents_by_package
+        fabric_agents = fabric_agents_by_package["sample"]
+        assert len(fabric_agents) == 1
+        assert fabric_agents[0]["name"] == "test_fabric_agent"
 
-    def test_list_crews_filters_by_package_name(self, temp_workspace: Path) -> None:
-        """Test that list_crews can filter to a specific package."""
-        from agentic_fabric.core.discovery import list_crews
-
-        with patch(
-            "agentic_fabric.core.discovery.discover_packages",
-            return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
-        ):
-            crews_by_package = list_crews(package_name="sample")
-
-        assert "sample" in crews_by_package
-        assert len(crews_by_package) == 1
-
-    def test_list_crews_returns_empty_for_nonexistent_package(self, temp_workspace: Path) -> None:
-        """Test that list_crews returns empty for non-existent package."""
-        from agentic_fabric.core.discovery import list_crews
+    def test_list_fabric_agents_filters_by_package_name(self, temp_workspace: Path) -> None:
+        """Test that list_fabric_agents can filter to a specific package."""
+        from agentic_fabric.core.discovery import list_fabric_agents
 
         with patch(
             "agentic_fabric.core.discovery.discover_packages",
             return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
         ):
-            crews_by_package = list_crews(package_name="nonexistent")
+            fabric_agents_by_package = list_fabric_agents(package_name="sample")
 
-        assert crews_by_package == {}
+        assert "sample" in fabric_agents_by_package
+        assert len(fabric_agents_by_package) == 1
+
+    def test_list_fabric_agents_returns_empty_for_nonexistent_package(self, temp_workspace: Path) -> None:
+        """Test that list_fabric_agents returns empty for non-existent package."""
+        from agentic_fabric.core.discovery import list_fabric_agents
+
+        with patch(
+            "agentic_fabric.core.discovery.discover_packages",
+            return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
+        ):
+            fabric_agents_by_package = list_fabric_agents(package_name="nonexistent")
+
+        assert fabric_agents_by_package == {}
 
     def test_load_manifest_parses_yaml(self, temp_workspace: Path) -> None:
         """Test that load_manifest parses YAML correctly."""
@@ -159,7 +159,7 @@ class TestDiscovery:
 
         assert manifest is not None
         assert manifest.get("name") == "sample"
-        assert "crews" in manifest
+        assert "fabric_agents" in manifest
 
     def test_get_workspace_root_finds_root(self) -> None:
         """Test that get_workspace_root finds the workspace root."""
@@ -187,30 +187,30 @@ class TestDiscovery:
         """Test framework detection from directory name."""
         from agentic_fabric.core.discovery import get_framework_from_config_dir
 
-        assert get_framework_from_config_dir(Path("/some/path/.crew")) is None
+        assert get_framework_from_config_dir(Path("/some/path/.fabric")) is None
         assert get_framework_from_config_dir(Path("/some/path/.crewai")) == "crewai"
         assert get_framework_from_config_dir(Path("/some/path/.langgraph")) == "langgraph"
         assert get_framework_from_config_dir(Path("/some/path/.strands")) == "strands"
 
-    def test_get_crew_config_includes_required_framework(self, temp_workspace: Path) -> None:
-        """Test that get_crew_config includes required_framework field."""
-        from agentic_fabric.core.discovery import get_crew_config
+    def test_get_fabric_agent_config_includes_required_framework(self, temp_workspace: Path) -> None:
+        """Test that get_fabric_agent_config includes required_framework field."""
+        from agentic_fabric.core.discovery import get_fabric_agent_config
 
         crewai_dir = temp_workspace / "packages" / "sample" / ".crewai"
-        config = get_crew_config(crewai_dir, "test_crew")
+        config = get_fabric_agent_config(crewai_dir, "test_fabric_agent")
 
         assert config["required_framework"] == "crewai"
 
-    def test_get_crew_config_requires_agents_and_tasks_keys(self, tmp_path: Path) -> None:
-        """Crew configs should fail before resolving missing YAML paths."""
-        from agentic_fabric.core.discovery import get_crew_config
+    def test_get_fabric_agent_config_requires_agents_and_tasks_keys(self, tmp_path: Path) -> None:
+        """Fabric agent configs should fail before resolving missing YAML paths."""
+        from agentic_fabric.core.discovery import get_fabric_agent_config
 
-        crew_dir = tmp_path / ".crew"
-        crew_dir.mkdir()
-        (crew_dir / "manifest.yaml").write_text(
+        fabric_dir = tmp_path / ".fabric"
+        fabric_dir.mkdir()
+        (fabric_dir / "manifest.yaml").write_text(
             """
 name: missing-files
-crews:
+fabric_agents:
   no_agents:
     tasks: tasks.yaml
   no_tasks:
@@ -220,10 +220,10 @@ crews:
         )
 
         with pytest.raises(ValueError, match="missing required key: agents"):
-            get_crew_config(crew_dir, "no_agents")
+            get_fabric_agent_config(fabric_dir, "no_agents")
 
         with pytest.raises(ValueError, match="missing required key: tasks"):
-            get_crew_config(crew_dir, "no_tasks")
+            get_fabric_agent_config(fabric_dir, "no_tasks")
 
 
 class TestDecomposer:
@@ -435,14 +435,14 @@ class TestDecomposer:
         with pytest.raises(ValueError, match="Unknown framework"):
             get_runner("unknown_framework")
 
-    def test_decompose_crew_uses_required_framework(self, tmp_path: Path) -> None:
-        """Test that decompose_crew respects required_framework from config."""
+    def test_compose_fabric_agent_uses_required_framework(self, tmp_path: Path) -> None:
+        """Test that compose_fabric_agent respects required_framework from config."""
         from unittest.mock import MagicMock
 
-        from agentic_fabric.core.decomposer import decompose_crew
+        from agentic_fabric.core.decomposer import compose_fabric_agent
 
-        crew_config = {
-            "name": "test_crew",
+        fabric_agent_config = {
+            "name": "test_fabric_agent",
             "required_framework": "strands",
             "agents": {},
             "tasks": {},
@@ -450,7 +450,7 @@ class TestDecomposer:
 
         mock_runner = MagicMock()
         mock_runner.framework_name = "strands"
-        mock_runner.build_crew.return_value = MagicMock()
+        mock_runner.build_fabric_agent.return_value = MagicMock()
 
         def mock_available(framework):
             return framework in ["crewai", "strands"]
@@ -465,18 +465,18 @@ class TestDecomposer:
                 return_value=mock_runner,
             ),
         ):
-            # decompose_crew returns the result of runner.build_crew()
-            decompose_crew(crew_config)
+            # compose_fabric_agent returns the result of runner.build_fabric_agent()
+            compose_fabric_agent(fabric_agent_config)
 
-        # Verify the runner's build_crew was called
-        mock_runner.build_crew.assert_called_once_with(crew_config)
+        # Verify the runner's build_fabric_agent was called
+        mock_runner.build_fabric_agent.assert_called_once_with(fabric_agent_config)
 
-    def test_decompose_crew_raises_when_required_unavailable(self) -> None:
-        """Test decompose_crew raises when required framework not available."""
-        from agentic_fabric.core.decomposer import decompose_crew
+    def test_compose_fabric_agent_raises_when_required_unavailable(self) -> None:
+        """Test compose_fabric_agent raises when required framework not available."""
+        from agentic_fabric.core.decomposer import compose_fabric_agent
 
-        crew_config = {
-            "name": "test_crew",
+        fabric_agent_config = {
+            "name": "test_fabric_agent",
             "required_framework": "langgraph",
             "agents": {},
             "tasks": {},
@@ -489,14 +489,14 @@ class TestDecomposer:
             ),
             pytest.raises(RuntimeError, match=r"requires langgraph.*not installed"),
         ):
-            decompose_crew(crew_config)
+            compose_fabric_agent(fabric_agent_config)
 
-    def test_decompose_crew_validates_framework_conflict(self) -> None:
-        """Test decompose_crew validates requested vs required conflict."""
-        from agentic_fabric.core.decomposer import decompose_crew
+    def test_compose_fabric_agent_validates_framework_conflict(self) -> None:
+        """Test compose_fabric_agent validates requested vs required conflict."""
+        from agentic_fabric.core.decomposer import compose_fabric_agent
 
-        crew_config = {
-            "name": "test_crew",
+        fabric_agent_config = {
+            "name": "test_fabric_agent",
             "required_framework": "crewai",
             "agents": {},
             "tasks": {},
@@ -509,7 +509,7 @@ class TestDecomposer:
             ),
             pytest.raises(ValueError, match=r"requires crewai.*langgraph was requested"),
         ):
-            decompose_crew(crew_config, framework="langgraph")
+            compose_fabric_agent(fabric_agent_config, framework="langgraph")
 
     def test_get_install_command_returns_pip_install(self) -> None:
         """Test that _get_install_command returns correct pip command."""

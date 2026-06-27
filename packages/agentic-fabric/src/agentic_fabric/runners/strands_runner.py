@@ -17,7 +17,7 @@ from agentic_fabric.tools.adapters import resolve_strands_tools
 
 
 class StrandsRunner(BaseRunner):
-    """Runner that uses AWS Strands for crew execution."""
+    """Runner that uses AWS Strands for fabric agent execution."""
 
     framework_name = "strands"
 
@@ -28,28 +28,28 @@ class StrandsRunner(BaseRunner):
         except ImportError as e:
             raise RuntimeError(f"Strands not installed. Install with: {install_command(self.framework_name)}") from e
 
-    def build_crew(self, crew_config: dict[str, Any]) -> Any:
+    def build_fabric_agent(self, fabric_agent_config: dict[str, Any]) -> Any:
         """Build a Strands agent from configuration.
 
-        Strands uses a single-agent model, so we combine crew tasks
+        Strands uses a single-agent model, so we combine fabric agent tasks
         into a system prompt for one capable agent.
 
         Args:
-            crew_config: Universal crew configuration.
+            fabric_agent_config: Universal fabric agent configuration.
 
         Returns:
             Strands Agent object.
         """
         from strands import Agent
 
-        # Build system prompt from crew description and agent backstories
-        system_prompt = self._build_system_prompt(crew_config)
+        # Build system prompt from fabric agent description and agent backstories.
+        system_prompt = self._build_system_prompt(fabric_agent_config)
 
         # Collect tools from tasks
-        tools = self._collect_tools(crew_config)
+        tools = self._collect_tools(fabric_agent_config)
 
-        # Get LLM/model configuration from crew config
-        llm_config = crew_config.get("llm", {})
+        # Get LLM/model configuration from fabric agent config.
+        llm_config = fabric_agent_config.get("llm", {})
         model_provider = self._get_model_provider(llm_config)
 
         agent_kwargs = {
@@ -67,7 +67,7 @@ class StrandsRunner(BaseRunner):
         """Get Strands-compatible model provider from LLM config.
 
         Args:
-            llm_config: LLM configuration from crew config.
+            llm_config: LLM configuration from fabric agent config.
 
         Returns:
             Model provider string for Strands, or None for default.
@@ -81,11 +81,11 @@ class StrandsRunner(BaseRunner):
         # Extract model from config dict
         return llm_config.get("model")
 
-    def run(self, crew: Any, inputs: dict[str, Any]) -> str:
+    def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
         """Execute the Strands agent.
 
         Args:
-            crew: Strands Agent object.
+            fabric_agent: Strands Agent object.
             inputs: Inputs for the agent.
 
         Returns:
@@ -94,7 +94,7 @@ class StrandsRunner(BaseRunner):
         # Convert inputs to prompt
         prompt = inputs.get("input", inputs.get("task", str(inputs)))
 
-        result = crew(prompt)
+        result = fabric_agent(prompt)
 
         return str(result)
 
@@ -140,26 +140,26 @@ class StrandsRunner(BaseRunner):
             "agent": agent,
         }
 
-    def _build_system_prompt(self, crew_config: dict[str, Any]) -> str:
-        """Build a comprehensive system prompt from crew config.
+    def _build_system_prompt(self, fabric_agent_config: dict[str, Any]) -> str:
+        """Build a comprehensive system prompt from fabric agent config.
 
         Combines all agent roles, goals, and backstories into a single
         capable system prompt.
 
         Args:
-            crew_config: Crew configuration.
+            fabric_agent_config: Fabric agent configuration.
 
         Returns:
             System prompt string.
         """
         parts = []
 
-        # Add crew description
-        if crew_config.get("description"):
-            parts.append(f"# Your Purpose\n{crew_config['description']}")
+        # Add fabric agent description.
+        if fabric_agent_config.get("description"):
+            parts.append(f"# Your Purpose\n{fabric_agent_config['description']}")
 
         # Add agent capabilities
-        agents = crew_config.get("agents", {})
+        agents = fabric_agent_config.get("agents", {})
         if agents:
             parts.append("\n# Your Capabilities")
             for agent_name, agent_cfg in agents.items():
@@ -170,7 +170,7 @@ class StrandsRunner(BaseRunner):
                     parts.append(f"Goal: {goal}")
 
         # Add task context
-        tasks = crew_config.get("tasks", {})
+        tasks = fabric_agent_config.get("tasks", {})
         if tasks:
             parts.append("\n# Tasks You Can Perform")
             for task_name, task_cfg in tasks.items():
@@ -184,9 +184,9 @@ class StrandsRunner(BaseRunner):
 
         return "\n".join(parts)
 
-    def _collect_tools(self, crew_config: dict[str, Any]) -> list:
-        """Collect tools declared by agents in crew configuration."""
+    def _collect_tools(self, fabric_agent_config: dict[str, Any]) -> list:
+        """Collect tools declared by agents in fabric agent configuration."""
         tool_names: list[str] = []
-        for agent_cfg in crew_config.get("agents", {}).values():
+        for agent_cfg in fabric_agent_config.get("agents", {}).values():
             tool_names.extend(agent_cfg.get("tools", []))
         return resolve_strands_tools(tool_names)

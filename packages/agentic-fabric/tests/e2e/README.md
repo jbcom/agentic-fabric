@@ -6,7 +6,7 @@ This directory contains end-to-end tests for framework runners (CrewAI, LangGrap
 
 E2E tests verify that each framework runner works correctly with:
 - Real LLM API calls
-- Complete crew execution flows
+- Complete fabric_agent execution flows
 - Multi-agent collaboration
 - Knowledge source integration
 - Tool usage
@@ -71,7 +71,7 @@ When configuring Strands tests with Bedrock, use the official model IDs from [Cl
 
 Example configuration:
 ```python
-crew_config = {
+fabric_agent_config = {
     "llm": {
         "provider": "bedrock",
         "model": "anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -94,9 +94,9 @@ tests/e2e/
 
 ### CrewAI (`test_crewai_e2e.py`)
 
-- ✅ Simple single-agent crew execution
+- ✅ Simple single-agent fabric_agent execution
 - ✅ Build and run convenience method
-- ✅ Multi-agent crew collaboration
+- ✅ Multi-agent fabric_agent collaboration
 - ✅ Knowledge source integration
 - ✅ Tool usage with agents
 
@@ -166,13 +166,13 @@ Example:
 @pytest.mark.crewai
 def test_my_feature(
     check_api_key: None,
-    simple_crew_config: dict[str, Any],
+    simple_fabric_agent_config: dict[str, Any],
 ) -> None:
     """Test my new feature."""
     from agentic_fabric.runners.crewai_runner import CrewAIRunner
     
     runner = CrewAIRunner()
-    result = runner.build_and_run(simple_crew_config, {"input": "test"})
+    result = runner.build_and_run(simple_fabric_agent_config, {"input": "test"})
     assert result is not None
 ```
 

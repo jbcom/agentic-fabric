@@ -39,18 +39,18 @@ class FakeCliRunner:
         return self.result
 
 
-def test_cmd_list_text_displays_framework_marked_crews(capsys: pytest.CaptureFixture[str]) -> None:
+def test_cmd_list_text_displays_framework_marked_fabric_agents(capsys: pytest.CaptureFixture[str]) -> None:
     args = SimpleNamespace(package=None, framework=None, json=False)
 
     with patch.object(
         cli,
-        "list_crews",
+        "list_fabric_agents",
         return_value={"pkg": [{"name": "reviewer", "description": "reviews code", "required_framework": "crewai"}]},
     ):
         cli.cmd_list(args)
 
     output = capsys.readouterr().out
-    assert "AVAILABLE CREWS" in output
+    assert "AVAILABLE FABRIC AGENTS" in output
     assert "pkg" in output
     assert "reviewer [crewai]: reviews code" in output
 
@@ -60,13 +60,13 @@ def test_cmd_list_json_flattens_packages(capsys: pytest.CaptureFixture[str]) -> 
 
     with patch.object(
         cli,
-        "list_crews",
+        "list_fabric_agents",
         return_value={"pkg": [{"name": "builder", "description": "builds", "required_framework": "langgraph"}]},
     ):
         cli.cmd_list(args)
 
     assert json.loads(capsys.readouterr().out) == {
-        "crews": [
+        "fabric_agents": [
             {
                 "package": "pkg",
                 "name": "builder",
@@ -85,7 +85,7 @@ def test_cmd_run_json_success_auto_detects_framework(
         json=True,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input="review this",
         framework="auto",
@@ -93,9 +93,9 @@ def test_cmd_run_json_success_auto_detects_framework(
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
+        patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer"}),
         patch("agentic_fabric.core.decomposer.detect_framework", return_value="crewai"),
-        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done") as run_crew_auto,
+        patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done") as run_fabric_agent_auto,
     ):
         cli.cmd_run(args)
 
@@ -103,7 +103,7 @@ def test_cmd_run_json_success_auto_detects_framework(
     assert data["success"] is True
     assert data["output"] == "done"
     assert data["framework_used"] == "crewai"
-    run_crew_auto.assert_called_once_with(
+    run_fabric_agent_auto.assert_called_once_with(
         {"name": "reviewer"},
         inputs={"spec": "review this", "component_spec": "review this", "input": "review this"},
         framework="crewai",
@@ -120,7 +120,7 @@ def test_cmd_run_json_uses_file_input_and_requested_framework(
         json=True,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=str(input_file),
         input=None,
         framework="strands",
@@ -128,20 +128,20 @@ def test_cmd_run_json_uses_file_input_and_requested_framework(
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".strands"}),
-        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
-        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done") as run_crew_auto,
+        patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer"}),
+        patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done") as run_fabric_agent_auto,
     ):
         cli.cmd_run(args)
 
     data = json.loads(capsys.readouterr().out)
     assert data["success"] is True
     assert data["framework_used"] == "strands"
-    assert run_crew_auto.call_args.kwargs["inputs"]["input"] == "from file"
-    assert run_crew_auto.call_args.kwargs["framework"] == "strands"
+    assert run_fabric_agent_auto.call_args.kwargs["inputs"]["input"] == "from file"
+    assert run_fabric_agent_auto.call_args.kwargs["framework"] == "strands"
 
 
 def test_cmd_run_dispatches_single_agent_runner(capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(json=False, runner="fake", package=None, crew=None)
+    args = SimpleNamespace(json=False, runner="fake", package=None, fabric_agent=None)
     calls: list[tuple[SimpleNamespace, bool]] = []
 
     with patch.object(cli, "_cmd_run_single_agent", side_effect=lambda args, use_json, start_time: calls.append((args, use_json))):
@@ -156,7 +156,7 @@ def test_cmd_run_json_reports_missing_package(capsys: pytest.CaptureFixture[str]
         json=True,
         runner=None,
         package="missing",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input="task",
         framework="auto",
@@ -182,7 +182,7 @@ def test_cmd_run_json_reports_execution_errors(
         json=True,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input="task",
         framework="auto",
@@ -190,13 +190,13 @@ def test_cmd_run_json_reports_execution_errors(
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", side_effect=ValueError("bad crew")),
+        patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("bad fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_run(args)
 
     assert exc_info.value.code == 1
-    assert json.loads(capsys.readouterr().out)["error"] == "bad crew"
+    assert json.loads(capsys.readouterr().out)["error"] == "bad fabric agent"
 
 
 @pytest.mark.parametrize("use_json", [True, False])
@@ -206,7 +206,7 @@ def test_cmd_run_reports_file_read_errors(capsys: pytest.CaptureFixture[str], us
         json=use_json,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file="/definitely/missing/task.txt",
         input=None,
         framework="auto",
@@ -224,23 +224,23 @@ def test_cmd_run_reports_file_read_errors(capsys: pytest.CaptureFixture[str], us
 
 
 def test_cmd_run_text_reports_missing_arguments(capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(json=False, runner=None, package=None, crew=None)
+    args = SimpleNamespace(json=False, runner=None, package=None, fabric_agent=None)
 
     with pytest.raises(SystemExit) as exc_info:
         cli.cmd_run(args)
 
     assert exc_info.value.code == 2
-    assert "Package and crew are required" in capsys.readouterr().out
+    assert "Package and fabric_agent are required" in capsys.readouterr().out
 
 
 def test_cmd_run_json_reports_missing_arguments(capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(json=True, runner=None, package=None, crew=None)
+    args = SimpleNamespace(json=True, runner=None, package=None, fabric_agent=None)
 
     with pytest.raises(SystemExit) as exc_info:
         cli.cmd_run(args)
 
     assert exc_info.value.code == 2
-    assert json.loads(capsys.readouterr().out)["error"].startswith("Package and crew are required")
+    assert json.loads(capsys.readouterr().out)["error"].startswith("Package and fabric_agent are required")
 
 
 def test_cmd_run_text_reports_missing_package(capsys: pytest.CaptureFixture[str]) -> None:
@@ -248,7 +248,7 @@ def test_cmd_run_text_reports_missing_package(capsys: pytest.CaptureFixture[str]
         json=False,
         runner=None,
         package="missing",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input="task",
         framework="auto",
@@ -274,21 +274,21 @@ def test_cmd_run_text_uses_empty_input_and_requested_or_auto_framework(
         json=False,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input=None,
         framework="langgraph",
     )
     calls: list[dict[str, Any]] = []
 
-    def fake_run_crew_auto(crew_config: dict[str, Any], inputs: dict[str, str], framework: str | None = None) -> str:
-        calls.append({"crew_config": crew_config, "inputs": inputs, "framework": framework})
+    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, str], framework: str | None = None) -> str:
+        calls.append({"fabric_agent_config": fabric_agent_config, "inputs": inputs, "framework": framework})
         return "done"
 
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crew"}),
-        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
-        patch("agentic_fabric.core.decomposer.run_crew_auto", side_effect=fake_run_crew_auto),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
+        patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer"}),
+        patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", side_effect=fake_run_fabric_agent_auto),
     ):
         cli.cmd_run(args)
 
@@ -299,10 +299,10 @@ def test_cmd_run_text_uses_empty_input_and_requested_or_auto_framework(
 
     args.framework = "auto"
     with (
-        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crew"}),
-        patch.object(cli, "get_crew_config", return_value={"name": "reviewer"}),
+        patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".fabric"}),
+        patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer"}),
         patch("agentic_fabric.core.decomposer.detect_framework", return_value="strands"),
-        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done"),
+        patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done"),
     ):
         cli.cmd_run(args)
 
@@ -314,7 +314,7 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
         json=False,
         runner=None,
         package="pkg",
-        crew="reviewer",
+        fabric_agent="reviewer",
         file=None,
         input="task",
         framework="auto",
@@ -322,8 +322,8 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", return_value={"name": "reviewer", "required_framework": "crewai"}),
-        patch("agentic_fabric.core.decomposer.run_crew_auto", return_value="done"),
+        patch.object(cli, "get_fabric_agent_config", return_value={"name": "reviewer", "required_framework": "crewai"}),
+        patch("agentic_fabric.core.decomposer.run_fabric_agent_auto", return_value="done"),
     ):
         cli.cmd_run(args)
 
@@ -334,7 +334,7 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", side_effect=RuntimeError("boom")),
+        patch.object(cli, "get_fabric_agent_config", side_effect=RuntimeError("boom")),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_run(args)
@@ -344,7 +344,7 @@ def test_cmd_run_text_success_and_error_paths(tmp_path: Path, capsys: pytest.Cap
 
 
 def test_cmd_info_json_success(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(package="pkg", crew="reviewer", json=True)
+    args = SimpleNamespace(package="pkg", fabric_agent="reviewer", json=True)
     config = {
         "description": "Reviews code",
         "required_framework": "crewai",
@@ -355,7 +355,7 @@ def test_cmd_info_json_success(tmp_path: Path, capsys: pytest.CaptureFixture[str
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", return_value=config),
+        patch.object(cli, "get_fabric_agent_config", return_value=config),
     ):
         cli.cmd_info(args)
 
@@ -367,21 +367,21 @@ def test_cmd_info_json_success(tmp_path: Path, capsys: pytest.CaptureFixture[str
 
 
 def test_cmd_info_json_reports_config_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(package="pkg", crew="missing", json=True)
+    args = SimpleNamespace(package="pkg", fabric_agent="missing", json=True)
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", side_effect=ValueError("missing crew")),
+        patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("missing fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_info(args)
 
     assert exc_info.value.code == 2
-    assert json.loads(capsys.readouterr().out) == {"error": "missing crew"}
+    assert json.loads(capsys.readouterr().out) == {"error": "missing fabric agent"}
 
 
 def test_cmd_info_json_reports_missing_package(capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(package="missing", crew="reviewer", json=True)
+    args = SimpleNamespace(package="missing", fabric_agent="reviewer", json=True)
 
     with (
         patch.object(cli, "discover_packages", return_value={"known": Path(".crewai")}),
@@ -396,7 +396,7 @@ def test_cmd_info_json_reports_missing_package(capsys: pytest.CaptureFixture[str
 
 
 def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    args = SimpleNamespace(package="pkg", crew="reviewer", json=False)
+    args = SimpleNamespace(package="pkg", fabric_agent="reviewer", json=False)
     config = {
         "description": "Reviews code",
         "agents": {"reviewer": {"role": "Code Reviewer"}},
@@ -406,12 +406,12 @@ def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.Capture
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", return_value=config),
+        patch.object(cli, "get_fabric_agent_config", return_value=config),
     ):
         cli.cmd_info(args)
 
     output = capsys.readouterr().out
-    assert "CREW: pkg/reviewer" in output
+    assert "FABRIC AGENT: pkg/reviewer" in output
     assert "Code Reviewer" in output
     assert "Review the change" in output
 
@@ -426,13 +426,13 @@ def test_cmd_info_text_success_and_errors(tmp_path: Path, capsys: pytest.Capture
 
     with (
         patch.object(cli, "discover_packages", return_value={"pkg": tmp_path / ".crewai"}),
-        patch.object(cli, "get_crew_config", side_effect=ValueError("missing crew")),
+        patch.object(cli, "get_fabric_agent_config", side_effect=ValueError("missing fabric agent")),
         pytest.raises(SystemExit) as exc_info,
     ):
         cli.cmd_info(args)
 
     assert exc_info.value.code == 2
-    assert "missing crew" in capsys.readouterr().out
+    assert "missing fabric agent" in capsys.readouterr().out
 
 
 def test_cmd_list_runners_json_skips_bad_profiles(capsys: pytest.CaptureFixture[str]) -> None:
@@ -603,7 +603,7 @@ def test_single_agent_text_success_unavailable_and_error_paths(
 ) -> None:
     input_file = tmp_path / "task.txt"
     input_file.write_text("from file", encoding="utf-8")
-    package_dir = tmp_path / "pkg" / ".crew"
+    package_dir = tmp_path / "pkg" / ".fabric"
     fake_runner = FakeCliRunner(result="fixed")
     args = SimpleNamespace(
         json=False,

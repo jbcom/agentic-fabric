@@ -37,14 +37,14 @@ class TestCLIEntryPoint:
                 return_value={},
             ),
             patch(
-                "agentic_fabric.main.list_crews",
+                "agentic_fabric.main.list_fabric_agents",
                 return_value={},
             ),
         ):
             main()
 
         captured = capsys.readouterr()
-        assert "No packages" in captured.out or "crews" in captured.out.lower()
+        assert "No packages" in captured.out or "fabric_agents" in captured.out.lower()
 
     def test_list_command_json_output(self, capsys) -> None:
         """'list --json' should produce valid JSON."""
@@ -53,7 +53,7 @@ class TestCLIEntryPoint:
         with (
             patch("sys.argv", ["agentic-fabric", "list", "--json"]),
             patch(
-                "agentic_fabric.main.list_crews",
+                "agentic_fabric.main.list_fabric_agents",
                 return_value={},
             ),
         ):
@@ -61,11 +61,11 @@ class TestCLIEntryPoint:
 
         captured = capsys.readouterr()
         data = json.loads(captured.out)
-        assert "crews" in data
-        assert isinstance(data["crews"], list)
+        assert "fabric_agents" in data
+        assert isinstance(data["fabric_agents"], list)
 
-    def test_run_missing_package_and_crew_exits_2(self) -> None:
-        """'run' without package or crew should exit with code 2."""
+    def test_run_missing_package_and_fabric_agent_exits_2(self) -> None:
+        """'run' without package or fabric_agent should exit with code 2."""
         with (
             patch("sys.argv", ["agentic-fabric", "run"]),
             pytest.raises(SystemExit) as exc_info,
@@ -76,7 +76,7 @@ class TestCLIEntryPoint:
     def test_run_nonexistent_package_exits_2(self) -> None:
         """'run' with a non-existent package should exit with code 2."""
         with (
-            patch("sys.argv", ["agentic-fabric", "run", "nonexistent", "some_crew", "--input", "test"]),
+            patch("sys.argv", ["agentic-fabric", "run", "nonexistent", "some_fabric_agent", "--input", "test"]),
             patch("agentic_fabric.main.discover_packages", return_value={}),
             pytest.raises(SystemExit) as exc_info,
         ):
@@ -86,21 +86,21 @@ class TestCLIEntryPoint:
     def test_info_nonexistent_package_exits_2(self) -> None:
         """'info' with non-existent package should exit with code 2."""
         with (
-            patch("sys.argv", ["agentic-fabric", "info", "nonexistent", "some_crew"]),
+            patch("sys.argv", ["agentic-fabric", "info", "nonexistent", "some_fabric_agent"]),
             patch("agentic_fabric.main.discover_packages", return_value={}),
             pytest.raises(SystemExit) as exc_info,
         ):
             main()
         assert exc_info.value.code == 2
 
-    def test_info_nonexistent_crew_exits_2(self, tmp_path) -> None:
-        """'info' with non-existent crew should exit with code 2."""
+    def test_info_missing_fabric_agent_exits_2(self, tmp_path) -> None:
+        """'info' with non-existent fabric agent should exit with code 2."""
         config_dir = tmp_path / ".crewai"
         config_dir.mkdir()
-        (config_dir / "manifest.yaml").write_text("crews: {}\n")
+        (config_dir / "manifest.yaml").write_text("fabric_agents: {}\n")
 
         with (
-            patch("sys.argv", ["agentic-fabric", "info", "pkg", "missing_crew"]),
+            patch("sys.argv", ["agentic-fabric", "info", "pkg", "missing_fabric_agent"]),
             patch(
                 "agentic_fabric.main.discover_packages",
                 return_value={"pkg": config_dir},

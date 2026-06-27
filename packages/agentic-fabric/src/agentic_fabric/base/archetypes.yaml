@@ -3,7 +3,7 @@
 # These are base templates that packages can extend in their own agents.yaml.
 # Use the 'extends' field to inherit from an archetype.
 #
-# Example usage in packages/mypackage/.crewai/crews/builder/agents.yaml:
+# Example usage in packages/mypackage/.crewai/fabric_agents/builder/agents.yaml:
 #   my_engineer:
 #     extends: senior_engineer
 #     variables:

@@ -50,7 +50,7 @@ def test_select_runtime_rejects_active_manifest_conflict(monkeypatch: pytest.Mon
     data = AgenticData(active_runtime="langgraph")
 
     with pytest.raises(ValueError, match="conflicts"):
-        data.select_runtime(crew_config={"required_framework": "crewai"})
+        data.select_runtime(fabric_agent_config={"required_framework": "crewai"})
 
 
 def test_select_runtime_uses_active_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -61,18 +61,18 @@ def test_select_runtime_uses_active_runtime(monkeypatch: pytest.MonkeyPatch) -> 
     assert data.select_runtime() == "strands"
 
 
-def test_run_agent_uses_registered_crew_and_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Named agents should route through run_crew_auto with merged inputs."""
+def test_run_fabric_agent_uses_registered_config_and_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Named fabric agents should route through run_fabric_agent_auto with merged inputs."""
     calls: list[tuple[dict[str, Any], dict[str, Any], str | None]] = []
 
-    def fake_run_crew_auto(crew_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
-        calls.append((crew_config, inputs, framework))
+    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
+        calls.append((fabric_agent_config, inputs, framework))
         return "done"
 
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: runtime == "crewai")
-    monkeypatch.setattr("agentic_fabric.core.decomposer.run_crew_auto", fake_run_crew_auto)
+    monkeypatch.setattr("agentic_fabric.core.decomposer.run_fabric_agent_auto", fake_run_fabric_agent_auto)
 
-    data = AgenticData(agent_registry={"reviewer": {"name": "review", "agents": {}, "tasks": {}}})
+    data = AgenticData(fabric_agents={"reviewer": {"name": "review", "agents": {}, "tasks": {}}})
 
     result = data.run_reviewer({"code": "x"}, severity="high")
 
@@ -80,12 +80,12 @@ def test_run_agent_uses_registered_crew_and_runtime(monkeypatch: pytest.MonkeyPa
     assert calls == [({"name": "review", "agents": {}, "tasks": {}}, {"code": "x", "severity": "high"}, "crewai")]
 
 
-def test_unknown_agent_lists_registered_names() -> None:
-    """Unknown agent errors should include the registered names."""
-    data = AgenticData(agent_registry={"reviewer": {"name": "review"}})
+def test_unknown_fabric_agent_lists_registered_names() -> None:
+    """Unknown fabric agent errors should include the registered names."""
+    data = AgenticData(fabric_agents={"reviewer": {"name": "review"}})
 
     with pytest.raises(KeyError, match="reviewer"):
-        data.run_agent("writer")
+        data.run_fabric_agent("writer")
 
 
 def test_fallback_vendor_guidance_when_vendor_fabric_missing() -> None:
@@ -147,16 +147,16 @@ def test_agentic_data_import_branch_with_vendor_fabric(monkeypatch: pytest.Monke
     assert data.value == "value"
 
 
-def test_agent_registry_is_read_only_and_unregister_is_chainable() -> None:
-    """Agent registry snapshots should be immutable from the public property."""
-    data = AgenticData(agent_registry={"reviewer": {"name": "review"}})
+def test_fabric_agents_are_read_only_and_unregister_is_chainable() -> None:
+    """Fabric agent registry snapshots should be immutable from the public property."""
+    data = AgenticData(fabric_agents={"reviewer": {"name": "review"}})
 
     with pytest.raises(TypeError):
-        data.agent_registry["writer"] = {"name": "write"}  # type: ignore[index]
+        data.fabric_agents["writer"] = {"name": "write"}  # type: ignore[index]
 
-    assert data.unregister_agent("reviewer") is data
-    assert data.agent_registry == {}
-    assert data.unregister_agent("missing") is data
+    assert data.unregister_fabric_agent("reviewer") is data
+    assert data.fabric_agents == {}
+    assert data.unregister_fabric_agent("missing") is data
 
 
 def test_use_runtime_auto_and_clear_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -188,8 +188,8 @@ def test_select_runtime_rejects_explicit_manifest_conflict(monkeypatch: pytest.M
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: True)
     data = AgenticData()
 
-    with pytest.raises(ValueError, match="Crew requires crewai but langgraph was requested"):
-        data.select_runtime("langgraph", crew_config={"runtime": "crewai"})
+    with pytest.raises(ValueError, match="Fabric agent requires crewai but langgraph was requested"):
+        data.select_runtime("langgraph", fabric_agent_config={"runtime": "crewai"})
 
 
 def test_select_runtime_uses_required_runtime_and_auto_detection(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -198,7 +198,7 @@ def test_select_runtime_uses_required_runtime_and_auto_detection(monkeypatch: py
     monkeypatch.setattr("agentic_fabric.core.decomposer.detect_framework", lambda: "strands")
     data = AgenticData()
 
-    assert data.select_runtime(crew_config={"framework": "langgraph"}) == "langgraph"
+    assert data.select_runtime(fabric_agent_config={"framework": "langgraph"}) == "langgraph"
     assert data.select_runtime() == "strands"
 
 
@@ -210,18 +210,18 @@ def test_select_runtime_reports_unavailable_requested_runtime(monkeypatch: pytes
         AgenticData().select_runtime("crewai")
 
 
-def test_run_agent_accepts_direct_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Direct crew config mappings should bypass registry lookup."""
+def test_run_fabric_agent_accepts_direct_mapping(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Direct fabric agent config mappings should bypass registry lookup."""
     calls: list[tuple[dict[str, Any], dict[str, Any], str | None]] = []
 
-    def fake_run_crew_auto(crew_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
-        calls.append((crew_config, inputs, framework))
+    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
+        calls.append((fabric_agent_config, inputs, framework))
         return "done"
 
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: runtime == "crewai")
-    monkeypatch.setattr("agentic_fabric.core.decomposer.run_crew_auto", fake_run_crew_auto)
+    monkeypatch.setattr("agentic_fabric.core.decomposer.run_fabric_agent_auto", fake_run_fabric_agent_auto)
 
-    result = AgenticData().run_agent({"name": "direct", "runtime": "crewai"}, {"a": 1}, b=2)
+    result = AgenticData().run_fabric_agent({"name": "direct", "runtime": "crewai"}, {"a": 1}, b=2)
 
     assert result == "done"
     assert calls == [({"name": "direct", "runtime": "crewai"}, {"a": 1, "b": 2}, "crewai")]
@@ -262,11 +262,11 @@ def test_vendor_tools_delegate_to_vendor_capability_catalog(monkeypatch: pytest.
 
 
 def test_dynamic_helpers_and_missing_attributes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Registered agents should appear as dynamic run_<agent> helpers."""
+    """Registered fabric agents should appear as dynamic run_<fabric_agent> helpers."""
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: True)
-    monkeypatch.setattr("agentic_fabric.core.decomposer.run_crew_auto", lambda crew_config, inputs, framework: "done")
+    monkeypatch.setattr("agentic_fabric.core.decomposer.run_fabric_agent_auto", lambda fabric_agent_config, inputs, framework: "done")
 
-    data = AgenticData(agent_registry={"reviewer": {"name": "reviewer", "runtime": "crewai"}})
+    data = AgenticData(fabric_agents={"reviewer": {"name": "reviewer", "runtime": "crewai"}})
 
     assert "run_reviewer" in dir(data)
     assert data.run_reviewer() == "done"

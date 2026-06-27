@@ -75,21 +75,22 @@ def test_agentic_mock_runtime_sets_runtime_entrypoints(
     assert hasattr(modules[runtime], expected_attr)
 
 
-def test_agentic_crew_config_fixture(agentic_crew_config: dict[str, Any]) -> None:
-    """Minimal crew config should be usable by runtime tests."""
-    assert agentic_crew_config["agents"]["tester"]["role"] == "Tester"
-    assert agentic_crew_config["tasks"]["verify"]["agent"] == "tester"
+def test_agentic_fabric_agent_config_fixture(agentic_fabric_agent_config: dict[str, Any]) -> None:
+    """Minimal fabric agent config should be usable by runtime tests."""
+    assert agentic_fabric_agent_config["agents"]["tester"]["role"] == "Tester"
+    assert agentic_fabric_agent_config["tasks"]["verify"]["agent"] == "tester"
 
 
 def test_agentic_workspace_fixture(agentic_workspace: Path) -> None:
-    """Workspace fixture should create a discoverable .crew package."""
-    manifest = agentic_workspace / "packages" / "sample" / ".crew" / "manifest.yaml"
+    """Workspace fixture should create a discoverable .fabric package."""
+    manifest = agentic_workspace / "packages" / "sample" / ".fabric" / "manifest.yaml"
     assert manifest.exists()
-    assert "test_crew" in manifest.read_text(encoding="utf-8")
+    assert "test_fabric_agent" in manifest.read_text(encoding="utf-8")
 
 
 def test_agentic_e2e_marker_skips_by_default(pytester: pytest.Pytester) -> None:
     """Runtime-dependent tests should skip unless --agentic-e2e is passed."""
+    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
     pytester.makepyfile(
         """
         import pytest
@@ -107,6 +108,7 @@ def test_agentic_e2e_marker_skips_by_default(pytester: pytest.Pytester) -> None:
 
 def test_agentic_e2e_marker_runs_when_enabled(pytester: pytest.Pytester) -> None:
     """Runtime-dependent tests should run when --agentic-e2e is passed."""
+    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function\n")
     pytester.makepyfile(
         """
         import pytest

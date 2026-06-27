@@ -22,11 +22,11 @@ class TestCapabilityCollection:
         """Runner methods should expose read-only capability metadata."""
 
         class TestRunner(BaseRunner):
-            def build_crew(self, crew_config: dict[str, Any]) -> Any:
-                return crew_config
+            def build_fabric_agent(self, fabric_agent_config: dict[str, Any]) -> Any:
+                return fabric_agent_config
 
-            def run(self, crew: Any, inputs: dict[str, Any]) -> str:
-                return f"{crew}:{inputs}"
+            def run(self, fabric_agent: Any, inputs: dict[str, Any]) -> str:
+                return f"{fabric_agent}:{inputs}"
 
             def build_agent(self, agent_config: dict[str, Any], tools: list | None = None) -> Any:
                 return agent_config
@@ -36,9 +36,9 @@ class TestCapabilityCollection:
 
         runner = TestRunner()
 
-        assert "build_crew" in runner.capability_map()
-        assert "run_crew" in runner.capability_map()
-        assert runner.call_capability("run_crew", {"name": "crew"}, {"task": "go"}) == "{'name': 'crew'}:{'task': 'go'}"
+        assert "build_fabric_agent" in runner.capability_map()
+        assert "run_fabric_agent" in runner.capability_map()
+        assert runner.call_capability("run_fabric_agent", {"name": "fabric_agent"}, {"task": "go"}) == "{'name': 'fabric_agent'}:{'task': 'go'}"
 
         with pytest.raises(TypeError):
             runner.capability_map()["new"] = runner.capability_map()["run"]  # type: ignore[index]

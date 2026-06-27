@@ -1,29 +1,29 @@
 Agentic Workflows
 =================
 
-Crew definitions are YAML-first and runtime-neutral unless placed in a
+Fabric agent definitions are YAML-first and runtime-neutral unless placed in a
 framework-specific directory.
 
 .. code:: yaml
 
    name: example
-   crews:
+   fabric_agents:
      reviewer:
        description: Review implementation quality
        agents: config/agents.yaml
        tasks: config/tasks.yaml
 
-``agentic-fabric`` resolves the crew, selects a runner, and delegates
+``agentic-fabric`` resolves the fabric agent, selects a runner, and delegates
 execution to the installed framework. The public API is intentionally
 small:
 
 .. code:: python
 
-   from agentic_fabric import discover_packages, get_crew_config, run_crew_auto
+   from agentic_fabric import discover_packages, get_fabric_agent_config, run_fabric_agent_auto
 
    packages = discover_packages()
-   config = get_crew_config(packages["example"], "reviewer")
-   result = run_crew_auto(config, inputs={"topic": "release readiness"})
+   config = get_fabric_agent_config(packages["example"], "reviewer")
+   result = run_fabric_agent_auto(config, inputs={"topic": "release readiness"})
 
 For stateful orchestration, register the same config with
 ``AgenticData``:
@@ -32,7 +32,7 @@ For stateful orchestration, register the same config with
 
    from agentic_fabric import AgenticData
 
-   session = AgenticData(agent_registry={"reviewer": config})
+   session = AgenticData(fabric_agents={"reviewer": config})
    session.use_runtime("langgraph", strict=False)
    result = session.run_reviewer({"topic": "release readiness"})
 
@@ -70,7 +70,7 @@ executables and do not require a Python extra:
 Tool Resolution
 ---------------
 
-Crew tool entries are resolved lazily. Built-in filesystem tool aliases,
+Fabric agent tool entries are resolved lazily. Built-in filesystem tool aliases,
 ``mcp://filesystem/...`` aliases, and ``vendor://provider/operation``
 references do not import optional framework or vendor packages until the
 tool is used.
@@ -92,6 +92,24 @@ module imports must be explicitly allowlisted:
    export AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST="my_company.tools,shared_agents."
 
 Manifest paths for ``agents``, ``tasks``, and ``knowledge`` are resolved
-relative to the crew config directory and cannot escape it. Filesystem
+relative to the fabric agent config directory and cannot escape it. Filesystem
 tools resolve symlinks before reading or writing and keep writes inside
 their configured workspace directories.
+
+MCP Adapters
+------------
+
+The ``mcp`` extra installs the MCP transport dependency. Provider
+implementation still belongs to ``vendor-fabric``; this package only owns the
+runtime-visible adapter layer:
+
+.. code:: bash
+
+   agentic-fabric-vendor-mcp
+   agentic-fabric-meshy-mcp
+
+``agentic-fabric-vendor-mcp`` exposes credential-free vendor catalog tools and
+public ``vendor-fabric`` data methods. ``agentic-fabric-meshy-mcp`` adapts the
+Meshy capability definitions from ``vendor_fabric.meshy.tools`` into MCP tool
+metadata. Install the matching ``vendor-fabric`` package and provider extras
+in the same environment before running provider-backed MCP tools.

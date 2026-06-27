@@ -147,7 +147,7 @@ def test_create_agent_and_task_from_config(loader_with_fake_crewai: Any, monkeyp
     assert task.kwargs["agent"] is agent
 
 
-def test_load_crew_from_config_resolves_tools_and_fallbacks(
+def test_load_fabric_agent_from_config_resolves_tools_and_fallbacks(
     loader_with_fake_crewai: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -159,7 +159,7 @@ def test_load_crew_from_config_resolves_tools_and_fallbacks(
         lambda tool_names: ["resolved-tool"] if tool_names else [],
     )
 
-    crew = loader_with_fake_crewai.load_crew_from_config(
+    fabric_agent = loader_with_fake_crewai.load_fabric_agent_from_config(
         {
             "agents": {
                 "tool_user": {"role": "Tool User", "tools": ["registered"]},
@@ -175,23 +175,23 @@ def test_load_crew_from_config_resolves_tools_and_fallbacks(
         }
     )
 
-    assert isinstance(crew, FakeCrew)
-    assert crew.kwargs["process"] == "sequential"
-    assert crew.kwargs["planning"] is True
-    assert crew.kwargs["memory"] is True
-    assert crew.kwargs["knowledge_sources"] == ["knowledge"]
+    assert isinstance(fabric_agent, FakeCrew)
+    assert fabric_agent.kwargs["process"] == "sequential"
+    assert fabric_agent.kwargs["planning"] is True
+    assert fabric_agent.kwargs["memory"] is True
+    assert fabric_agent.kwargs["knowledge_sources"] == ["knowledge"]
 
-    agents = crew.kwargs["agents"]
+    agents = fabric_agent.kwargs["agents"]
     assert [agent.kwargs["role"] for agent in agents] == ["Tool User", "Engineer", "Researcher"]
     assert agents[0].kwargs["tools"] == ["resolved-tool"]
     assert len(agents[1].kwargs["tools"]) == 3
     assert len(agents[2].kwargs["tools"]) == 2
-    assert len(crew.kwargs["tasks"]) == 3
+    assert len(fabric_agent.kwargs["tasks"]) == 3
 
 
-def test_load_crew_from_config_requires_task_agent(loader_with_fake_crewai: Any) -> None:
+def test_load_fabric_agent_from_config_requires_task_agent(loader_with_fake_crewai: Any) -> None:
     with pytest.raises(ValueError, match="missing an 'agent' assignment"):
-        loader_with_fake_crewai.load_crew_from_config(
+        loader_with_fake_crewai.load_fabric_agent_from_config(
             {
                 "agents": {"writer": {"role": "Writer"}},
                 "tasks": {"draft": {"description": "draft"}},
@@ -199,9 +199,9 @@ def test_load_crew_from_config_requires_task_agent(loader_with_fake_crewai: Any)
         )
 
 
-def test_load_crew_from_config_requires_existing_agent(loader_with_fake_crewai: Any) -> None:
+def test_load_fabric_agent_from_config_requires_existing_agent(loader_with_fake_crewai: Any) -> None:
     with pytest.raises(ValueError, match="Agent 'missing' for task 'draft' not found"):
-        loader_with_fake_crewai.load_crew_from_config(
+        loader_with_fake_crewai.load_fabric_agent_from_config(
             {
                 "agents": {"writer": {"role": "Writer"}},
                 "tasks": {"draft": {"description": "draft", "agent": "missing"}},

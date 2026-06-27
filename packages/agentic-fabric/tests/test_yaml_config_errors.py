@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from agentic_fabric.core.discovery import (
-    get_crew_config,
+    get_fabric_agent_config,
     get_framework_from_config_dir,
     load_manifest,
 )
@@ -45,79 +45,79 @@ class TestLoadManifestErrors:
         with pytest.raises(yaml.YAMLError):
             load_manifest(tmp_path)
 
-    def test_manifest_with_no_crews_key(self, tmp_path: Path) -> None:
-        """Manifest without 'crews' key should parse without error."""
+    def test_manifest_with_no_fabric_agents_key(self, tmp_path: Path) -> None:
+        """Manifest without 'fabric_agents' key should parse without error."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text("name: test_package\ndescription: A test\n")
         result = load_manifest(tmp_path)
         assert result.get("name") == "test_package"
-        assert result.get("crews") is None
+        assert result.get("fabric_agents") is None
 
 
-class TestGetCrewConfigErrors:
-    """Test error handling in get_crew_config."""
+class TestGetFabricAgentConfigErrors:
+    """Test error handling in get_fabric_agent_config."""
 
-    def test_crew_not_in_manifest_raises_value_error(self, tmp_path: Path) -> None:
-        """Requesting a non-existent crew should raise ValueError."""
+    def test_fabric_agent_not_in_manifest_raises_value_error(self, tmp_path: Path) -> None:
+        """Requesting a non-existent fabric_agent should raise ValueError."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  existing_crew:\n"
-            "    description: An existing crew\n"
-            "    agents: crews/existing/agents.yaml\n"
-            "    tasks: crews/existing/tasks.yaml\n"
+            "fabric_agents:\n"
+            "  existing_fabric_agent:\n"
+            "    description: An existing fabric_agent\n"
+            "    agents: fabric_agents/existing/agents.yaml\n"
+            "    tasks: fabric_agents/existing/tasks.yaml\n"
         )
-        with pytest.raises(ValueError, match="Crew 'nonexistent' not found"):
-            get_crew_config(tmp_path, "nonexistent")
+        with pytest.raises(ValueError, match="Fabric agent 'nonexistent' not found"):
+            get_fabric_agent_config(tmp_path, "nonexistent")
 
-    def test_error_lists_available_crews(self, tmp_path: Path) -> None:
-        """ValueError message should list available crew names."""
+    def test_error_lists_available_fabric_agents(self, tmp_path: Path) -> None:
+        """ValueError message should list available fabric_agent names."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  alpha_crew:\n"
+            "fabric_agents:\n"
+            "  alpha_fabric_agent:\n"
             "    agents: a.yaml\n"
             "    tasks: t.yaml\n"
-            "  beta_crew:\n"
+            "  beta_fabric_agent:\n"
             "    agents: a.yaml\n"
             "    tasks: t.yaml\n"
         )
-        with pytest.raises(ValueError, match="alpha_crew") as exc_info:
-            get_crew_config(tmp_path, "missing")
-        assert "beta_crew" in str(exc_info.value)
+        with pytest.raises(ValueError, match="alpha_fabric_agent") as exc_info:
+            get_fabric_agent_config(tmp_path, "missing")
+        assert "beta_fabric_agent" in str(exc_info.value)
 
     def test_missing_agents_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
         """If agents YAML file doesn't exist, agents should be empty dict."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: nonexistent_agents.yaml\n"
             "    tasks: nonexistent_tasks.yaml\n"
         )
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert config["agents"] == {}
 
     def test_missing_tasks_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
         """If tasks YAML file doesn't exist, tasks should be empty dict."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: nonexistent_agents.yaml\n"
             "    tasks: nonexistent_tasks.yaml\n"
         )
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert config["tasks"] == {}
 
     def test_agents_and_tasks_yaml_are_read_as_utf8(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """Agents and tasks YAML should use explicit UTF-8 decoding."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n",
             encoding="utf-8",
@@ -134,18 +134,18 @@ class TestGetCrewConfigErrors:
 
         monkeypatch.setattr(Path, "read_text", tracking_read_text)
 
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
 
         assert config["agents"]["agent"]["role"] == "Café reviewer"
         assert config["tasks"]["task"]["description"] == "Résumé review"
         assert encodings == ["utf-8", "utf-8"]
 
-    def test_empty_crews_section_raises_for_any_crew(self, tmp_path: Path) -> None:
-        """Empty crews section should raise ValueError."""
+    def test_empty_fabric_agents_section_raises_for_any_fabric_agent(self, tmp_path: Path) -> None:
+        """Empty fabric_agents section should raise ValueError."""
         manifest_file = tmp_path / "manifest.yaml"
-        manifest_file.write_text("crews: {}\n")
+        manifest_file.write_text("fabric_agents: {}\n")
         with pytest.raises(ValueError, match="not found"):
-            get_crew_config(tmp_path, "anything")
+            get_fabric_agent_config(tmp_path, "anything")
 
     def test_knowledge_paths_resolves_relative(self, tmp_path: Path) -> None:
         """Knowledge paths should resolve relative to config dir."""
@@ -156,9 +156,9 @@ class TestGetCrewConfigErrors:
 
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n  test_crew:\n    agents: agents.yaml\n    tasks: tasks.yaml\n    knowledge:\n      - knowledge\n"
+            "fabric_agents:\n  test_fabric_agent:\n    agents: agents.yaml\n    tasks: tasks.yaml\n    knowledge:\n      - knowledge\n"
         )
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert len(config["knowledge_paths"]) == 1
         assert config["knowledge_paths"][0] == knowledge_dir
 
@@ -166,14 +166,14 @@ class TestGetCrewConfigErrors:
         """Non-existent knowledge paths should be silently excluded."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    knowledge:\n"
             "      - missing_dir\n"
         )
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
         assert config["knowledge_paths"] == []
 
     def test_knowledge_file_paths_excluded(self, tmp_path: Path) -> None:
@@ -181,15 +181,15 @@ class TestGetCrewConfigErrors:
         (tmp_path / "knowledge.md").write_text("# Not a directory")
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    knowledge:\n"
             "      - knowledge.md\n"
         )
 
-        config = get_crew_config(tmp_path, "test_crew")
+        config = get_fabric_agent_config(tmp_path, "test_fabric_agent")
 
         assert config["knowledge_paths"] == []
 
@@ -197,18 +197,18 @@ class TestGetCrewConfigErrors:
         """Manifest agents paths must stay inside the config directory."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: ../outside_agents.yaml\n"
             "    tasks: tasks.yaml\n"
         )
 
         with pytest.raises(ValueError, match="Manifest path must be relative"):
-            get_crew_config(tmp_path, "test_crew")
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
 
     def test_agents_symlink_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
         """Resolved symlinks must not escape the config directory."""
-        config_dir = tmp_path / ".crew"
+        config_dir = tmp_path / ".fabric"
         config_dir.mkdir()
         outside = tmp_path / "outside_agents.yaml"
         outside.write_text("agent: {}\n", encoding="utf-8")
@@ -220,22 +220,22 @@ class TestGetCrewConfigErrors:
 
         manifest_file = config_dir / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: agents-link.yaml\n"
             "    tasks: tasks.yaml\n",
             encoding="utf-8",
         )
 
         with pytest.raises(ValueError, match="Manifest path escapes config directory"):
-            get_crew_config(config_dir, "test_crew")
+            get_fabric_agent_config(config_dir, "test_fabric_agent")
 
     def test_knowledge_path_cannot_escape_config_dir(self, tmp_path: Path) -> None:
         """Manifest knowledge paths must stay inside the config directory."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    knowledge:\n"
@@ -243,7 +243,7 @@ class TestGetCrewConfigErrors:
         )
 
         with pytest.raises(ValueError, match="Manifest path must be relative"):
-            get_crew_config(tmp_path, "test_crew")
+            get_fabric_agent_config(tmp_path, "test_fabric_agent")
 
 
 class TestGetFrameworkFromConfigDir:
@@ -262,7 +262,7 @@ class TestGetFrameworkFromConfigDir:
     def test_all_known_dirs_return_expected_framework(self) -> None:
         """All known framework directories should map correctly."""
         expected = {
-            ".crew": None,
+            ".fabric": None,
             ".crewai": "crewai",
             ".langgraph": "langgraph",
             ".strands": "strands",
@@ -273,7 +273,7 @@ class TestGetFrameworkFromConfigDir:
 
 
 class TestCrewConfigFrameworkConflict:
-    """Test framework conflict warnings in get_crew_config."""
+    """Test framework conflict warnings in get_fabric_agent_config."""
 
     def test_framework_mismatch_logs_warning(self, tmp_path: Path, caplog) -> None:
         """When manifest preferred_framework differs from directory, warn."""
@@ -282,15 +282,15 @@ class TestCrewConfigFrameworkConflict:
 
         manifest_file = crewai_dir / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    preferred_framework: strands\n"
         )
         with caplog.at_level(logging.WARNING):
-            config = get_crew_config(crewai_dir, "test_crew")
+            config = get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework=strands" in caplog.text
         assert "requires crewai" in caplog.text
         # required_framework should still be crewai (directory wins)
@@ -303,15 +303,15 @@ class TestCrewConfigFrameworkConflict:
 
         manifest_file = crewai_dir / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    preferred_framework: crewai\n"
         )
         with caplog.at_level(logging.WARNING):
-            get_crew_config(crewai_dir, "test_crew")
+            get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework" not in caplog.text
 
     def test_preferred_auto_no_warning(self, tmp_path: Path, caplog) -> None:
@@ -321,13 +321,13 @@ class TestCrewConfigFrameworkConflict:
 
         manifest_file = crewai_dir / "manifest.yaml"
         manifest_file.write_text(
-            "crews:\n"
-            "  test_crew:\n"
+            "fabric_agents:\n"
+            "  test_fabric_agent:\n"
             "    description: Test\n"
             "    agents: agents.yaml\n"
             "    tasks: tasks.yaml\n"
             "    preferred_framework: auto\n"
         )
         with caplog.at_level(logging.WARNING):
-            get_crew_config(crewai_dir, "test_crew")
+            get_fabric_agent_config(crewai_dir, "test_fabric_agent")
         assert "preferred_framework" not in caplog.text

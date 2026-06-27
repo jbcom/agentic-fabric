@@ -11,10 +11,10 @@ from __future__ import annotations
 # - check_aws_credentials
 # - simple_agent_config
 # - simple_task_config
-# - simple_crew_config
-# - multi_agent_crew_config
-# - crew_with_knowledge
-# - temp_crew_dir
+# - simple_fabric_agent_config
+# - multi_agent_fabric_agent_config
+# - fabric_agent_with_knowledge
+# - temp_crewai_dir
 #
 # CLI options:
 # - --e2e: Enable E2E tests

@@ -28,6 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tests = [
+    "pytest-asyncio>=0.23.0",
     "pytest>=9.0.3",
 ]
 typing = [
@@ -54,3 +55,4 @@ packages = ["src/pytest_agentic_fabric"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
 xfail_strict = true
+asyncio_default_fixture_loop_scope = "function"

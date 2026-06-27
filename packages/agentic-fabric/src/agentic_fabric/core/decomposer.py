@@ -1,6 +1,6 @@
 """Framework decomposition - auto-detect and select AI framework.
 
-This module provides the core capability of agentic-fabric: declaring crews
+This module provides the core capability of agentic-fabric: declaring fabric agents
 once and running them on CrewAI, LangGraph, or Strands depending on what's
 installed. It also supports single-agent CLI runners for simpler tasks.
 
@@ -199,48 +199,48 @@ def is_cli_runner_available(profile: str) -> bool:
         return False
 
 
-def _resolve_required_framework(crew_config: dict[str, Any], framework: str | None = None) -> str | None:
-    """Return the framework selected after honoring crew-level requirements."""
-    required_framework = crew_config.get("required_framework")
+def _resolve_required_framework(fabric_agent_config: dict[str, Any], framework: str | None = None) -> str | None:
+    """Return the framework selected after honoring fabric-agent-level requirements."""
+    required_framework = fabric_agent_config.get("required_framework")
     if not required_framework:
         return framework
 
     if framework and framework not in (required_framework, "auto"):
         raise ValueError(
-            f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
+            f"Fabric agent requires {required_framework} (defined in .{required_framework}/ directory) "
             f"but {framework} was requested"
         )
 
     if not is_framework_available(required_framework):
         raise RuntimeError(
-            f"Crew requires {required_framework} but it's not installed. "
+            f"Fabric agent requires {required_framework} but it's not installed. "
             f"Install with: {_get_install_command(required_framework)}"
         )
     return required_framework
 
 
-def decompose_crew(
-    crew_config: dict[str, Any],
+def compose_fabric_agent(
+    fabric_agent_config: dict[str, Any],
     framework: str | None = None,
 ) -> Any:
-    """Decompose a crew configuration to a framework-specific crew.
+    """Compose a fabric agent configuration into a runtime-specific object.
 
-    This is the core function that converts a framework-agnostic crew
-    definition into a runnable crew for the target framework.
+    This is the core function that converts a framework-agnostic fabric agent
+    definition into a runnable fabric agent for the target framework.
 
     Args:
-        crew_config: Crew configuration from loader.
+        fabric_agent_config: Fabric agent configuration from loader.
         framework: Target framework or None for auto-detect.
-                   If crew_config has required_framework, that takes precedence.
+                   If fabric_agent_config has required_framework, that takes precedence.
 
     Returns:
-        Framework-specific crew object ready to run.
+        Runtime-specific fabric agent object ready to run.
 
     Raises:
         RuntimeError: If required framework is not available.
     """
-    runner = get_runner(_resolve_required_framework(crew_config, framework))
-    return runner.build_crew(crew_config)
+    runner = get_runner(_resolve_required_framework(fabric_agent_config, framework))
+    return runner.build_fabric_agent(fabric_agent_config)
 
 
 def _get_install_command(framework: str) -> str:
@@ -252,27 +252,27 @@ def _get_install_command(framework: str) -> str:
 
 
 # Convenience function for simple use cases
-def run_crew_auto(
-    crew_config: dict[str, Any],
+def run_fabric_agent_auto(
+    fabric_agent_config: dict[str, Any],
     inputs: dict[str, Any] | None = None,
     framework: str | None = None,
 ) -> str:
-    """Run a crew using the best available framework.
+    """Run a fabric agent using the best available framework.
 
     Args:
-        crew_config: Crew configuration from loader.
-        inputs: Optional inputs for the crew.
-        framework: Optional framework override. If crew_config has
+        fabric_agent_config: Fabric agent configuration from loader.
+        inputs: Optional inputs for the fabric agent.
+        framework: Optional framework override. If fabric_agent_config has
                    required_framework (from .crewai/.strands/.langgraph dir),
                    that takes precedence.
 
     Returns:
-        Crew output as string.
+        Fabric agent output as string.
 
     Raises:
         RuntimeError: If required framework is not available.
         ValueError: If requested framework conflicts with required framework.
     """
-    runner = get_runner(_resolve_required_framework(crew_config, framework))
-    crew = runner.build_crew(crew_config)
-    return runner.run(crew, inputs or {})
+    runner = get_runner(_resolve_required_framework(fabric_agent_config, framework))
+    fabric_agent = runner.build_fabric_agent(fabric_agent_config)
+    return runner.run(fabric_agent, inputs or {})

@@ -1,7 +1,0 @@
-name: review
-description: Framework-agnostic review crew example.
-crews:
-  implementation_review:
-    description: Review an implementation for correctness and migration readiness.
-    agents: crews/implementation_review/agents.yaml
-    tasks: crews/implementation_review/tasks.yaml

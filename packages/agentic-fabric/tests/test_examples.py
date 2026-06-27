@@ -21,17 +21,17 @@ def test_discovery_workflow_summary_uses_bundled_workspace() -> None:
 
     assert sorted(summary["packages"]) == ["review"]
     review = summary["packages"]["review"]
-    assert review["config_dir"] == ".crew"
-    crew = review["crews"]["implementation_review"]
-    assert crew["required_framework"] is None
-    assert crew["agents"] == ["documenter", "reviewer"]
-    assert crew["tasks"] == ["review_code", "review_docs"]
+    assert review["config_dir"] == ".fabric"
+    fabric_agent = review["fabric_agents"]["implementation_review"]
+    assert fabric_agent["required_framework"] is None
+    assert fabric_agent["agents"] == ["documenter", "reviewer"]
+    assert fabric_agent["tasks"] == ["review_code", "review_docs"]
 
 
 def test_tool_registry_example_inspects_core_registry() -> None:
     summary = inspect_registry()
 
-    assert summary["framework_dirs"] == [".crew", ".crewai", ".langgraph", ".strands"]
+    assert summary["framework_dirs"] == [".fabric", ".crewai", ".langgraph", ".strands"]
     assert summary["mcp_git_available"] is False
 
 
@@ -39,7 +39,7 @@ def test_runtime_context_example_inspects_agentic_data() -> None:
     summary = inspect_runtime_context()
 
     assert summary["active_runtime"] == "crewai"
-    assert summary["registered_agents"] == ["reviewer"]
+    assert summary["registered_fabric_agents"] == ["reviewer"]
     assert summary["runtime_names"] == ["crewai", "langgraph", "strands"]
 
 

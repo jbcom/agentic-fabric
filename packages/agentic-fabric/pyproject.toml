@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-fabric"
 version = "1.0.0"
-description = "Framework-agnostic agent crew orchestration for CrewAI, LangGraph, Strands, local CLI runners, and vendor-fabric tools"
+description = "Framework-agnostic agent fabric orchestration for CrewAI, LangGraph, Strands, local CLI runners, and vendor-fabric tools"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 readme = "README.md"
@@ -60,6 +60,8 @@ docs = [
 
 [project.scripts]
 agentic-fabric = "agentic_fabric.main:main"
+agentic-fabric-meshy-mcp = "agentic_fabric.tools.meshy_mcp:main"
+agentic-fabric-vendor-mcp = "agentic_fabric.tools.vendor_mcp:main"
 
 [project.urls]
 Documentation = "https://jonbogaty.com/agentic-fabric/"
@@ -75,6 +77,7 @@ addopts = ["-ra", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
 xfail_strict = true
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 timeout = 30
 timeout_method = "thread"
 markers = [
@@ -174,7 +177,6 @@ module = [
     "langchain_anthropic",
     "langgraph",
     "langgraph.*",
-    "mesh_toolkit.*",
     "strands",
 ]
 ignore_missing_imports = true

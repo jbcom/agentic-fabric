@@ -4,9 +4,9 @@ Pillars
 Declare Once
 ------------
 
-Crew definitions should be portable across supported runtimes. Framework
+Fabric agent definitions should be portable across supported runtimes. Framework
 specificity belongs in adapters and optional extras, not in the basic
-crew schema.
+fabric agent schema.
 
 Data And Context Move Together
 ------------------------------

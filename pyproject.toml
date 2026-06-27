@@ -25,3 +25,19 @@ dev = [
     "tox-gh>=1.3",
     "tox-uv>=1.11",
 ]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = [
+    "packages/agentic-fabric/tests",
+    "packages/pytest-agentic-fabric/tests",
+]
+xfail_strict = true
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "crewai: tests that require CrewAI runtime dependencies",
+    "e2e: end-to-end tests that require external runtime dependencies",
+    "langgraph: tests that require LangGraph runtime dependencies",
+    "strands: tests that require Strands runtime dependencies",
+    "vendor_fabric: tests that require vendor-fabric runtime dependencies",
+]

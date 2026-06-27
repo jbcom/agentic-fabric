@@ -1783,10 +1783,12 @@ dependencies = [
 dev = [
     { name = "mypy" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "ruff" },
 ]
 tests = [
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 typing = [
     { name = "mypy" },
@@ -1798,6 +1800,7 @@ requires-dist = [
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=9.0.3" },
     { name = "pytest-agentic-fabric", extras = ["tests", "typing"], marker = "extra == 'dev'", editable = "packages/pytest-agentic-fabric" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.23.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
 ]
 provides-extras = ["tests", "typing", "dev"]

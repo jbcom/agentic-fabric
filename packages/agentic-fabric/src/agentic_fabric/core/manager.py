@@ -1,6 +1,6 @@
-"""Hierarchical Manager Agent for crew orchestration.
+"""Hierarchical manager agent for fabric agent orchestration.
 
-This module provides a manager agent that can orchestrate multiple crews,
+This module provides a manager agent that can orchestrate multiple fabric agents,
 enabling complex workflows with smart delegation, sequential and parallel
 execution, and human-in-the-loop checkpoints.
 
@@ -9,11 +9,11 @@ Example:
     from agentic_fabric.core.manager import ManagerAgent
 
     class GameDevManager(ManagerAgent):
-        '''Manager that orchestrates game development crews.'''
+        '''Manager that orchestrates game development fabric agents.'''
 
         def __init__(self):
             super().__init__(
-                crews={
+                fabric_agents={
                     "design": "gameplay_design",
                     "implementation": "ecs_implementation",
                     "assets": "asset_pipeline",
@@ -47,8 +47,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from agentic_fabric.core.decomposer import run_crew_auto
-from agentic_fabric.core.discovery import discover_packages, get_crew_config
+from agentic_fabric.core.decomposer import run_fabric_agent_auto
+from agentic_fabric.core.discovery import discover_packages, get_fabric_agent_config
 
 
 logger = logging.getLogger(__name__)
@@ -57,33 +57,33 @@ logger = logging.getLogger(__name__)
 class ManagerAgent:
     """Base class for hierarchical manager agents.
 
-    A manager agent orchestrates multiple specialized crews to accomplish
+    A manager agent orchestrates multiple specialized fabric agents to accomplish
     complex tasks that require coordination between different domains or phases.
 
     Attributes:
-        crews: Dict mapping crew role names to crew names in packages.
-        package_name: Optional package name if all crews are in one package.
-        workspace_root: Optional workspace root for crew discovery.
+        fabric_agents: Dict mapping fabric agent role names to fabric agent names in packages.
+        package_name: Optional package name if all fabric agents are in one package.
+        workspace_root: Optional workspace root for fabric agent discovery.
     """
 
     def __init__(
         self,
-        crews: dict[str, str],
+        fabric_agents: dict[str, str],
         package_name: str | None = None,
         workspace_root: Path | None = None,
     ):
         """Initialize the manager agent.
 
         Args:
-            crews: Dict mapping role names to crew names (e.g., {"design": "game_design"}).
-            package_name: Optional package name if all crews are in the same package.
+            fabric_agents: Dict mapping role names to fabric agent names (e.g., {"design": "game_design"}).
+            package_name: Optional package name if all fabric agents are in the same package.
             workspace_root: Optional workspace root for discovering packages.
         """
-        self.crews = crews
+        self.fabric_agents = fabric_agents
         self.package_name = package_name
         self.workspace_root = workspace_root
         self._packages_cache: dict[str, Path] | None = None
-        self._crew_config_cache: dict[str, dict[str, Any]] = {}
+        self._fabric_agent_config_cache: dict[str, dict[str, Any]] = {}
 
     def _get_packages(self) -> dict[str, Path]:
         """Get discovered packages, using cache if available."""
@@ -93,101 +93,102 @@ class ManagerAgent:
 
     def delegate(
         self,
-        crew_role: str,
+        fabric_agent_role: str,
         inputs: dict[str, Any] | str,
         framework: str | None = None,
     ) -> str:
-        """Delegate a task to a specific crew synchronously.
+        """Delegate a task to a specific fabric agent synchronously.
 
         Args:
-            crew_role: Role name from the crews dict (e.g., "design").
-            inputs: Input dict or string to pass to the crew.
+            fabric_agent_role: Role name from the fabric_agents dict (e.g., "design").
+            inputs: Input dict or string to pass to the fabric agent.
             framework: Optional framework override.
 
         Returns:
-            Crew output as a string.
+            Fabric agent output as a string.
 
         Raises:
-            ValueError: If crew_role not found in crews mapping.
+            ValueError: If fabric_agent_role not found in fabric_agents mapping.
         """
-        if crew_role not in self.crews:
-            raise ValueError(f"Unknown crew role '{crew_role}'. Available: {list(self.crews.keys())}")
+        if fabric_agent_role not in self.fabric_agents:
+            raise ValueError(f"Unknown fabric agent role '{fabric_agent_role}'. Available: {list(self.fabric_agents.keys())}")
 
-        crew_name = self.crews[crew_role]
+        fabric_agent_name = self.fabric_agents[fabric_agent_role]
 
         # Convert string inputs to dict (create new dict to avoid mutation)
         if isinstance(inputs, str):
             inputs = {"task": inputs}
 
-        # Check crew config cache first for performance
-        if crew_name in self._crew_config_cache:
-            cached_config = self._crew_config_cache[crew_name]
-            return run_crew_auto(cached_config, inputs=inputs, framework=framework)
+        # Check fabric agent config cache first for performance
+        if fabric_agent_name in self._fabric_agent_config_cache:
+            cached_config = self._fabric_agent_config_cache[fabric_agent_name]
+            return run_fabric_agent_auto(cached_config, inputs=inputs, framework=framework)
 
-        # Get crew configuration
-        crew_config: dict[str, Any]
+        # Get fabric agent configuration
+        fabric_agent_config: dict[str, Any]
         if self.package_name:
             # Use specified package
             packages = self._get_packages()
             if self.package_name not in packages:
                 raise ValueError(f"Package '{self.package_name}' not found. Available: {list(packages.keys())}")
             crewai_dir = packages[self.package_name]
-            crew_config = get_crew_config(crewai_dir, crew_name)
+            fabric_agent_config = get_fabric_agent_config(crewai_dir, fabric_agent_name)
         else:
-            # Auto-discover package containing the crew
+            # Auto-discover package containing the fabric agent
             packages = self._get_packages()
             found_config: dict[str, Any] | None = None
             for pkg_dir in packages.values():
                 try:
-                    found_config = get_crew_config(pkg_dir, crew_name)
+                    found_config = get_fabric_agent_config(pkg_dir, fabric_agent_name)
                     break
                 except ValueError:
                     continue
 
             if found_config is None:
                 raise ValueError(
-                    f"Crew '{crew_name}' not found in any package. Available packages: {list(packages.keys())}"
+                    f"Fabric agent '{fabric_agent_name}' not found in any package. "
+                    f"Available packages: {list(packages.keys())}"
                 )
-            crew_config = found_config
+            fabric_agent_config = found_config
 
         # Cache the config for future calls
-        self._crew_config_cache[crew_name] = crew_config
-        return run_crew_auto(crew_config, inputs=inputs, framework=framework)
+        self._fabric_agent_config_cache[fabric_agent_name] = fabric_agent_config
+        return run_fabric_agent_auto(fabric_agent_config, inputs=inputs, framework=framework)
 
     async def delegate_async(
         self,
-        crew_role: str,
+        fabric_agent_role: str,
         inputs: dict[str, Any] | str,
         framework: str | None = None,
     ) -> str:
-        """Delegate a task to a specific crew asynchronously.
+        """Delegate a task to a specific fabric agent asynchronously.
 
-        This runs the crew in a thread pool to avoid blocking the event loop.
+        This runs the fabric agent in a thread pool to avoid blocking the event loop.
 
         Args:
-            crew_role: Role name from the crews dict (e.g., "design").
-            inputs: Input dict or string to pass to the crew.
+            fabric_agent_role: Role name from the fabric_agents dict (e.g., "design").
+            inputs: Input dict or string to pass to the fabric agent.
             framework: Optional framework override.
 
         Returns:
-            Crew output as a string.
+            Fabric agent output as a string.
         """
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, self.delegate, crew_role, inputs, framework)
+        return await loop.run_in_executor(None, self.delegate, fabric_agent_role, inputs, framework)
 
     async def delegate_parallel(
         self,
         delegations: list[tuple[str, dict[str, Any] | str]],
         framework: str | None = None,
     ) -> list[str]:
-        """Delegate tasks to multiple crews in parallel.
+        """Delegate tasks to multiple fabric agents in parallel.
 
         Args:
-            delegations: List of (crew_role, inputs) tuples.
-            framework: Optional framework override for all crews.
+            delegations: List of (fabric_agent_role, inputs) tuples.
+            framework: Optional framework override for all fabric agents.
 
         Returns:
-            List of crew outputs in the same order as delegations.
+            List of fabric_agent outputs in the same order as delegations.
 
         Example:
             ```python
@@ -198,7 +199,7 @@ class ManagerAgent:
             design_result, assets_result = results
             ```
         """
-        tasks = [self.delegate_async(crew_role, inputs, framework) for crew_role, inputs in delegations]
+        tasks = [self.delegate_async(fabric_agent_role, inputs, framework) for fabric_agent_role, inputs in delegations]
         return await asyncio.gather(*tasks)
 
     def delegate_sequential(
@@ -206,14 +207,14 @@ class ManagerAgent:
         delegations: list[tuple[str, dict[str, Any] | str]],
         framework: str | None = None,
     ) -> list[str]:
-        """Delegate tasks to multiple crews sequentially.
+        """Delegate tasks to multiple fabric agents sequentially.
 
         Args:
-            delegations: List of (crew_role, inputs) tuples.
-            framework: Optional framework override for all crews.
+            delegations: List of (fabric_agent_role, inputs) tuples.
+            framework: Optional framework override for all fabric agents.
 
         Returns:
-            List of crew outputs in the same order as delegations.
+            List of fabric_agent outputs in the same order as delegations.
 
         Example:
             ```python
@@ -225,8 +226,8 @@ class ManagerAgent:
             ```
         """
         results = []
-        for crew_role, inputs in delegations:
-            result = self.delegate(crew_role, inputs, framework)
+        for fabric_agent_role, inputs in delegations:
+            result = self.delegate(fabric_agent_role, inputs, framework)
             results.append(result)
         return results
 

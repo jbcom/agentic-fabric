@@ -10,14 +10,14 @@ from agentic_fabric.core.decomposer import (
     _framework_cache,
     _get_install_command,
     _resolve_required_framework,
-    decompose_crew,
+    compose_fabric_agent,
     detect_framework,
     get_available_frameworks,
     get_framework_info,
     get_runner,
     is_cli_runner_available,
     is_framework_available,
-    run_crew_auto,
+    run_fabric_agent_auto,
 )
 from agentic_fabric.runners.registry import clear_runtime_cache
 
@@ -218,72 +218,72 @@ class TestRunnerDispatch:
         )
         assert is_cli_runner_available("missing") is False
 
-    def test_decompose_crew_enforces_required_runtime_and_builds(
+    def test_compose_fabric_agent_enforces_required_runtime_and_builds(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Required framework configs should build through that runtime."""
 
         class FakeRunner:
-            def build_crew(self, crew_config):
-                return {"built": crew_config}
+            def build_fabric_agent(self, fabric_agent_config):
+                return {"built": fabric_agent_config}
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: True)
         monkeypatch.setattr("agentic_fabric.core.decomposer.get_runner", lambda framework: FakeRunner())
 
-        crew_config = {"required_framework": "crewai", "name": "reviewer"}
+        fabric_agent_config = {"required_framework": "crewai", "name": "reviewer"}
 
-        assert decompose_crew(crew_config, framework="auto") == {"built": crew_config}
+        assert compose_fabric_agent(fabric_agent_config, framework="auto") == {"built": fabric_agent_config}
 
-    def test_decompose_crew_reports_conflicting_or_missing_required_runtime(
+    def test_compose_fabric_agent_reports_conflicting_or_missing_required_runtime(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Required runtime errors should surface clear guidance."""
-        crew_config = {"required_framework": "crewai"}
+        fabric_agent_config = {"required_framework": "crewai"}
 
-        with pytest.raises(ValueError, match="Crew requires crewai"):
-            decompose_crew(crew_config, framework="strands")
+        with pytest.raises(ValueError, match="Fabric agent requires crewai"):
+            compose_fabric_agent(fabric_agent_config, framework="strands")
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: False)
 
         with pytest.raises(RuntimeError, match="pip install crewai"):
-            decompose_crew(crew_config)
+            compose_fabric_agent(fabric_agent_config)
 
-    def test_run_crew_auto_enforces_required_runtime_and_runs(
+    def test_run_fabric_agent_auto_enforces_required_runtime_and_runs(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """run_crew_auto should build and run through the selected runner."""
+        """run_fabric_agent_auto should build and run through the selected runner."""
 
         class FakeRunner:
-            def build_crew(self, crew_config):
-                return {"crew": crew_config}
+            def build_fabric_agent(self, fabric_agent_config):
+                return {"fabric_agent": fabric_agent_config}
 
-            def run(self, crew, inputs):
-                return f"{crew['crew']['name']}:{inputs['task']}"
+            def run(self, fabric_agent, inputs):
+                return f"{fabric_agent['fabric_agent']['name']}:{inputs['task']}"
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: True)
         monkeypatch.setattr("agentic_fabric.core.decomposer.get_runner", lambda framework: FakeRunner())
 
-        result = run_crew_auto({"name": "reviewer", "required_framework": "langgraph"}, {"task": "go"})
+        result = run_fabric_agent_auto({"name": "reviewer", "required_framework": "langgraph"}, {"task": "go"})
 
         assert result == "reviewer:go"
 
-    def test_run_crew_auto_reports_conflicting_or_missing_required_runtime(
+    def test_run_fabric_agent_auto_reports_conflicting_or_missing_required_runtime(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """run_crew_auto should reject conflicts and unavailable required runtimes."""
-        crew_config = {"required_framework": "langgraph"}
+        """run_fabric_agent_auto should reject conflicts and unavailable required runtimes."""
+        fabric_agent_config = {"required_framework": "langgraph"}
 
-        with pytest.raises(ValueError, match="Crew requires langgraph"):
-            run_crew_auto(crew_config, framework="crewai")
+        with pytest.raises(ValueError, match="Fabric agent requires langgraph"):
+            run_fabric_agent_auto(fabric_agent_config, framework="crewai")
 
         monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda framework: False)
 
         with pytest.raises(RuntimeError, match=r"agentic-fabric\[langgraph\]"):
-            run_crew_auto(crew_config)
+            run_fabric_agent_auto(fabric_agent_config)
 
 
 class TestFrameworkInfo:

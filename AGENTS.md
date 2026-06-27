@@ -39,7 +39,7 @@ and remote state before finalizing this repo.
 
 `agentic-fabric` owns:
 
-- framework-agnostic crew discovery and loading
+- framework-agnostic fabric agent discovery and loading
 - runner adapters for CrewAI, LangGraph, Strands, and local CLI tools
 - agent-facing tool resolution and framework adapter utilities
 - planned optional passthrough dependencies to `vendor-fabric` after

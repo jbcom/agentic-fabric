@@ -22,9 +22,9 @@ Use ``pytest-agentic-fabric`` fixtures for reusable runtime test setup:
 
 .. code:: python
 
-   def test_runtime(agentic_mock_runtime, agentic_crew_config):
+   def test_runtime(agentic_mock_runtime, agentic_fabric_agent_config):
        agentic_mock_runtime("langgraph")
-       assert agentic_crew_config["name"] == "test_crew"
+       assert agentic_fabric_agent_config["name"] == "test_fabric_agent"
 
 Before deleting old monorepo code, first prove this repository owns the
 moved surface with docs, tests, package metadata, and release workflows.

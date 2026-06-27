@@ -8,7 +8,7 @@ package still imports without vendor SDKs installed.
 The integration rule is simple: vendor IO, provider capability metadata,
 and the SecretSync Python facade/capability surface belong in
 ``vendor-fabric``. The SecretSync Go runtime and gopy binding source
-belong in ``secrets-sync``. Crew orchestration, runtime selection, and
+belong in ``secrets-sync``. Fabric agent orchestration, runtime selection, and
 agent-facing framework wrappers belong here.
 
 ``AgenticData`` subclasses ``VendorData`` when ``vendor-fabric`` is
@@ -43,3 +43,10 @@ also expose a provider catalog from the superclass:
 capability route into a lazy ``VendorCapabilityTool``. The provider
 connectors, install availability, and dispatch behavior still come from
 ``vendor-fabric``.
+
+MCP ownership follows the same boundary. ``agentic-fabric`` owns the
+``agentic-fabric-vendor-mcp`` and ``agentic-fabric-meshy-mcp`` adapter entry
+points because MCP is an agent runtime transport. The underlying connector
+classes, provider methods, Meshy capability metadata, credentials, and network
+calls remain in ``vendor-fabric`` and are imported lazily only when the MCP
+server is created.

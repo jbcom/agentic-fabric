@@ -13,6 +13,8 @@ Use tox for local validation:
    tox -e py313
    tox -e py314
    tox -e coverage
+   tox -e plugin
+   tox -e examples
    tox -e docs
    tox -e build
 

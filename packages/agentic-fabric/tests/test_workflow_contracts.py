@@ -40,11 +40,11 @@ def test_automerge_uses_base_context_without_checkout_or_secrets() -> None:
     ]
 
 
-def test_ci_and_cd_quality_run_security_audit() -> None:
-    """CI and CD quality gates should include dependency auditing."""
+def test_ci_and_cd_quality_run_security_audit_and_examples() -> None:
+    """CI and CD quality gates should include auditing and shipped examples."""
     for workflow_name in ("ci.yml", "cd.yml"):
         workflow = load_workflow(workflow_name)
         quality_steps = workflow["jobs"]["quality"]["steps"]
         tox_commands = [step["run"] for step in quality_steps if step.get("run", "").startswith("tox -e ")]
 
-        assert tox_commands == ["tox -e lint,typecheck,audit,coverage,plugin,docs,build"]
+        assert tox_commands == ["tox -e lint,typecheck,audit,examples,coverage,plugin,docs,build"]

@@ -84,6 +84,7 @@ tox -e audit
 tox -e py311,py312,py313,py314
 tox -e coverage
 tox -e plugin
+tox -e examples
 tox -e docs
 tox -e build
 ```

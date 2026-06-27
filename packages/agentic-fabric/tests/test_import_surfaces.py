@@ -13,6 +13,7 @@ import pytest
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = PACKAGE_ROOT.parents[1]
 
 
 def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,5 +85,49 @@ def test_runtime_source_does_not_reown_vendor_or_legacy_surfaces() -> None:
         for token, reason in disallowed.items():
             if token in text:
                 failures.append(f"{source_file.relative_to(PACKAGE_ROOT)} contains {token!r}: {reason}")
+
+    assert failures == []
+
+
+def test_public_surfaces_do_not_advertise_retired_vendor_mcp_entrypoints() -> None:
+    """MCP ownership should stay with agentic-fabric, not vendor-fabric."""
+    retired = {
+        "vendor_fabric.mcp": "use agentic_fabric.tools.vendor_mcp",
+        "vendor_fabric.meshy.mcp": "use agentic_fabric.tools.meshy_mcp",
+        "vendor-fabric-mcp": "use the agentic-fabric-vendor-mcp console script",
+        "vendor-fabric[mcp]": "MCP transport dependencies live in agentic-fabric[mcp]",
+        "vendor-fabric[meshy,mcp]": "combine agentic-fabric[mcp] with vendor-fabric[meshy]",
+    }
+    roots = [
+        PACKAGE_ROOT / "README.md",
+        PACKAGE_ROOT / "pyproject.toml",
+        PACKAGE_ROOT / "src",
+        PACKAGE_ROOT / "examples",
+        WORKSPACE_ROOT / "docs",
+        WORKSPACE_ROOT / "AGENTS.md",
+        WORKSPACE_ROOT / "README.md",
+        WORKSPACE_ROOT / "pyproject.toml",
+        WORKSPACE_ROOT / "tox.ini",
+    ]
+
+    files: list[Path] = []
+    for root in roots:
+        if root.is_file():
+            files.append(root)
+        elif root.is_dir():
+            files.extend(
+                path
+                for path in root.rglob("*")
+                if path.suffix in {".md", ".py", ".rst", ".toml", ".yaml", ".yml"}
+                and "_build" not in path.parts
+                and "__pycache__" not in path.parts
+            )
+
+    failures: list[str] = []
+    for source_file in sorted(files):
+        text = source_file.read_text(encoding="utf-8")
+        for token, replacement in retired.items():
+            if token in text:
+                failures.append(f"{source_file.relative_to(WORKSPACE_ROOT)} contains {token!r}: {replacement}")
 
     assert failures == []

@@ -47,7 +47,7 @@ installs are unaffected.
 ### 1. Define a Fabric Agent (YAML)
 
 ```yaml
-# .crewai/fabric_agents/analyzer/agents.yaml
+# .fabric/fabric_agents/analyzer/agents.yaml
 code_reviewer:
   role: Senior Code Reviewer
   goal: Find bugs and improvements
@@ -55,7 +55,7 @@ code_reviewer:
 ```
 
 ```yaml
-# .crewai/fabric_agents/analyzer/tasks.yaml
+# .fabric/fabric_agents/analyzer/tasks.yaml
 review_code:
   description: Review the provided code for issues
   expected_output: List of findings with severity

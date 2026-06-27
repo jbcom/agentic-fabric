@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-agentic-fabric"
+version = "0.1.0"
+description = "Pytest fixtures for projects built on agentic-fabric"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+classifiers = [
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pytest-mock>=3.15.1",
+    "pytest>=9.1.1",
+    "pyyaml>=6.0.3",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest-asyncio>=1.4.0",
+    "pytest-mock>=3.15.1",
+    "pytest>=9.1.1",
+]
+typing = [
+    "mypy>=2.1.0",
+]
+dev = [
+    "pytest-agentic-fabric[tests,typing]",
+    "ruff>=0.15.20",
+]
+
+[project.entry-points.pytest11]
+agentic_fabric = "pytest_agentic_fabric.plugin"
+
+[project.urls]
+Documentation = "https://jonbogaty.com/agentic-fabric/"
+Issues = "https://github.com/jbcom/agentic-fabric/issues"
+Source = "https://github.com/jbcom/agentic-fabric"
+Changelog = "https://github.com/jbcom/agentic-fabric/blob/main/packages/pytest-agentic-fabric/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_agentic_fabric"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+xfail_strict = true
+asyncio_default_fixture_loop_scope = "function"

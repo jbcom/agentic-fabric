@@ -1,0 +1,43 @@
+[project]
+name = "agentic-fabric-workspace"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+    "packages/agentic-fabric",
+    "packages/pytest-agentic-fabric",
+]
+
+[tool.uv.sources]
+agentic-fabric = { workspace = true }
+pytest-agentic-fabric = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+    "ruff>=0.15.20",
+    "tox>=4.56.1",
+    "tox-gh>=1.7.1",
+    "tox-uv>=1.35.2",
+]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = [
+    "packages/agentic-fabric/tests",
+    "packages/pytest-agentic-fabric/tests",
+]
+xfail_strict = true
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "crewai: tests that require CrewAI runtime dependencies",
+    "e2e: end-to-end tests that require external runtime dependencies",
+    "langgraph: tests that require LangGraph runtime dependencies",
+    "strands: tests that require Strands runtime dependencies",
+    "vendor_fabric: tests that require vendor-fabric runtime dependencies",
+]

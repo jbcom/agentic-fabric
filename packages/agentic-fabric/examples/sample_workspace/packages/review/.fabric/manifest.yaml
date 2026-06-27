@@ -1,0 +1,7 @@
+name: review
+description: Framework-agnostic review fabric_agent example.
+fabric_agents:
+  implementation_review:
+    description: Review an implementation for correctness and migration readiness.
+    agents: fabric_agents/implementation_review/agents.yaml
+    tasks: fabric_agents/implementation_review/tasks.yaml

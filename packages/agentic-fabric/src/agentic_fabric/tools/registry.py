@@ -1,0 +1,165 @@
+"""Tool resolution helpers for configured fabric agent tools.
+
+This module turns YAML-declared tool names into instantiated tool objects
+without forcing every optional dependency to import at module load time.
+"""
+
+from __future__ import annotations
+
+import importlib
+import logging
+import os
+
+from collections.abc import Callable
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
+
+ToolFactory = Callable[[], Any]
+
+
+def _build_factory(module_name: str, attr_name: str) -> ToolFactory:
+    """Create a lazy factory for a tool class or callable."""
+
+    def factory() -> Any:
+        module = importlib.import_module(module_name)
+        tool = getattr(module, attr_name)
+        return tool() if callable(tool) else tool
+
+    return factory
+
+
+_TOOL_FACTORIES: dict[str, ToolFactory] = {
+    "GameCodeWriterTool": _build_factory("agentic_fabric.tools.file_tools", "GameCodeWriterTool"),
+    "GameCodeReaderTool": _build_factory("agentic_fabric.tools.file_tools", "GameCodeReaderTool"),
+    "DirectoryListTool": _build_factory("agentic_fabric.tools.file_tools", "DirectoryListTool"),
+    "ScrapeWebsiteTool": _build_factory("agentic_fabric.tools.scraping_tools", "ScrapeWebsiteTool"),
+    "CrawlWebsiteTool": _build_factory("agentic_fabric.tools.scraping_tools", "CrawlWebsiteTool"),
+}
+
+_TOOL_ALIASES = {
+    "FileWriteTool": "GameCodeWriterTool",
+    "WriteFileTool": "GameCodeWriterTool",
+    "FileReadTool": "GameCodeReaderTool",
+    "ReadFileTool": "GameCodeReaderTool",
+    "ListDirectoryTool": "DirectoryListTool",
+    "ListFilesTool": "DirectoryListTool",
+    "mcp://filesystem/write_file": "GameCodeWriterTool",
+    "mcp://filesystem/read_file": "GameCodeReaderTool",
+    "mcp://filesystem/list_directory": "DirectoryListTool",
+}
+
+_DEFAULT_IMPORT_PREFIXES = ("agentic_fabric.",)
+
+
+def _canonical_tool_name(tool_name: str) -> str:
+    """Normalize aliases to a canonical tool identifier."""
+    return _TOOL_ALIASES.get(tool_name, tool_name)
+
+
+def register_tool_factory(tool_name: str, factory: ToolFactory, *, aliases: tuple[str, ...] = ()) -> None:
+    """Register a safe tool factory without using dynamic imports."""
+    _TOOL_FACTORIES[tool_name] = factory
+    for alias in aliases:
+        _TOOL_ALIASES[alias] = tool_name
+
+
+def _allowed_import_prefixes() -> tuple[str, ...]:
+    """Return module prefixes allowed for fully qualified tool references."""
+    configured = os.environ.get("AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", "")
+    extra = tuple(prefix.strip() for prefix in configured.split(",") if prefix.strip())
+    return (*_DEFAULT_IMPORT_PREFIXES, *extra)
+
+
+def _is_import_allowed(module_name: str) -> bool:
+    """Return whether a fully qualified tool module may be imported."""
+    return any(module_name == prefix.rstrip(".") or module_name.startswith(prefix) for prefix in _allowed_import_prefixes())
+
+
+def _resolve_vendor_tool(tool_name: str) -> Any | None:
+    """Resolve vendor-backed tool references without importing vendor SDKs."""
+    if tool_name.startswith("vendor://"):
+        path = tool_name.removeprefix("vendor://")
+        provider, separator, operation = path.partition("/")
+        if provider and separator and operation:
+            from agentic_fabric.tools.vendor import VendorCapabilityTool
+
+            return VendorCapabilityTool(provider, operation)
+
+    if tool_name.startswith("vendor:"):
+        _, provider, operation = tool_name.split(":", 2) if tool_name.count(":") >= 2 else ("", "", "")
+        if provider and operation:
+            from agentic_fabric.tools.vendor import VendorCapabilityTool
+
+            return VendorCapabilityTool(provider, operation)
+
+    return None
+
+
+def resolve_tool(tool_name: str) -> Any | None:
+    """Resolve a configured tool name to an instantiated tool object.
+
+    Supports:
+    - built-in aliases like ``FileWriteTool``
+    - selected filesystem MCP URIs
+    - fully-qualified ``module:attribute`` references
+    - fully-qualified ``package.module.ClassName`` references
+    """
+    canonical_name = _canonical_tool_name(tool_name)
+
+    vendor_tool = _resolve_vendor_tool(canonical_name)
+    if vendor_tool is not None:
+        return vendor_tool
+
+    if canonical_name.startswith("mcp://"):
+        return None
+
+    try:
+        if canonical_name in _TOOL_FACTORIES:
+            return _TOOL_FACTORIES[canonical_name]()
+
+        if ":" in canonical_name:
+            module_name, attr_name = canonical_name.split(":", 1)
+            if not _is_import_allowed(module_name):
+                logger.warning("Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name)
+                return None
+            return _build_factory(module_name, attr_name)()
+
+        if "." in canonical_name:
+            module_name, _, attr_name = canonical_name.rpartition(".")
+            if module_name and attr_name:
+                if not _is_import_allowed(module_name):
+                    logger.warning("Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name)
+                    return None
+                return _build_factory(module_name, attr_name)()
+    except (ImportError, AttributeError) as exc:
+        logger.warning("Failed to resolve tool '%s': %s", tool_name, exc)
+        return None
+
+    return None
+
+
+def resolve_tools(tool_names: list[str]) -> list[Any]:
+    """Resolve configured tool names to instantiated tool objects.
+
+    Unknown or unavailable tools are skipped with a warning so that fabric agents can
+    continue to run with the capabilities available in the current environment.
+    """
+    resolved: list[Any] = []
+    seen: set[str] = set()
+
+    for tool_name in tool_names:
+        canonical_name = _canonical_tool_name(tool_name)
+        if canonical_name in seen:
+            continue
+
+        tool = resolve_tool(tool_name)
+        if tool is None:
+            logger.warning("Skipping unresolved tool '%s'", tool_name)
+            continue
+
+        resolved.append(tool)
+        seen.add(canonical_name)
+
+    return resolved

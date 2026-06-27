@@ -460,6 +460,7 @@ profiles:
         # Check command was built correctly
         call_args = mock_run.call_args
         assert call_args[0][0] == ["test-tool", "--task", "Fix the bug"]
+        assert call_args.kwargs["shell"] is False
 
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")

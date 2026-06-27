@@ -59,7 +59,7 @@ jobs:
           enable-cache: true
       - run: uv sync --all-packages --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
-      - run: tox -e lint,typecheck,plugin,docs,build
+      - run: tox -e lint,typecheck,coverage,plugin,docs,build
 
   publish-package:
     name: Publish package to PyPI

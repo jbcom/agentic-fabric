@@ -405,6 +405,7 @@ class LocalCLIRunner(SingleAgentRunner):
                 cwd=working_dir,
                 capture_output=True,
                 text=True,
+                shell=False,
                 timeout=self.config.timeout,
                 env=os.environ.copy(),  # Pass through environment
                 check=True,

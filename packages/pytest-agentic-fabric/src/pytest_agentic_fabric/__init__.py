@@ -26,4 +26,4 @@ __all__ = [
 try:
     __version__ = version("pytest-agentic-fabric")
 except PackageNotFoundError:
-    __version__ = "0.0.0"
+    __version__ = "0.2.0"

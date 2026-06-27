@@ -2,6 +2,13 @@
 
 <!-- version list -->
 
+## [1.1.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.0.0...agentic-fabric-v1.1.0) (2026-06-27)
+
+
+### Features
+
+* bootstrap agentic fabric workspace ([#1](https://github.com/jbcom/agentic-fabric/issues/1)) ([2704e67](https://github.com/jbcom/agentic-fabric/commit/2704e6758a77661477c01678073a1b78ca1abcbc))
+
 ## v1.0.0 (2025-12-25)
 
 ### Initial Stable Release

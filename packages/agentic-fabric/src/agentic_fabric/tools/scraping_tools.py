@@ -107,8 +107,6 @@ class CrawlWebsiteTool(ScrapeWebsiteTool):
         while urls_to_visit and len(visited_urls) < MAX_CRAWL_PAGES:
             current_url, depth = urls_to_visit.popleft()
             queued_urls.discard(current_url)
-            if current_url in visited_urls:
-                continue
             visited_urls.add(current_url)
 
             try:

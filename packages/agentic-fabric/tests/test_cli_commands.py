@@ -199,6 +199,30 @@ def test_cmd_run_json_reports_execution_errors(
     assert json.loads(capsys.readouterr().out)["error"] == "bad crew"
 
 
+@pytest.mark.parametrize("use_json", [True, False])
+def test_cmd_run_reports_file_read_errors(capsys: pytest.CaptureFixture[str], use_json: bool) -> None:
+    """Multi-agent CLI runs should report unreadable input files."""
+    args = SimpleNamespace(
+        json=use_json,
+        runner=None,
+        package="pkg",
+        crew="reviewer",
+        file="/definitely/missing/task.txt",
+        input=None,
+        framework="auto",
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.cmd_run(args)
+
+    assert exc_info.value.code == 2
+    output = capsys.readouterr().out
+    if use_json:
+        assert json.loads(output)["success"] is False
+    else:
+        assert "Error:" in output
+
+
 def test_cmd_run_text_reports_missing_arguments(capsys: pytest.CaptureFixture[str]) -> None:
     args = SimpleNamespace(json=False, runner=None, package=None, crew=None)
 
@@ -532,6 +556,28 @@ def test_single_agent_text_requires_input(capsys: pytest.CaptureFixture[str]) ->
 
     assert exc_info.value.code == 2
     assert "No input provided" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("use_json", [True, False])
+def test_single_agent_reports_file_read_errors(capsys: pytest.CaptureFixture[str], use_json: bool) -> None:
+    """Single-agent CLI runs should report unreadable input files."""
+    args = SimpleNamespace(
+        json=use_json,
+        runner="fake",
+        input=None,
+        file="/definitely/missing/task.txt",
+        package=None,
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli._cmd_run_single_agent(args, use_json=use_json, start_time=0)
+
+    assert exc_info.value.code == 2
+    output = capsys.readouterr().out
+    if use_json:
+        assert json.loads(output)["success"] is False
+    else:
+        assert "Error:" in output
 
 
 def test_single_agent_json_reports_unavailable_runner(capsys: pytest.CaptureFixture[str]) -> None:

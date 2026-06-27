@@ -3,11 +3,28 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import runpy
 import sys
 import types
 
 import pytest
+
+
+def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Source-tree imports should have a stable version fallback."""
+    package_file = importlib.import_module("agentic_fabric").__file__
+
+    def missing_version(name: str) -> str:
+        if name == "agentic-fabric":
+            raise importlib.metadata.PackageNotFoundError(name)
+        return "1.0.0"
+
+    monkeypatch.setattr(importlib.metadata, "version", missing_version)
+
+    namespace = runpy.run_path(package_file, run_name="agentic_fabric_version_fallback")
+
+    assert namespace["__version__"] == "0.0.0"
 
 
 def test_base_exports_file_tools_with_fake_crewai(monkeypatch: pytest.MonkeyPatch) -> None:

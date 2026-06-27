@@ -96,6 +96,39 @@ def test_crawler_enforces_page_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     assert scraping_tools.requests.get.call_count == 3
 
 
+def test_crawler_enforces_depth_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Crawl depth should prevent child requests when configured to zero."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+    monkeypatch.setattr(scraping_tools, "MAX_CRAWL_DEPTH", 0)
+    root_response = MagicMock()
+    root_response.content = b"<a href='/page-1'>Page 1</a><p>root</p>"
+    root_response.raise_for_status.return_value = None
+    scraping_tools.requests.get.return_value = root_response
+
+    result = scraping_tools.CrawlWebsiteTool()._run("https://example.test")
+
+    assert "root" in result
+    assert scraping_tools.requests.get.call_count == 1
+
+
+def test_scrape_website_tool_success_and_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first-party scrape tool should handle safe, unsafe, and failed URLs."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+    response = MagicMock()
+    response.content = b"<p>Visible content</p>"
+    response.raise_for_status.return_value = None
+    scraping_tools.requests.get.return_value = response
+
+    assert "Visible content" in scraping_tools.ScrapeWebsiteTool()._run("https://example.test")
+
+    scraping_tools.requests.get.reset_mock()
+    assert scraping_tools.ScrapeWebsiteTool()._run("http://127.0.0.1") == ""
+    scraping_tools.requests.get.assert_not_called()
+
+    scraping_tools.requests.get.side_effect = scraping_tools.requests.RequestException("boom")
+    assert scraping_tools.ScrapeWebsiteTool()._run("https://example.test") == ""
+
+
 def test_scrape_content_removes_script_and_style_tags(monkeypatch: pytest.MonkeyPatch) -> None:
     """The scraper should remove script/style nodes before reading text."""
     scraping_tools = import_scraping_tools(monkeypatch)

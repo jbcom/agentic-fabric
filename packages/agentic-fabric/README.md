@@ -189,6 +189,7 @@ tox -e py311
 tox -e py312
 tox -e py313
 tox -e py314
+tox -e coverage
 tox -e build
 ```
 

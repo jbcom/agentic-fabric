@@ -235,6 +235,8 @@ profiles:
     @pytest.mark.parametrize(
         "field_name,value",
         [
+            ("auto_approve", "   "),
+            ("structured_output", '--json "unterminated'),
             ("task_flag", "--prompt; rm -rf /"),
             ("subcommand", "run && rm -rf /"),
             ("auto_approve", "--yes | sh"),
@@ -328,6 +330,30 @@ profiles:
             with pytest.raises(FileNotFoundError, match="regular file"):
                 LocalCLIRunner._load_profiles()
 
+    def test_profiles_source_rejects_unexpected_file_name(self, tmp_path: Path):
+        """The bundled profiles source should have the expected file name."""
+        from agentic_fabric.runners import local_cli_runner
+
+        unexpected_file = tmp_path / "profiles.yaml"
+        unexpected_file.write_text("profiles: {}\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="Unexpected profiles file name"):
+            local_cli_runner._validate_profiles_file_source(unexpected_file)
+
+    def test_load_profiles_rejects_invalid_profile_entries(self, tmp_path: Path):
+        """Profiles YAML should contain string names mapped to config mappings."""
+        profiles_file = tmp_path / "local_cli_profiles.yaml"
+        profiles_file.write_text("profiles:\n  bad: not-a-mapping\n", encoding="utf-8")
+
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+            mock_path.return_value.__truediv__.return_value = profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(TypeError, match="invalid profile entry"):
+                LocalCLIRunner._load_profiles()
+
     def test_init_with_config_object(self):
         """Should initialize with a LocalCLIConfig object."""
         config = LocalCLIConfig(
@@ -399,6 +425,14 @@ profiles:
 
         with pytest.raises(ValueError, match="NUL byte"):
             runner.run("safe\x00unsafe")
+
+    def test_run_rejects_non_string_runtime_arguments(self):
+        """Runtime arguments should be strings before reaching subprocess."""
+        config = LocalCLIConfig(command="test-tool", task_flag="--task")
+        runner = LocalCLIRunner(config)
+
+        with pytest.raises(TypeError, match="task must be a string"):
+            runner.run(123)  # type: ignore[arg-type]
 
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")

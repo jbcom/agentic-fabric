@@ -219,3 +219,41 @@ class TestVendorCapabilityTool:
     def test_vendor_capability_tools_returns_empty_without_vendor_catalog(self) -> None:
         """The import shim should not invent provider behavior."""
         assert vendor_capability_tools(object()) == []
+
+    def test_vendor_capability_tools_creates_default_agentic_data(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The vendor catalog helper should create AgenticData when none is supplied."""
+        fake_data = MagicMock()
+        fake_data.capabilities.return_value = [{"provider": "slack", "operation": "list_messages"}]
+
+        class FakeAgenticData:
+            def __new__(cls) -> MagicMock:
+                return fake_data
+
+        monkeypatch.setattr("agentic_fabric.agentic_data.AgenticData", FakeAgenticData)
+
+        tools = vendor_capability_tools(provider="slack")
+
+        fake_data.capabilities.assert_called_once_with("slack", include_unavailable=True)
+        assert tools[0].provider == "slack"
+
+    def test_builds_tool_from_getter_style_metadata(self) -> None:
+        """Capability metadata can expose values through a get method."""
+
+        class GetterMetadata:
+            def get(self, key: str, default: str) -> str:
+                values = {"provider": "aws", "operation": "get_secret"}
+                return values.get(key, default)
+
+        tool = VendorCapabilityTool.from_metadata(GetterMetadata())
+
+        assert tool.provider == "aws"
+        assert tool.operation == "get_secret"
+
+    def test_builds_tool_from_attribute_metadata(self) -> None:
+        """Capability metadata can expose values as attributes."""
+        metadata = type("Metadata", (), {"provider": "github", "operation": "list_repos"})()
+
+        tool = VendorCapabilityTool.from_metadata(metadata)
+
+        assert tool.provider == "github"
+        assert tool.operation == "list_repos"

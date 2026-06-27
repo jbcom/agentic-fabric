@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import importlib
 import sys
 import types
@@ -120,3 +121,24 @@ def test_connector_builder_kickoff_returns_raw_result(
     crew_instance = module.ConnectorBuilderCrew()
 
     assert crew_instance.kickoff(inputs={"url": "http://example.com"}) == "raw success"
+
+
+def test_connector_builder_reports_missing_crewai(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Connector builder should raise install guidance when CrewAI is absent."""
+    module = import_connector_builder_with_fake_crewai(monkeypatch)
+    monkeypatch.delitem(sys.modules, "crewai", raising=False)
+    module.Agent = None
+    module.Crew = None
+    module.Task = None
+
+    original_import = builtins.__import__
+
+    def reject_crewai(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name == "crewai":
+            raise ImportError("missing crewai")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", reject_crewai)
+
+    with pytest.raises(RuntimeError, match="pip install crewai"):
+        module._load_crewai_classes()

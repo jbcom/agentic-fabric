@@ -11,6 +11,7 @@ Use tox for local validation:
    tox -e py312
    tox -e py313
    tox -e py314
+   tox -e coverage
    tox -e docs
    tox -e build
 

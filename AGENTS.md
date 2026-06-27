@@ -81,6 +81,7 @@ uv sync --all-packages
 tox -e lint
 tox -e typecheck
 tox -e py311,py312,py313,py314
+tox -e coverage
 tox -e plugin
 tox -e docs
 tox -e build

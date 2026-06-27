@@ -21,8 +21,8 @@ Boundary
 
 ``extended-data`` owns base data primitives, logging, input handling,
 files, redaction, and generic workflows. ``vendor-fabric`` owns vendor
-API connectors, provider-backed sync, SecretSync for Python, provider
-capability metadata, and provider dispatch.
+API connectors, provider-backed sync, SecretSync Python facade/capability
+surfaces, provider capability metadata, and provider dispatch.
 
 AgenticData
 -----------

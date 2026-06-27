@@ -35,6 +35,8 @@ This repository creates the runtime- and agent-aware superclass on top of
 - If something exists only because an AI framework wants a specific wrapper
   type, keep it here.
 - Do not push AI-framework shims back down into `vendor-fabric`.
+- Do not bypass `vendor-fabric` to import SecretSync Go bindings or invoke the
+  Go runtime directly from this layer.
 
 ## Superclass Role
 

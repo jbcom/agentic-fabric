@@ -162,8 +162,9 @@ world-writable.
 
 - `extended-data` owns base data containers, logging, input handling, files,
   redaction, and generic workflows.
-- `vendor-fabric` owns vendor connectors, provider-backed sync, SecretSync for
-  Python, provider capability metadata, and provider dispatch.
+- `vendor-fabric` owns vendor connectors, provider-backed sync, the SecretSync
+  Python facade/capability surfaces, provider capability metadata, and provider
+  dispatch.
 - `agentic-fabric` owns crew discovery, runner selection, framework adapters,
   agent-facing tool wrappers, and orchestration.
 

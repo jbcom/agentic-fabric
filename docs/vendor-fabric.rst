@@ -6,8 +6,10 @@ until ``vendor-fabric`` is published and resolvable from PyPI. The core
 package still imports without vendor SDKs installed.
 
 The integration rule is simple: vendor IO, provider capability metadata,
-and SecretSync behavior belong in ``vendor-fabric``; crew orchestration,
-runtime selection, and agent-facing framework wrappers belong here.
+and the SecretSync Python facade/capability surface belong in
+``vendor-fabric``. The SecretSync Go runtime and gopy binding source
+belong in ``secrets-sync``. Crew orchestration, runtime selection, and
+agent-facing framework wrappers belong here.
 
 ``AgenticData`` subclasses ``VendorData`` when ``vendor-fabric`` is
 installed. Until then, it keeps runtime context importable and raises

@@ -50,7 +50,9 @@ and remote state before finalizing this repo.
 
 `extended-data` owns base data primitives, logging, inputs, files, redaction,
 and generic workflows. `vendor-fabric` owns vendor connectors, provider-backed
-sync, SecretSync for Python, and vendor-backed tools.
+sync, the SecretSync Python facade and `VendorData` capability surface, and
+provider dispatch. `agentic-fabric` owns agent-facing wrappers over those
+capabilities.
 
 ## Architecture Docs
 

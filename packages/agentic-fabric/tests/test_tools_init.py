@@ -26,9 +26,11 @@ def test_getattr_lazily_loads_declared_tool(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert tools.__getattr__("GameCodeReaderTool") is FakeTool
     assert tools.__getattr__("ScrapeWebsiteTool") is FakeTool
+    assert tools.__getattr__("VendorCapabilityTool") is FakeTool
     assert calls == [
         ("agentic_fabric.tools.file_tools", "GameCodeReaderTool"),
         ("agentic_fabric.tools.scraping_tools", "ScrapeWebsiteTool"),
+        ("agentic_fabric.tools.vendor", "VendorCapabilityTool"),
     ]
 
 

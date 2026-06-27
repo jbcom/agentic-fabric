@@ -34,7 +34,9 @@ Clear Boundaries
 
 This package does not own data primitives or vendor APIs. It composes
 ``extended-data`` and ``vendor-fabric`` when those capabilities are
-installed.
+installed. Provider connectors and dispatch stay in ``vendor-fabric``;
+framework-specific and agent-facing wrappers built from those capabilities
+stay in this package.
 
 Testable Adapters
 -----------------

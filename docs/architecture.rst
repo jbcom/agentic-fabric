@@ -14,13 +14,15 @@ Boundary
 - runner adapters for optional agent frameworks
 - tool resolution for built-in, MCP-style, fully qualified, and
   vendor-backed tools
+- agent-facing tool catalogs built from ``vendor-fabric`` capability
+  metadata
 - agent capability dispatch over the data and vendor layers
 - pytest support for agent runtime tests
 
 ``extended-data`` owns base data primitives, logging, input handling,
 files, redaction, and generic workflows. ``vendor-fabric`` owns vendor
-API connectors, provider-backed sync, SecretSync for Python, and
-vendor-backed tool adapters.
+API connectors, provider-backed sync, SecretSync for Python, provider
+capability metadata, and provider dispatch.
 
 AgenticData
 -----------
@@ -110,6 +112,9 @@ declared by ``vendor-fabric``.
 
 Lazy vendor tool references are supported with
 ``vendor://provider/operation`` and ``vendor:provider:operation`` names.
+When ``vendor-fabric`` is installed, ``AgenticData.vendor_tools()`` reads
+``VendorData.capabilities()`` and returns lazy agent-facing wrappers for
+those provider operations.
 
 Testing Package
 ---------------

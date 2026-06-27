@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agentic_fabric.tools.registry import register_tool_factory, resolve_tool, resolve_tools
-from agentic_fabric.tools.vendor import VendorCapabilityTool
+from agentic_fabric.tools.vendor import VendorCapabilityTool, vendor_capability_tools
 
 
 class TestResolveTool:
@@ -160,6 +160,21 @@ class TestResolveTool:
 class TestVendorCapabilityTool:
     """Tests for the generic vendor-backed tool wrapper."""
 
+    def test_builds_tool_from_vendor_capability_metadata(self) -> None:
+        """VendorData capability metadata should become a lazy tool wrapper."""
+        metadata = {
+            "provider": "github",
+            "operation": "get_file",
+            "description": "Read a repository file.",
+        }
+
+        tool = VendorCapabilityTool.from_metadata(metadata)
+
+        assert tool.provider == "github"
+        assert tool.operation == "get_file"
+        assert tool.description == "Read a repository file."
+        assert tool.metadata is metadata
+
     def test_runs_operation_through_supplied_data(self) -> None:
         """Supplied data facade should receive provider and kwargs."""
         data = MagicMock()
@@ -184,3 +199,23 @@ class TestVendorCapabilityTool:
         VendorCapabilityTool("github", "get_file")(path="README.md")
 
         fake_data.call.assert_called_once_with("get_file", "github", path="README.md")
+
+    def test_vendor_capability_tools_reads_vendor_data_catalog(self) -> None:
+        """VendorData capabilities should be converted into agent tool wrappers."""
+        data = MagicMock()
+        data.capabilities.return_value = [
+            {"provider": "github", "operation": "get_file", "description": "Read files"},
+            {"provider": "", "operation": "broken"},
+        ]
+
+        tools = vendor_capability_tools(data, provider="github", include_unavailable=False)
+
+        data.capabilities.assert_called_once_with("github", include_unavailable=False)
+        assert len(tools) == 1
+        assert tools[0].provider == "github"
+        assert tools[0].operation == "get_file"
+        assert tools[0].data is data
+
+    def test_vendor_capability_tools_returns_empty_without_vendor_catalog(self) -> None:
+        """The import shim should not invent provider behavior."""
+        assert vendor_capability_tools(object()) == []

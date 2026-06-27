@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from agentic_fabric.tools.file_tools import DirectoryListTool, GameCodeReaderTool, GameCodeWriterTool
     from agentic_fabric.tools.scraping_tools import CrawlWebsiteTool, ScrapeWebsiteTool
+    from agentic_fabric.tools.vendor import VendorCapabilityTool, vendor_capability_tools
 
 
 def _load_attr(module_name: str, attr_name: str) -> Any:
@@ -26,6 +27,8 @@ def __getattr__(name: str) -> Any:
         return _load_attr("agentic_fabric.tools.file_tools", name)
     if name in {"CrawlWebsiteTool", "ScrapeWebsiteTool"}:
         return _load_attr("agentic_fabric.tools.scraping_tools", name)
+    if name in {"VendorCapabilityTool", "vendor_capability_tools"}:
+        return _load_attr("agentic_fabric.tools.vendor", name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -69,7 +72,9 @@ __all__ = [
     "GameCodeReaderTool",
     "GameCodeWriterTool",
     "ScrapeWebsiteTool",
+    "VendorCapabilityTool",
     "get_all_tools",
     "get_file_tools",
     "get_scraping_tools",
+    "vendor_capability_tools",
 ]

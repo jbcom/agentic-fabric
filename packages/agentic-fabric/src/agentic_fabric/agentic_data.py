@@ -210,6 +210,17 @@ class AgenticData(_VendorDataBase):
         runner = get_runner(selected_runtime)
         return runner.call_capability(capability, *args, **kwargs)
 
+    def vendor_tools(
+        self,
+        provider: str | None = None,
+        *,
+        include_unavailable: bool = True,
+    ) -> list[Any]:
+        """Return agent-facing tools built from inherited vendor capabilities."""
+        from agentic_fabric.tools.vendor import vendor_capability_tools
+
+        return vendor_capability_tools(self, provider=provider, include_unavailable=include_unavailable)
+
     def __getattr__(self, name: str) -> Any:
         """Expose ``run_<agent>`` helpers while preserving VendorData dispatch."""
         if name.startswith("run_"):

@@ -120,6 +120,9 @@ result = session.run_agent("reviewer", runtime="crewai")
   read-only metadata and deterministic dispatch.
 - Tool resolution: built-in, vendor URI, and registered factories are preferred;
   external dynamic imports require `AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST`.
+- Vendor tool catalogs: `AgenticData.vendor_tools()` adapts inherited
+  `VendorData` capability metadata into agent-facing tools without importing
+  provider SDKs directly.
 - YAML-first: crew configuration in YAML, not Python boilerplate.
 - Hierarchical orchestration: `ManagerAgent` delegates across crews.
 - Package discovery: finds `.crew/`, `.crewai/`, `.langgraph/`, and
@@ -160,9 +163,9 @@ world-writable.
 - `extended-data` owns base data containers, logging, input handling, files,
   redaction, and generic workflows.
 - `vendor-fabric` owns vendor connectors, provider-backed sync, SecretSync for
-  Python, and vendor-backed tool adapters.
-- `agentic-fabric` owns crew discovery, runner selection, framework adapters, and
-  orchestration.
+  Python, provider capability metadata, and provider dispatch.
+- `agentic-fabric` owns crew discovery, runner selection, framework adapters,
+  agent-facing tool wrappers, and orchestration.
 
 Full guides and API documentation are published at
 [jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/).

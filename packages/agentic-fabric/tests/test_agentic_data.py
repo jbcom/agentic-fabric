@@ -240,6 +240,27 @@ def test_call_runtime_delegates_to_selected_runner(monkeypatch: pytest.MonkeyPat
     assert AgenticData().call_runtime("run", 1, runtime="crewai", flag=True) == ("run", (1,), {"flag": True})
 
 
+def test_vendor_tools_delegate_to_vendor_capability_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AgenticData should expose agent-facing tools from vendor capabilities."""
+    calls: list[tuple[AgenticData, str | None, bool]] = []
+
+    def fake_vendor_capability_tools(
+        data: AgenticData,
+        *,
+        provider: str | None = None,
+        include_unavailable: bool = True,
+    ) -> list[str]:
+        calls.append((data, provider, include_unavailable))
+        return ["tool"]
+
+    monkeypatch.setattr("agentic_fabric.tools.vendor.vendor_capability_tools", fake_vendor_capability_tools)
+
+    data = AgenticData()
+
+    assert data.vendor_tools("github", include_unavailable=False) == ["tool"]
+    assert calls == [(data, "github", False)]
+
+
 def test_dynamic_helpers_and_missing_attributes(monkeypatch: pytest.MonkeyPatch) -> None:
     """Registered agents should appear as dynamic run_<agent> helpers."""
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: True)

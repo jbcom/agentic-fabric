@@ -208,6 +208,7 @@ Local validation:
 uv sync --all-packages --all-extras --dev
 tox -e lint
 tox -e typecheck
+tox -e audit
 tox -e py311
 tox -e py312
 tox -e py313

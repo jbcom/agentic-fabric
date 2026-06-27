@@ -80,6 +80,7 @@ PyPI. The package currently has no resolvable PyPI release under that name.
 uv sync --all-packages --all-extras --dev
 tox -e lint
 tox -e typecheck
+tox -e audit
 tox -e py311,py312,py313,py314
 tox -e coverage
 tox -e plugin

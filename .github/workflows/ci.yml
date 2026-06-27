@@ -51,4 +51,4 @@ jobs:
           enable-cache: true
       - run: uv sync --all-packages --all-extras --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
-      - run: tox -e lint,typecheck,coverage,plugin,docs,build
+      - run: tox -e lint,typecheck,audit,coverage,plugin,docs,build

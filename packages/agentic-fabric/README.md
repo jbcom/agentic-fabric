@@ -192,7 +192,7 @@ missing provider extras are visible.
 
 Full guides and API documentation are published at
 [jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/).
-`AGENTS.md` contains the active local migration plan for Codex sessions.
+`AGENTS.md` contains durable repository guidance for Codex sessions.
 
 ## Documentation
 

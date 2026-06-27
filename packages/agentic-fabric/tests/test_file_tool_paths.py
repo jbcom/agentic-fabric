@@ -57,7 +57,7 @@ def test_workspace_root_resolution_uses_workspace_env_and_cwd(
     """Workspace discovery should fall back from package roots to env vars and cwd."""
     file_tools = import_file_tools_with_fake_crewai(monkeypatch)
     workspace_root = tmp_path / "workspace"
-    target_package = workspace_root / "packages" / "otterfall"
+    target_package = workspace_root / "packages" / "sample"
     target_package.mkdir(parents=True)
     monkeypatch.setattr(file_tools, "_find_workspace_root", lambda: workspace_root)
 
@@ -66,14 +66,14 @@ def test_workspace_root_resolution_uses_workspace_env_and_cwd(
     env_root = tmp_path / "env-root"
     env_root.mkdir()
     monkeypatch.setattr(file_tools, "_find_workspace_root", lambda: None)
-    monkeypatch.setenv("OTTERFALL_ROOT", str(env_root))
+    monkeypatch.setenv("SAMPLE_ROOT", str(env_root))
 
-    assert file_tools.get_workspace_root("otterfall") == env_root
+    assert file_tools.get_workspace_root("sample") == env_root
 
-    monkeypatch.delenv("OTTERFALL_ROOT")
+    monkeypatch.delenv("SAMPLE_ROOT")
     monkeypatch.chdir(tmp_path)
 
-    assert file_tools.get_workspace_root("otterfall") == tmp_path
+    assert file_tools.get_workspace_root("sample") == tmp_path
 
 
 def test_find_workspace_root_finds_repository_root(monkeypatch: pytest.MonkeyPatch) -> None:

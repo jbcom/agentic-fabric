@@ -169,6 +169,22 @@ profiles:
             assert runner.config.command == "aider"
             assert runner.config.task_flag == "--message"
 
+    def test_named_profile_receives_isolated_config_copy(self, mock_profiles_file: Path):
+        """Mutating one named runner should not mutate the cached profile."""
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = mock_profiles_file.parent
+            mock_path.return_value.__truediv__.return_value = mock_profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+            runner = LocalCLIRunner("aider")
+
+            runner.config.auth_env.append("MUTATED")
+            runner.config.additional_flags.append("--mutated")
+
+            cached = LocalCLIRunner._load_profiles()["aider"]
+            assert cached.auth_env == ["OPENAI_API_KEY"]
+            assert cached.additional_flags == ["--no-git"]
+
     def test_init_with_unknown_profile(self, mock_profiles_file: Path):
         """Should raise ValueError for unknown profile."""
         with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
@@ -254,6 +270,11 @@ profiles:
 
         assert runner.config.command == "custom-tool"
         assert runner.config.task_flag == "--task"
+
+    def test_init_rejects_unsupported_profile_input(self):
+        """Unsupported profile inputs should fail with a clear type error."""
+        with pytest.raises(TypeError, match="profile must be"):
+            LocalCLIRunner(["not", "supported"])
 
     def test_is_available_tool_exists(self):
         """Should return True if tool is in PATH."""

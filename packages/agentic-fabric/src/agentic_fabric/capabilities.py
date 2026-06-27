@@ -101,7 +101,14 @@ class AgentCapabilityProviderMixin:
     @classmethod
     def list_capabilities(cls, *, kind: str | None = None) -> tuple[AgentCapabilitySpec, ...]:
         """Return declared capabilities, optionally filtered by kind."""
-        capabilities = list(cls.agent_capabilities.values())
+        seen: set[int] = set()
+        capabilities = []
+        for capability in cls.agent_capabilities.values():
+            marker = id(capability)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            capabilities.append(capability)
         if kind is not None:
             capabilities = [capability for capability in capabilities if capability.kind == kind]
         return tuple(capabilities)

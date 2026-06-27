@@ -106,7 +106,7 @@ def test_cmd_run_json_success_auto_detects_framework(
     run_crew_auto.assert_called_once_with(
         {"name": "reviewer"},
         inputs={"spec": "review this", "component_spec": "review this", "input": "review this"},
-        framework=None,
+        framework="crewai",
     )
 
 

@@ -55,6 +55,17 @@ MODELS = {
     "openrouter-haiku": "openrouter/anthropic/claude-haiku-4.5",
 }
 
+_OPENROUTER_MODEL_MAP = {
+    _CLAUDE_HAIKU_45: "openrouter/anthropic/claude-haiku-4.5",
+    _CLAUDE_SONNET_45: "openrouter/anthropic/claude-sonnet-4.5",
+    _CLAUDE_SONNET_4: "openrouter/anthropic/claude-sonnet-4",
+    _CLAUDE_OPUS_4: "openrouter/anthropic/claude-opus-4",
+    "haiku": "openrouter/anthropic/claude-haiku-4.5",
+    "sonnet": "openrouter/anthropic/claude-sonnet-4.5",
+    "sonnet-4": "openrouter/anthropic/claude-sonnet-4",
+    "opus": "openrouter/anthropic/claude-opus-4",
+}
+
 # Predefined configurations for common use cases
 LLM_CONFIGS = {
     "reasoning": LLMConfig(model=_CLAUDE_OPUS_4, temperature=0.3, description="Optimized for complex reasoning tasks"),
@@ -147,7 +158,7 @@ def _create_openrouter_llm(model: str, temperature: float, api_key: str) -> LLM:
     """Create OpenRouter LLM instance."""
     # Convert model name to OpenRouter format if needed
     if not model.startswith("openrouter/"):
-        model = MODELS.get("openrouter-auto", "openrouter/auto")
+        model = _OPENROUTER_MODEL_MAP.get(model, MODELS.get(model, MODELS.get("openrouter-auto", "openrouter/auto")))
 
     return LLM(
         model=model,

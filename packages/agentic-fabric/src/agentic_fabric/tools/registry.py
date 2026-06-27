@@ -112,13 +112,13 @@ def resolve_tool(tool_name: str) -> Any | None:
     if vendor_tool is not None:
         return vendor_tool
 
-    if canonical_name in _TOOL_FACTORIES:
-        return _TOOL_FACTORIES[canonical_name]()
-
     if canonical_name.startswith("mcp://"):
         return None
 
     try:
+        if canonical_name in _TOOL_FACTORIES:
+            return _TOOL_FACTORIES[canonical_name]()
+
         if ":" in canonical_name:
             module_name, attr_name = canonical_name.split(":", 1)
             if not _is_import_allowed(module_name):

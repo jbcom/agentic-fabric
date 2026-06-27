@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import inspect
 import logging
 import re
@@ -43,12 +44,16 @@ def _invoke_tool(tool_obj: Any, kwargs: dict[str, Any]) -> Any:
 
 def _build_runner(tool_obj: Any, name: str, description: str) -> Any:
     """Create a plain callable wrapper for a configured tool."""
+    target = getattr(tool_obj, "_run", tool_obj)
 
     def runner(**kwargs: Any) -> Any:
         return _invoke_tool(tool_obj, kwargs)
 
     runner.__name__ = name
     runner.__doc__ = description
+    if callable(target):
+        with contextlib.suppress(ValueError, TypeError):
+            runner.__signature__ = inspect.signature(target)  # type: ignore[attr-defined]
     return runner
 
 

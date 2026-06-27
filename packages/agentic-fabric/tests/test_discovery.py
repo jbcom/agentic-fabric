@@ -17,8 +17,8 @@ class TestDiscovery:
 
         packages = discover_packages(workspace_root=temp_workspace)
 
-        assert "otterfall" in packages
-        assert packages["otterfall"].exists()
+        assert "sample" in packages
+        assert packages["sample"].exists()
 
     def test_discover_packages_finds_crew_directories(self, tmp_path: Path) -> None:
         """Test that discover_packages finds framework-agnostic .crew directories."""
@@ -116,12 +116,12 @@ class TestDiscovery:
 
         with patch(
             "agentic_fabric.core.discovery.discover_packages",
-            return_value={"otterfall": temp_workspace / "packages" / "otterfall" / ".crewai"},
+            return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
         ):
             crews_by_package = list_crews()
 
-        assert "otterfall" in crews_by_package
-        crews = crews_by_package["otterfall"]
+        assert "sample" in crews_by_package
+        crews = crews_by_package["sample"]
         assert len(crews) == 1
         assert crews[0]["name"] == "test_crew"
 
@@ -131,11 +131,11 @@ class TestDiscovery:
 
         with patch(
             "agentic_fabric.core.discovery.discover_packages",
-            return_value={"otterfall": temp_workspace / "packages" / "otterfall" / ".crewai"},
+            return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
         ):
-            crews_by_package = list_crews(package_name="otterfall")
+            crews_by_package = list_crews(package_name="sample")
 
-        assert "otterfall" in crews_by_package
+        assert "sample" in crews_by_package
         assert len(crews_by_package) == 1
 
     def test_list_crews_returns_empty_for_nonexistent_package(self, temp_workspace: Path) -> None:
@@ -144,7 +144,7 @@ class TestDiscovery:
 
         with patch(
             "agentic_fabric.core.discovery.discover_packages",
-            return_value={"otterfall": temp_workspace / "packages" / "otterfall" / ".crewai"},
+            return_value={"sample": temp_workspace / "packages" / "sample" / ".crewai"},
         ):
             crews_by_package = list_crews(package_name="nonexistent")
 
@@ -154,11 +154,11 @@ class TestDiscovery:
         """Test that load_manifest parses YAML correctly."""
         from agentic_fabric.core.discovery import load_manifest
 
-        crewai_dir = temp_workspace / "packages" / "otterfall" / ".crewai"
+        crewai_dir = temp_workspace / "packages" / "sample" / ".crewai"
         manifest = load_manifest(crewai_dir)
 
         assert manifest is not None
-        assert manifest.get("name") == "otterfall"
+        assert manifest.get("name") == "sample"
         assert "crews" in manifest
 
     def test_get_workspace_root_finds_root(self) -> None:
@@ -196,10 +196,34 @@ class TestDiscovery:
         """Test that get_crew_config includes required_framework field."""
         from agentic_fabric.core.discovery import get_crew_config
 
-        crewai_dir = temp_workspace / "packages" / "otterfall" / ".crewai"
+        crewai_dir = temp_workspace / "packages" / "sample" / ".crewai"
         config = get_crew_config(crewai_dir, "test_crew")
 
         assert config["required_framework"] == "crewai"
+
+    def test_get_crew_config_requires_agents_and_tasks_keys(self, tmp_path: Path) -> None:
+        """Crew configs should fail before resolving missing YAML paths."""
+        from agentic_fabric.core.discovery import get_crew_config
+
+        crew_dir = tmp_path / ".crew"
+        crew_dir.mkdir()
+        (crew_dir / "manifest.yaml").write_text(
+            """
+name: missing-files
+crews:
+  no_agents:
+    tasks: tasks.yaml
+  no_tasks:
+    agents: agents.yaml
+""",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="missing required key: agents"):
+            get_crew_config(crew_dir, "no_agents")
+
+        with pytest.raises(ValueError, match="missing required key: tasks"):
+            get_crew_config(crew_dir, "no_tasks")
 
 
 class TestDecomposer:

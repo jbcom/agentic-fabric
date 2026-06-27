@@ -6,6 +6,8 @@ Note: These tests require crewai to be installed for the tool base classes.
 from __future__ import annotations
 
 import os
+import sys
+import types
 
 from pathlib import Path
 from unittest.mock import patch
@@ -13,8 +15,21 @@ from unittest.mock import patch
 import pytest
 
 
-# Skip all tests if crewai not installed
-pytest.importorskip("crewai", reason="crewai not installed")
+@pytest.fixture(autouse=True)
+def fake_crewai_base_tool(monkeypatch: pytest.MonkeyPatch):
+    """Import file_tools without requiring the optional CrewAI package."""
+    fake_crewai = types.ModuleType("crewai")
+    fake_tools = types.ModuleType("crewai.tools")
+
+    class BaseTool:
+        """Minimal stand-in for crewai.tools.BaseTool."""
+
+    fake_tools.BaseTool = BaseTool
+    monkeypatch.setitem(sys.modules, "crewai", fake_crewai)
+    monkeypatch.setitem(sys.modules, "crewai.tools", fake_tools)
+    sys.modules.pop("agentic_fabric.tools.file_tools", None)
+    yield
+    sys.modules.pop("agentic_fabric.tools.file_tools", None)
 
 
 class TestGetWorkspaceRoot:
@@ -42,17 +57,16 @@ class TestGetWorkspaceRoot:
 
         assert root == other_pkg
 
-    def test_defaults_to_otterfall(self, temp_workspace: Path) -> None:
-        """Test that package defaults to 'otterfall'."""
+    def test_defaults_to_single_workspace_package(self, tmp_path: Path) -> None:
+        """A single package workspace should be selected without repo-specific names."""
         from agentic_fabric.tools.file_tools import get_workspace_root
 
-        # Create otterfall package
-        otterfall = temp_workspace / "packages" / "otterfall"
-        otterfall.mkdir(parents=True, exist_ok=True)
+        target_package = tmp_path / "packages" / "sample"
+        target_package.mkdir(parents=True, exist_ok=True)
 
         with patch(
             "agentic_fabric.tools.file_tools._find_workspace_root",
-            return_value=temp_workspace,
+            return_value=tmp_path,
         ):
             # Remove TARGET_PACKAGE if set
             env = os.environ.copy()
@@ -60,7 +74,7 @@ class TestGetWorkspaceRoot:
             with patch.dict(os.environ, env, clear=True):
                 root = get_workspace_root()
 
-        assert root.name == "otterfall"
+        assert root == target_package
 
     def test_explicit_package_name(self, temp_workspace: Path) -> None:
         """Test explicit package name parameter."""
@@ -126,14 +140,14 @@ class TestGameCodeWriterTool:
         from agentic_fabric.tools.file_tools import GameCodeWriterTool
 
         # Create the allowed directory structure
-        ecs_dir = temp_workspace / "packages" / "otterfall" / "src" / "ecs"
+        ecs_dir = temp_workspace / "packages" / "sample" / "src" / "ecs"
         ecs_dir.mkdir(parents=True)
 
         tool = GameCodeWriterTool()
 
         with patch(
             "agentic_fabric.tools.file_tools.get_workspace_root",
-            return_value=temp_workspace / "packages" / "otterfall",
+            return_value=temp_workspace / "packages" / "sample",
         ):
             result = tool._run(
                 file_path="src/ecs/TestComponent.ts",
@@ -142,6 +156,7 @@ class TestGameCodeWriterTool:
 
         assert "Successfully wrote" in result
         assert (ecs_dir / "TestComponent.ts").exists()
+        assert (ecs_dir / "TestComponent.ts").read_text(encoding="utf-8") == "export const TestComponent = {};"
 
 
 class TestGameCodeReaderTool:
@@ -162,7 +177,7 @@ class TestGameCodeReaderTool:
         from agentic_fabric.tools.file_tools import GameCodeReaderTool
 
         # Create a test file
-        test_file = temp_workspace / "packages" / "otterfall" / "src" / "test.ts"
+        test_file = temp_workspace / "packages" / "sample" / "src" / "test.ts"
         test_file.parent.mkdir(parents=True, exist_ok=True)
         test_file.write_text("export const Test = 'hello';")
 
@@ -170,7 +185,7 @@ class TestGameCodeReaderTool:
 
         with patch(
             "agentic_fabric.tools.file_tools.get_workspace_root",
-            return_value=temp_workspace / "packages" / "otterfall",
+            return_value=temp_workspace / "packages" / "sample",
         ):
             result = tool._run(file_path="src/test.ts")
 
@@ -184,7 +199,7 @@ class TestGameCodeReaderTool:
 
         with patch(
             "agentic_fabric.tools.file_tools.get_workspace_root",
-            return_value=temp_workspace / "packages" / "otterfall",
+            return_value=temp_workspace / "packages" / "sample",
         ):
             result = tool._run(file_path="src/nonexistent.ts")
 
@@ -200,7 +215,7 @@ class TestDirectoryListTool:
         from agentic_fabric.tools.file_tools import DirectoryListTool
 
         # Create some test files
-        src_dir = temp_workspace / "packages" / "otterfall" / "src"
+        src_dir = temp_workspace / "packages" / "sample" / "src"
         src_dir.mkdir(parents=True)
         (src_dir / "index.ts").write_text("export {};")
         (src_dir / "utils").mkdir()
@@ -209,7 +224,7 @@ class TestDirectoryListTool:
 
         with patch(
             "agentic_fabric.tools.file_tools.get_workspace_root",
-            return_value=temp_workspace / "packages" / "otterfall",
+            return_value=temp_workspace / "packages" / "sample",
         ):
             result = tool._run(directory="src")
 

@@ -23,25 +23,24 @@ pip install "agentic-fabric[crewai]"
 pip install "agentic-fabric[langgraph]"
 pip install "agentic-fabric[strands]"
 
-# All frameworks
-pip install "agentic-fabric[ai]"
-
 # Non-framework optional surfaces
 pip install "agentic-fabric[mcp]"
 pip install "agentic-fabric[scraping]"
-pip install "agentic-fabric[all]"
 ```
 
 Local CLI runners do not require a Python extra. Install the external CLI
 (`aider`, `claude`, `codex`, `ollama`, or a custom executable) and inspect
 profiles with `agentic-fabric list-runners --json`.
 
-Vendor-backed passthrough extras are added after `vendor-fabric` is published.
-Until then, vendor references stay lazy and report install guidance at use time.
+Vendor-backed passthrough extras will be added after the upstream
+`vendor-fabric` optional-extra contract is published and stable. Until then,
+vendor references stay lazy and report install guidance at use time.
 
-The `crewai`, `ai`, `scraping`, and `all` extras include dependencies selected
-by CrewAI. If a transitive CrewAI dependency has an upstream advisory with no
-patched release, upgrading `agentic-fabric` alone cannot clear that advisory.
+There is no aggregate AI extra. Install exactly the framework or provider path
+you use. The `crewai` and `scraping` extras include dependencies selected by
+CrewAI. If a transitive CrewAI dependency has an upstream advisory with no
+patched release, upgrading `agentic-fabric` alone cannot clear that advisory;
+core/local-CLI installs are unaffected.
 
 ## Quick Start
 
@@ -113,8 +112,8 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Framework agnostic: one crew definition, multiple runtime backends.
 - Lazy imports: core package import does not require CrewAI, LangGraph,
   Strands, or vendor SDKs.
-- Complete extras: `crewai`, `langgraph`, `strands`, `ai`, `mcp`,
-  `scraping`, `tests`, `typing`, `docs`, `dev`, and `all`.
+- Focused extras: `crewai`, `langgraph`, `strands`, `mcp`, `scraping`,
+  `tests`, `typing`, `docs`, and `dev`.
 - `AgenticData`: carries data, registered crews, active runtime selection, and
   vendor-layer context together.
 - Capability decorators: runners and tools expose declared capabilities through
@@ -125,8 +124,8 @@ result = session.run_agent("reviewer", runtime="crewai")
 - Hierarchical orchestration: `ManagerAgent` delegates across crews.
 - Package discovery: finds `.crew/`, `.crewai/`, `.langgraph/`, and
   `.strands/` directories.
-- Vendor passthrough extras are planned after `vendor-fabric` is published to
-  PyPI.
+- Vendor passthrough extras are deferred until `vendor-fabric` is published
+  with a stable optional-extra contract.
 - CLI and library: use from the command line or import as a module.
 
 ## Framework Priority

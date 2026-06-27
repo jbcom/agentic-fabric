@@ -1,7 +1,7 @@
 """File manipulation tools for CrewAI agents.
 
-These tools enable agents to read and write code to specific directories
-in game package codebases (e.g., packages/otterfall).
+These tools enable agents to read and write code to specific directories in
+workspace package codebases.
 """
 
 from __future__ import annotations
@@ -37,32 +37,39 @@ def get_workspace_root(package_name: str | None = None) -> Path:
 
     Args:
         package_name: Name of the target package. If not provided,
-            uses TARGET_PACKAGE environment variable, or defaults to "otterfall".
+            uses TARGET_PACKAGE environment variable, or the only package
+            directory when the workspace has exactly one package.
 
     Returns:
         Path to packages/<package_name> directory.
     """
     # Determine the target package name
     if package_name is None:
-        package_name = os.environ.get("TARGET_PACKAGE", "otterfall")
+        package_name = os.environ.get("TARGET_PACKAGE")
 
     # Find workspace root using marker file search
     workspace_root = _find_workspace_root()
     if workspace_root:
-        target_dir = workspace_root / "packages" / package_name
-        if target_dir.exists():
-            return target_dir
+        packages_dir = workspace_root / "packages"
+        if package_name is not None:
+            target_dir = packages_dir / package_name
+            if target_dir.exists():
+                return target_dir
+        elif packages_dir.is_dir():
+            package_dirs = sorted(path for path in packages_dir.iterdir() if path.is_dir())
+            if len(package_dirs) == 1:
+                return package_dirs[0]
 
     # Fallback: try environment variable for root directory
-    env_root_var = f"{package_name.upper()}_ROOT"
-    if env_root_var in os.environ:
+    env_root_var = f"{package_name.upper()}_ROOT" if package_name else None
+    if env_root_var and env_root_var in os.environ:
         return Path(os.environ[env_root_var]).resolve()
 
     # Last fallback - current directory (shouldn't happen in normal use)
     return Path.cwd()
 
 
-# Allowed directories for writing (relative to packages/otterfall)
+# Allowed directories for writing relative to the selected package root.
 ALLOWED_WRITE_DIRS = [
     "src/ecs",  # ECS components, world, data
     "src/ecs/data",  # Species definitions, etc.

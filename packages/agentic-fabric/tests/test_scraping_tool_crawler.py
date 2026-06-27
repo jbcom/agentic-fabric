@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import re
 import sys
 import types
 
@@ -36,13 +37,13 @@ def import_scraping_tools(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
             return []
 
         def find_all(self, tag: str, href: bool = False) -> list[FakeLink]:
-            if tag == "a" and href and "duplicate-fail" in self.content:
-                return [FakeLink(href="/fail"), FakeLink(href="/fail")]
-            return []
+            if tag != "a" or not href:
+                return []
+            return [FakeLink(href=match) for match in re.findall(r"<a[^>]+href=['\"]([^'\"]+)['\"]", self.content)]
 
         @property
         def stripped_strings(self) -> list[str]:
-            return ["duplicate-fail"] if "duplicate-fail" in self.content else []
+            return [part.strip() for part in re.sub(r"<[^>]+>", " ", self.content).split() if part.strip()]
 
     fake_crewai_tools.ScrapeWebsiteTool = ScrapeWebsiteTool
     fake_requests.RequestException = RequestError
@@ -72,6 +73,33 @@ def test_crawler_marks_failed_url_visited_before_retry(monkeypatch: pytest.Monke
 
     assert "duplicate-fail" in result
     assert scraping_tools.requests.get.call_count == 2
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "http://127.0.0.1", "http://localhost:8000"])
+def test_crawler_rejects_unsafe_start_urls(monkeypatch: pytest.MonkeyPatch, url: str) -> None:
+    """Unsafe starting URLs should not be requested."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+
+    assert scraping_tools.CrawlWebsiteTool()._run(url) == ""
+    scraping_tools.requests.get.assert_not_called()
+
+
+def test_crawler_enforces_page_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Crawl breadth should stay bounded."""
+    scraping_tools = import_scraping_tools(monkeypatch)
+    monkeypatch.setattr(scraping_tools, "MAX_CRAWL_PAGES", 3)
+    root_response = MagicMock()
+    root_response.content = b"".join([f"<a href='/page-{index}'>Page {index}</a>".encode() for index in range(10)])
+    root_response.raise_for_status.return_value = None
+    page_response = MagicMock()
+    page_response.content = b"<p>child page</p>"
+    page_response.raise_for_status.return_value = None
+    scraping_tools.requests.get.side_effect = [root_response, page_response, page_response]
+
+    result = scraping_tools.CrawlWebsiteTool()._run("https://example.test")
+
+    assert "Page" in result
+    assert scraping_tools.requests.get.call_count == 3
 
 
 def test_scrape_content_removes_script_and_style_tags(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -38,7 +38,7 @@ class FakeCrew:
 def test_run_crew_discovers_package_loads_config_and_returns_raw(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     crewai_dir = tmp_path / "pkg" / ".crewai"
     fake_crew = FakeCrew(FakeRawResult())
-    calls: list[tuple[str, Any]] = []
+    calls: list[tuple[Any, ...]] = []
 
     monkeypatch.setattr(crew_runner, "discover_packages", lambda workspace_root: {"pkg": crewai_dir})
 

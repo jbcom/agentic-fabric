@@ -271,6 +271,40 @@ class TestCrewAIRunner:
         assert "context" in second_task_kwargs
         assert second_task_kwargs["context"] == [mock_task1]
 
+    def test_build_crew_warns_for_unresolved_context_dependencies(
+        self,
+        crew_mocker: CrewMocker,
+        caplog,
+    ) -> None:
+        """Unresolved task context references should be visible to callers."""
+        crew_mocker.mock_crewai()
+
+        from agentic_fabric.runners.crewai_runner import CrewAIRunner
+
+        crew_mocker.patch_crewai_crew()
+        crew_mocker.patch_crewai_agent()
+        crew_mocker.patch_crewai_task()
+        crew_mocker.patch_crewai_process()
+        crew_mocker.patch_get_llm()
+
+        runner = CrewAIRunner()
+        crew_config = {
+            "agents": {"agent1": {"role": "Agent", "goal": "Goal", "backstory": "Story"}},
+            "tasks": {
+                "task1": {
+                    "description": "Task 1",
+                    "expected_output": "Output 1",
+                    "agent": "agent1",
+                    "context": ["later_task"],
+                }
+            },
+            "knowledge_paths": [],
+        }
+
+        runner.build_crew(crew_config)
+
+        assert "references context tasks that are not yet available: later_task" in caplog.text
+
     def test_build_crew_resolves_declared_tools(self, crew_mocker: CrewMocker) -> None:
         """Tool names declared in agent config should be instantiated and attached."""
         crew_mocker.mock_crewai()

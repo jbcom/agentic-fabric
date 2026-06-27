@@ -14,11 +14,9 @@ import pytest
 if TYPE_CHECKING:
     from tests._crew_mocker import CrewMocker
 
-# Skip all tests in this module if crewai is not installed
-pytestmark = pytest.mark.skipif(
-    not pytest.importorskip("crewai", reason="crewai not installed"),
-    reason="crewai not installed",
-)
+
+pytest.importorskip("crewai", reason="crewai not installed")
+pytestmark = pytest.mark.crewai
 
 
 class TestCreateAgentFromConfig:

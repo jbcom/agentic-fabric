@@ -82,7 +82,7 @@ crew_config = {
 
 ## Test Structure
 
-```
+```text
 tests/e2e/
 ├── conftest.py              # E2E fixtures and pytest configuration
 ├── test_crewai_e2e.py       # CrewAI runner E2E tests

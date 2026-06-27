@@ -70,7 +70,7 @@ def test_get_llm_can_force_openrouter_and_normalizes_model(monkeypatch: pytest.M
 
     assert isinstance(result, FakeLLM)
     assert result.kwargs == {
-        "model": "openrouter/auto",
+        "model": "openrouter/anthropic/claude-sonnet-4",
         "api_key": "openrouter-key",
         "base_url": "https://openrouter.ai/api/v1",
         "temperature": 0.4,

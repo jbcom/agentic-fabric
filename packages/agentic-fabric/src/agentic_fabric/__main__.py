@@ -1,4 +1,4 @@
-"""Allow running as: python -m crew_agents"""
+"""Allow running as: python -m agentic_fabric."""
 
 from __future__ import annotations
 

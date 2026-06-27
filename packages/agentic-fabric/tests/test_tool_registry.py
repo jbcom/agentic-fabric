@@ -32,6 +32,12 @@ class TestResolveTool:
         mock_tool_class.assert_called_once_with()
         assert result is mock_tool_instance
 
+    @patch("agentic_fabric.tools.registry.importlib.import_module", side_effect=ImportError("missing crewai"))
+    def test_builtin_alias_skips_missing_optional_dependency(self, mock_import_module: MagicMock) -> None:
+        """Built-in aliases should skip cleanly when their optional imports fail."""
+        assert resolve_tool("FileWriteTool") is None
+        mock_import_module.assert_called_once_with("agentic_fabric.tools.file_tools")
+
     @patch("agentic_fabric.tools.registry.importlib.import_module")
     def test_resolves_fully_qualified_reference(self, mock_import_module: MagicMock) -> None:
         """Allowed module:attribute references should be resolved dynamically."""

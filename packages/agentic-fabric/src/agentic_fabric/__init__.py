@@ -32,8 +32,13 @@ Usage:
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = "1.0.0"
+
+try:
+    __version__ = version("agentic-fabric")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 # Core exports - framework-agnostic functionality
 from agentic_fabric.agentic_data import AgenticData

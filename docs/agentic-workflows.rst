@@ -54,10 +54,10 @@ framework:
        print(runtime["name"], runtime["available"], runtime["install"])
 
 Supported runtime extras are ``crewai``, ``langgraph``, and ``strands``.
-``ai`` installs all three. ``mcp`` and ``scraping`` are optional tool surfaces;
-``all`` installs every optional runtime and tool dependency. Local CLI runners
-are configured profiles over external executables and do not require a Python
-extra:
+Install the runtime you actually execute; the package does not publish an
+aggregate AI or all-frameworks extra. ``mcp`` and ``scraping`` remain focused
+optional tool surfaces. Local CLI runners are configured profiles over external
+executables and do not require a Python extra:
 
 .. code:: bash
 

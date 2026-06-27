@@ -1,8 +1,8 @@
 Getting Started
 ===============
 
-Install the core package when you only need discovery, configuration
-loading, and lazy runner selection:
+Install the core package when you only need discovery, configuration loading,
+lazy runner selection, and local CLI runner profiles:
 
 .. code:: bash
 
@@ -15,16 +15,15 @@ Install the runtime extras you actually use:
    pip install "agentic-fabric[crewai]"
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
-   pip install "agentic-fabric[ai]"
    pip install "agentic-fabric[mcp]"
    pip install "agentic-fabric[scraping]"
-   pip install "agentic-fabric[all]"
 
-``ai`` installs the three agent framework runtimes. ``mcp`` exposes MCP
-integration dependencies. ``scraping`` installs the CrewAI tools surface plus
-``requests`` and ``beautifulsoup4``. ``all`` installs every optional runtime and
-tool dependency declared by ``agentic-fabric``. Test, typing, docs, and dev
-extras are reserved for repository validation and package maintenance.
+``mcp`` exposes MCP integration dependencies. ``scraping`` installs the CrewAI
+tools surface plus ``requests`` and ``beautifulsoup4``. Vendor passthrough
+extras are deferred until ``vendor-fabric`` is published with a stable
+optional-extra contract. There is no aggregate AI or all-frameworks extra.
+Test, typing, docs, and dev extras are reserved for repository validation and
+package maintenance.
 
 Local CLI runners do not require a Python extra. They shell out to external
 executables that you install separately:
@@ -66,9 +65,9 @@ registered crew definitions:
 CrewAI Dependency Note
 ----------------------
 
-The ``crewai``, ``ai``, ``scraping``, and ``all`` extras include dependencies
-chosen by CrewAI. If a transitive CrewAI dependency has an upstream advisory
-with no patched release, upgrading ``agentic-fabric`` or relaxing its CrewAI
-range cannot clear that advisory by itself. Track the upstream CrewAI and
-dependency advisory state before enabling those optional extras in sensitive
-environments.
+The ``crewai`` and ``scraping`` extras include dependencies chosen by CrewAI.
+If a transitive CrewAI dependency has an upstream advisory with no patched
+release, upgrading ``agentic-fabric`` or relaxing its CrewAI range cannot clear
+that advisory by itself. Core and local CLI installs do not include CrewAI.
+Track the upstream CrewAI and dependency advisory state before enabling those
+optional extras in sensitive environments.

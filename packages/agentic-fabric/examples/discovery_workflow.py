@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from pathlib import Path
 from typing import Any
@@ -40,7 +41,8 @@ def summarize_workspace(workspace_root: Path = DEFAULT_WORKSPACE) -> dict[str, A
 
 def main() -> None:
     """Print the sample workspace summary as JSON."""
-    print(json.dumps(summarize_workspace(), indent=2, sort_keys=True))
+    sys.stdout.write(json.dumps(summarize_workspace(), indent=2, sort_keys=True))
+    sys.stdout.write("\n")
 
 
 if __name__ == "__main__":

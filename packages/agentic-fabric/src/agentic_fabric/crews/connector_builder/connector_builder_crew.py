@@ -8,11 +8,39 @@ documentation.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from crewai import Agent, Crew, Task
-
+from agentic_fabric.runners.registry import install_command
 from agentic_fabric.tools.registry import resolve_tools
 from agentic_fabric.utils import load_config
+
+
+Agent: Any | None = None
+Crew: Any | None = None
+Task: Any | None = None
+
+
+def _load_crewai_classes() -> tuple[Any, Any, Any]:
+    """Load CrewAI classes only when the connector-builder crew is used."""
+    global Agent, Crew, Task
+
+    if Agent is None or Crew is None or Task is None:
+        try:
+            from crewai import Agent as ImportedAgent
+            from crewai import Crew as ImportedCrew
+            from crewai import Task as ImportedTask
+        except ImportError as exc:
+            msg = f"ConnectorBuilderCrew requires CrewAI. Install with: {install_command('crewai')}"
+            raise RuntimeError(msg) from exc
+
+        if Agent is None:
+            Agent = ImportedAgent
+        if Crew is None:
+            Crew = ImportedCrew
+        if Task is None:
+            Task = ImportedTask
+
+    return Agent, Crew, Task
 
 
 class ConnectorBuilderCrew:
@@ -38,14 +66,15 @@ class ConnectorBuilderCrew:
             output_dir: The directory where the generated connector code
                         will be saved.
         """
+        agent_cls, crew_cls, task_cls = _load_crewai_classes()
         config_dir = Path(__file__).parent / "config"
         agent_config = load_config(config_dir / "agents.yaml")
         task_config = load_config(config_dir / "tasks.yaml")
 
-        def build_agent(name: str) -> Agent:
+        def build_agent(name: str) -> Any:
             config = agent_config[name].copy()
             config["tools"] = resolve_tools(config.get("tools", []))
-            return Agent(**config)
+            return agent_cls(**config)
 
         # Create Agents
         self.doc_scraper = build_agent("doc_scraper")
@@ -53,17 +82,17 @@ class ConnectorBuilderCrew:
         self.code_generator = build_agent("code_generator")
 
         # Create Tasks
-        self.scrape_docs = Task(**task_config["scrape_docs"])
-        self.analyze_api = Task(**task_config["analyze_api"])
+        self.scrape_docs = task_cls(**task_config["scrape_docs"])
+        self.analyze_api = task_cls(**task_config["analyze_api"])
 
         generate_code_config = task_config["generate_code"].copy()
         generate_code_config["description"] = generate_code_config["description"].format(output_dir=output_dir)
-        self.generate_code = Task(**generate_code_config)
+        self.generate_code = task_cls(**generate_code_config)
 
-        self.crew = Crew(
+        self.crew = crew_cls(
             agents=[self.doc_scraper, self.api_analyzer, self.code_generator],
             tasks=[self.scrape_docs, self.analyze_api, self.generate_code],
-            verbose=2,
+            verbose=True,
         )
 
     def kickoff(self, inputs: dict) -> str:

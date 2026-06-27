@@ -12,11 +12,17 @@ LangGraph, Strands, or local CLI runners.
    pip install "agentic-fabric[crewai]"
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
-   pip install "agentic-fabric[ai]"
+   pip install "agentic-fabric[mcp]"
+   pip install "agentic-fabric[scraping]"
 
-Vendor-backed tools will be exposed as passthrough extras after
-``vendor-fabric`` is available on PyPI. Until then, agent runtime work
-stays separate from provider dependency declarations.
+Local CLI runners are part of the core install because they shell out to
+external executables and require no third-party Python framework. CrewAI,
+LangGraph, Strands, MCP, scraping helpers, and vendor providers are opt-in
+extras.
+
+Vendor-backed passthrough extras are deferred until ``vendor-fabric`` is
+published with a stable optional-extra contract. Until then, vendor references
+stay lazy and report install guidance at use time.
 
 Core imports stay lightweight. Optional frameworks and vendor SDKs are
 loaded only when a runner, tool, or adapter is resolved.

@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-
-pytest.importorskip("crewai", reason="crewai not installed")
-
-from agentic_fabric.tools.scraping_tools import CrawlWebsiteTool
+from tests.test_scraping_tool_crawler import import_scraping_tools
 
 
-@patch("agentic_fabric.tools.scraping_tools.requests.get")
-def test_crawl_website_tool(mock_get: MagicMock):
+def test_crawl_website_tool(monkeypatch: pytest.MonkeyPatch):
     """Tests that the CrawlWebsiteTool scrapes content and discovers links."""
+    scraping_tools = import_scraping_tools(monkeypatch)
     mock_response_page1 = MagicMock()
     mock_response_page1.content = b'<html><body><a href="/page2">Page 2</a><p>Content 1</p></body></html>'
     mock_response_page1.raise_for_status.return_value = None
@@ -23,12 +20,12 @@ def test_crawl_website_tool(mock_get: MagicMock):
     mock_response_page2.content = b"<html><body><p>Content 2</p></body></html>"
     mock_response_page2.raise_for_status.return_value = None
 
-    mock_get.side_effect = [mock_response_page1, mock_response_page2]
+    scraping_tools.requests.get.side_effect = [mock_response_page1, mock_response_page2]
 
-    tool = CrawlWebsiteTool()
+    tool = scraping_tools.CrawlWebsiteTool()
     result = tool._run("http://example.com")
 
     assert "Content 1" in result
     assert "Page 2" in result
     assert "Content 2" in result
-    assert mock_get.call_count == 2
+    assert scraping_tools.requests.get.call_count == 2

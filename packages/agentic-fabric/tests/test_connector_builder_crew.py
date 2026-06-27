@@ -61,9 +61,20 @@ def import_connector_builder_with_fake_crewai(monkeypatch: pytest.MonkeyPatch) -
     return importlib.import_module("agentic_fabric.crews.connector_builder.connector_builder_crew")
 
 
-def test_connector_builder_crew_initializes_and_kicks_off(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ConnectorBuilderCrew should build configured agents/tasks and delegate kickoff."""
+@pytest.fixture
+def connector_builder_module(monkeypatch: pytest.MonkeyPatch):
+    """Yield a connector-builder module backed by fake CrewAI classes."""
     module = import_connector_builder_with_fake_crewai(monkeypatch)
+    yield module
+    sys.modules.pop("agentic_fabric.crews.connector_builder.connector_builder_crew", None)
+
+
+def test_connector_builder_crew_initializes_and_kicks_off(
+    monkeypatch: pytest.MonkeyPatch,
+    connector_builder_module: Any,
+) -> None:
+    """ConnectorBuilderCrew should build configured agents/tasks and delegate kickoff."""
+    module = connector_builder_module
     monkeypatch.setattr(module, "resolve_tools", lambda tools: [f"resolved:{tool}" for tool in tools])
 
     crew_instance = module.ConnectorBuilderCrew(output_dir="test_output")
@@ -91,9 +102,12 @@ def test_connector_builder_crew_initializes_and_kicks_off(monkeypatch: pytest.Mo
     assert crew_instance.crew.kickoff_inputs == {"url": "http://example.com"}
 
 
-def test_connector_builder_kickoff_returns_raw_result(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_connector_builder_kickoff_returns_raw_result(
+    monkeypatch: pytest.MonkeyPatch,
+    connector_builder_module: Any,
+) -> None:
     """CrewAI raw results should be returned without string conversion."""
-    module = import_connector_builder_with_fake_crewai(monkeypatch)
+    module = connector_builder_module
 
     class RawCrew(FakeCrew):
         def kickoff(self, inputs: dict[str, Any]) -> Any:

@@ -50,6 +50,16 @@ class CallableTool:
         return f"called:{kwargs['value']}"
 
 
+class SignatureTool:
+    """Tool without args_schema whose _run signature should be preserved."""
+
+    name = "signature_tool"
+    description = "Uses signature inference."
+
+    def _run(self, file_path: str, mode: str = "r") -> str:
+        return f"{mode}:{file_path}"
+
+
 class FakeStructuredTool:
     """Minimal LangChain-style tool wrapper used for adapter tests."""
 
@@ -162,6 +172,21 @@ class TestLangGraphToolAdapters:
 
         assert adapted == [existing_tool]
 
+    @patch("agentic_fabric.tools.adapters.resolve_tools")
+    def test_preserves_runner_signature_for_schema_inference(self, mock_resolve_tools: MagicMock) -> None:
+        """LangChain schema inference should see the wrapped tool's real arguments."""
+        mock_resolve_tools.return_value = [SignatureTool()]
+
+        fake_tools_module = ModuleType("langchain_core.tools")
+        fake_tools_module.StructuredTool = FakeStructuredTool
+
+        with patch.dict(sys.modules, {"langchain_core.tools": fake_tools_module}):
+            adapted = resolve_langgraph_tools(["SignatureTool"])
+
+        wrapped = adapted[0]
+        assert wrapped.infer_schema is True
+        assert tuple(wrapped.func.__signature__.parameters) == ("file_path", "mode")
+
 
 class TestStrandsToolAdapters:
     """Tests for Strands configured-tool wrapping."""
@@ -229,6 +254,12 @@ class TestToolAdapterHelpers:
         assert runner(value="x") == "called:x"
         assert runner.__name__ == "callable_tool"
         assert runner.__doc__ == "Call a tool."
+
+    def test_build_runner_preserves_tool_signature(self) -> None:
+        runner = _build_runner(SignatureTool(), "signature_tool", "Uses signature inference.")
+
+        assert runner(file_path="README.md", mode="rb") == "rb:README.md"
+        assert tuple(runner.__signature__.parameters) == ("file_path", "mode")
 
     def test_invoke_tool_rejects_noncallable_objects(self) -> None:
         with pytest.raises(TypeError, match="not callable"):

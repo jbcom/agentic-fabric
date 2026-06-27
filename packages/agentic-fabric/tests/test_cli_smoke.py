@@ -28,11 +28,8 @@ class TestCLIEntryPoint:
             main()
         assert exc_info.value.code == 0
 
-    def test_list_command_with_no_packages(self, tmp_path, capsys) -> None:
+    def test_list_command_with_no_packages(self, capsys) -> None:
         """'list' should work even with no packages found."""
-        # Create empty packages dir
-        (tmp_path / "packages").mkdir()
-
         with (
             patch("sys.argv", ["agentic-fabric", "list"]),
             patch(

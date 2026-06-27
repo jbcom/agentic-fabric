@@ -19,4 +19,7 @@ def load_config(path: Path | str) -> dict[str, Any]:
     """
     with open(path, encoding="utf-8") as f:
         loaded = yaml.safe_load(f) or {}
+    if not isinstance(loaded, dict):
+        msg = f"Expected mapping at top level of YAML config: {path}"
+        raise TypeError(msg)
     return cast(dict[str, Any], loaded)

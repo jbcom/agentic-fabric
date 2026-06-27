@@ -25,7 +25,7 @@ import shlex
 import stat
 import subprocess
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -78,6 +78,11 @@ class LocalCLIConfig:
 
 
 _CONFIG_FIELD_NAMES = {item.name for item in fields(LocalCLIConfig)}
+
+
+def _copy_config(config: LocalCLIConfig) -> LocalCLIConfig:
+    """Return an isolated copy of a CLI config, including mutable list fields."""
+    return replace(config, auth_env=list(config.auth_env), additional_flags=list(config.additional_flags))
 
 
 def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str, Any]:
@@ -177,13 +182,16 @@ class LocalCLIRunner(SingleAgentRunner):
                     f"Unknown profile '{profile}'. Available: {available}\n"
                     f"Or provide a LocalCLIConfig object for custom tools."
                 )
-            self.config = profiles[profile]
+            self.config = _copy_config(profiles[profile])
         elif isinstance(profile, dict):
             # Convert dict to LocalCLIConfig
             self.config = LocalCLIConfig(**_validate_profile_config("custom", profile))
-        else:
+        elif isinstance(profile, LocalCLIConfig):
             # Use provided LocalCLIConfig directly
             self.config = profile
+        else:
+            msg = "profile must be a profile name, LocalCLIConfig, or config dict"
+            raise TypeError(msg)
 
         self.model = model
         self.runner_name = f"local_cli_{self.config.command}"

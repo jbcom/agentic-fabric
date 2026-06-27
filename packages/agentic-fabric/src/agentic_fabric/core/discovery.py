@@ -122,7 +122,7 @@ def discover_all_framework_configs(
 
     Returns:
         Dict mapping package name to dict of framework -> config_dir.
-        Example: {"otterfall": {"crewai": Path(...), "strands": Path(...)}}
+        Example: {"sample": {"crewai": Path(...), "strands": Path(...)}}
         Framework can be None for framework-agnostic .crew/ directories.
     """
     if workspace_root is None:
@@ -229,9 +229,16 @@ def get_crew_config(config_dir: Path, crew_name: str) -> dict:
         available = list(crews.keys())
         raise ValueError(f"Crew '{crew_name}' not found. Available: {available}")
 
+    agents_rel = crew_config.get("agents")
+    tasks_rel = crew_config.get("tasks")
+    if not agents_rel or not tasks_rel:
+        missing = "agents" if not agents_rel else "tasks"
+        msg = f"Crew '{crew_name}' is missing required key: {missing}"
+        raise ValueError(msg)
+
     # Load agents and tasks YAML
-    agents_path = _resolve_config_path(config_dir, crew_config["agents"])
-    tasks_path = _resolve_config_path(config_dir, crew_config["tasks"])
+    agents_path = _resolve_config_path(config_dir, agents_rel)
+    tasks_path = _resolve_config_path(config_dir, tasks_rel)
 
     agents = yaml.safe_load(agents_path.read_text(encoding="utf-8")) if agents_path.exists() else {}
     tasks = yaml.safe_load(tasks_path.read_text(encoding="utf-8")) if tasks_path.exists() else {}

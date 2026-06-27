@@ -117,13 +117,12 @@ def test_load_knowledge_sources_logs_unreadable_files(
     bad_file = knowledge_dir / "bad.md"
     bad_file.write_text("content", encoding="utf-8")
 
-    def broken_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
-        if self == bad_file:
+    def broken_content_check(path: Path) -> bool:
+        if path == bad_file:
             raise OSError("boom")
-        return original_read_text(self, *args, **kwargs)
+        return True
 
-    original_read_text = Path.read_text
-    monkeypatch.setattr(Path, "read_text", broken_read_text)
+    monkeypatch.setattr(loader_with_fake_crewai, "_has_non_whitespace_content", broken_content_check)
 
     assert loader_with_fake_crewai.load_knowledge_sources([knowledge_dir]) == []
     assert "Could not load knowledge source" in caplog.text

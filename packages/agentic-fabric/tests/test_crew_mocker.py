@@ -70,4 +70,4 @@ class TestLocalFixtures:
     """Test reusable local fixtures."""
 
     def test_temp_workspace_fixture(self, temp_workspace: Path) -> None:
-        assert (temp_workspace / "packages" / "otterfall" / ".crewai" / "manifest.yaml").exists()
+        assert (temp_workspace / "packages" / "sample" / ".crewai" / "manifest.yaml").exists()

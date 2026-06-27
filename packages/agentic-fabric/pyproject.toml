@@ -29,17 +29,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-crewai = ["crewai[tools,anthropic]>=1.5.0"]
+crewai = ["crewai[anthropic]>=1.5.0"]
 langgraph = ["langgraph>=0.2.0", "langchain-anthropic>=0.3.0"]
 strands = ["strands-agents>=0.1.0"]
-ai = [
-    "crewai[tools,anthropic]>=1.5.0",
-    "langgraph>=0.2.0",
-    "langchain-anthropic>=0.3.0",
-    "strands-agents>=0.1.0",
-]
 mcp = ["mcp>=1.0.0"]
-scraping = ["crewai[tools]>=1.5.0", "beautifulsoup4>=4.12.0", "requests>=2.31.0"]
+scraping = ["beautifulsoup4>=4.12.0", "crewai-tools>=1.5.0", "requests>=2.31.0"]
 tests = [
     "coverage[toml]>=7.6.0",
     "pytest-asyncio>=0.23.0",
@@ -64,15 +58,6 @@ docs = [
     "sphinx>=8.2.3,<9.0.0",
     "sphinx-autodoc2>=0.5.0",
     "sphinx-copybutton>=0.5.2",
-]
-all = [
-    "crewai[tools,anthropic]>=1.5.0",
-    "langgraph>=0.2.0",
-    "langchain-anthropic>=0.3.0",
-    "strands-agents>=0.1.0",
-    "mcp>=1.0.0",
-    "beautifulsoup4>=4.12.0",
-    "requests>=2.31.0",
 ]
 
 [project.scripts]

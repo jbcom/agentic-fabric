@@ -29,16 +29,16 @@ class LangGraphRunner(BaseRunner):
             raise RuntimeError(f"LangGraph not installed. Install with: {install_command(self.framework_name)}") from e
 
     def build_crew(self, crew_config: dict[str, Any]) -> Any:
-        """Build a LangGraph workflow from configuration.
+        """Build a LangGraph ReAct agent from crew configuration.
 
-        Converts crew format to a LangGraph StateGraph with agents as nodes
-        and tasks as edges.
+        The current adapter condenses the universal crew configuration into a
+        LangGraph prebuilt ReAct agent with the declared tools attached.
 
         Args:
             crew_config: Universal crew configuration.
 
         Returns:
-            Compiled LangGraph StateGraph.
+            LangGraph runnable agent.
         """
         from langgraph.prebuilt import create_react_agent
 
@@ -89,7 +89,7 @@ class LangGraphRunner(BaseRunner):
         """
         from langchain_anthropic import ChatAnthropic
 
-        # Default to Claude 3.5 Sonnet if no model specified
+        # Default to Claude Haiku 4.5 if no model specified.
         default_model = "claude-haiku-4-5-20251001"
         return ChatAnthropic(model=model or default_model)
 

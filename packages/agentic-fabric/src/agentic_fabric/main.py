@@ -118,13 +118,21 @@ def cmd_run(args):
         print(f"🚀 Running {args.package}/{args.crew}")
         print("=" * 60)
 
-    # Get input
-    if args.file:
-        input_text = Path(args.file).read_text(encoding="utf-8")
-    elif args.input:
-        input_text = args.input
-    else:
-        input_text = ""
+    try:
+        # Get input
+        if args.file:
+            input_text = Path(args.file).read_text(encoding="utf-8")
+        elif args.input:
+            input_text = args.input
+        else:
+            input_text = ""
+    except OSError as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        if use_json:
+            print(json.dumps({"success": False, "error": str(e), "duration_ms": duration_ms}))
+        else:
+            print(f"❌ Error: {e}")
+        sys.exit(2)
 
     inputs = {"spec": input_text, "component_spec": input_text, "input": input_text}
 
@@ -168,7 +176,7 @@ def cmd_run(args):
         result = run_crew_auto(
             crew_config,
             inputs=inputs,
-            framework=requested,
+            framework=framework_used,
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -216,12 +224,23 @@ def _cmd_run_single_agent(args, use_json: bool, start_time: float):
         print(f"🤖 Running single-agent: {args.runner}")
         print("=" * 60)
 
-    # Get input
-    if args.file:
-        input_text = Path(args.file).read_text(encoding="utf-8")
-    elif args.input:
-        input_text = args.input
-    else:
+    try:
+        # Get input
+        if args.file:
+            input_text = Path(args.file).read_text(encoding="utf-8")
+        elif args.input:
+            input_text = args.input
+        else:
+            input_text = ""
+    except OSError as e:
+        duration_ms = int((time.time() - start_time) * 1000)
+        if use_json:
+            print(json.dumps({"success": False, "error": str(e), "duration_ms": duration_ms}))
+        else:
+            print(f"❌ Error: {e}")
+        sys.exit(2)
+
+    if not input_text:
         if use_json:
             print(
                 json.dumps(

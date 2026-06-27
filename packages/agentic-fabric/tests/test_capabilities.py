@@ -72,7 +72,7 @@ class TestCapabilityCollection:
         provider = ToolProvider()
         specs = provider.list_capabilities(kind="tool")
 
-        assert specs == (provider.agent_capabilities["read_file"], provider.agent_capabilities["read"])
+        assert specs == (provider.agent_capabilities["read_file"],)
         assert specs[0].as_dict() == {
             "name": "read_file",
             "kind": "tool",

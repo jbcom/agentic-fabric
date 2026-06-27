@@ -76,17 +76,17 @@ def temp_workspace(tmp_path: Path) -> Path:
     packages_dir = tmp_path / "packages"
     packages_dir.mkdir()
 
-    # Create a mock otterfall package with .crewai structure
-    otterfall_dir = packages_dir / "otterfall"
-    otterfall_dir.mkdir()
+    # Create a mock sample package with .crewai structure
+    sample_dir = packages_dir / "sample"
+    sample_dir.mkdir()
 
-    crewai_dir = otterfall_dir / ".crewai"
+    crewai_dir = sample_dir / ".crewai"
     crewai_dir.mkdir()
 
     # Create minimal manifest (dict format, not list)
     manifest = crewai_dir / "manifest.yaml"
     manifest.write_text("""
-name: otterfall
+name: sample
 description: Test package
 crews:
   test_crew:

@@ -28,7 +28,6 @@ class TestIsFrameworkAvailable:
         """Clear the framework cache before each test."""
         _framework_cache.clear()
         clear_runtime_cache()
-        clear_runtime_cache()
 
     def test_unsupported_framework_returns_false(self) -> None:
         """An unsupported framework name should return False immediately."""

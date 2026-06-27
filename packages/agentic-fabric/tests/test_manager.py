@@ -256,10 +256,8 @@ class TestManagerAgent:
                 ]
             )
 
-            assert len(results) == 2
             # Verify correct results returned (order matches input order)
-            assert "Design done" in results
-            assert "Assets done" in results
+            assert results == ["Design done", "Assets done"]
             # Both should have been executed
             assert mock_run.call_count == 2
 

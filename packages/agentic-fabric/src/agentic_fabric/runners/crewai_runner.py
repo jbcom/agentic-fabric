@@ -66,9 +66,19 @@ class CrewAIRunner(BaseRunner):
 
             # Build context from referenced tasks
             context_tasks = []
+            unresolved_context = []
             for ctx_name in task_cfg.get("context", []):
                 if ctx_name in tasks_by_name:
                     context_tasks.append(tasks_by_name[ctx_name])
+                else:
+                    unresolved_context.append(ctx_name)
+
+            if unresolved_context:
+                logger.warning(
+                    "Task '%s' references context tasks that are not yet available: %s",
+                    task_name,
+                    ", ".join(unresolved_context),
+                )
 
             task = self.build_task(task_cfg, agents[agent_name], context=context_tasks)
             tasks.append(task)

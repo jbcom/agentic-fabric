@@ -22,6 +22,15 @@ from agentic_fabric.tools.registry import resolve_tools
 logger = logging.getLogger(__name__)
 
 
+def _has_non_whitespace_content(file_path: Path) -> bool:
+    """Return whether a text file contains any non-whitespace content."""
+    with file_path.open(encoding="utf-8") as handle:
+        while chunk := handle.read(4096):
+            if chunk.strip():
+                return True
+    return False
+
+
 def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
     """Load knowledge sources from the specified paths.
 
@@ -46,9 +55,7 @@ def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
         for ext in ["*.md", "*.ts", "*.tsx", "*.py"]:
             for file_path in knowledge_path.rglob(ext):
                 try:
-                    # Read file content directly
-                    content = file_path.read_text(encoding="utf-8")
-                    if content.strip():
+                    if _has_non_whitespace_content(file_path):
                         sources.append(
                             TextFileKnowledgeSource(
                                 file_paths=[str(file_path)],

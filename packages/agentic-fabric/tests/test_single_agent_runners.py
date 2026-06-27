@@ -312,6 +312,22 @@ profiles:
             with pytest.raises(TypeError, match="profiles"):
                 LocalCLIRunner._load_profiles()
 
+    def test_load_profiles_rejects_symlink_profiles_file(self, tmp_path: Path):
+        """Bundled profiles should be read from a regular file."""
+        target_file = tmp_path / "target.yaml"
+        target_file.write_text("profiles: {}\n", encoding="utf-8")
+        profiles_file = tmp_path / "local_cli_profiles.yaml"
+        profiles_file.symlink_to(target_file)
+
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+            mock_path.return_value.__truediv__.return_value = profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(FileNotFoundError, match="regular file"):
+                LocalCLIRunner._load_profiles()
+
     def test_init_with_config_object(self):
         """Should initialize with a LocalCLIConfig object."""
         config = LocalCLIConfig(
@@ -323,6 +339,16 @@ profiles:
 
         assert runner.config.command == "custom-tool"
         assert runner.config.task_flag == "--task"
+
+    def test_init_with_config_object_uses_profile_validation(self):
+        """LocalCLIConfig objects should not bypass fragment validation."""
+        config = LocalCLIConfig(
+            command="custom-tool",
+            task_flag="--task; rm -rf /",
+        )
+
+        with pytest.raises(ValueError, match="task_flag"):
+            LocalCLIRunner(config)
 
     def test_init_rejects_unsupported_profile_input(self):
         """Unsupported profile inputs should fail with a clear type error."""
@@ -365,6 +391,14 @@ profiles:
 
         with pytest.raises(RuntimeError, match="Missing required environment variables"):
             runner.run("test task")
+
+    def test_run_rejects_nul_task_argument(self):
+        """User arguments should be valid subprocess arguments."""
+        config = LocalCLIConfig(command="test-tool", task_flag="--task")
+        runner = LocalCLIRunner(config)
+
+        with pytest.raises(ValueError, match="NUL byte"):
+            runner.run("safe\x00unsafe")
 
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")

@@ -26,7 +26,7 @@ import shlex
 import stat
 import subprocess
 
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +88,12 @@ def _copy_config(config: LocalCLIConfig) -> LocalCLIConfig:
     return replace(config, auth_env=list(config.auth_env), additional_flags=list(config.additional_flags))
 
 
+def _validated_config(name: str, config: LocalCLIConfig | dict[str, Any]) -> LocalCLIConfig:
+    """Return a copied LocalCLIConfig after applying profile validation."""
+    config_dict = asdict(config) if isinstance(config, LocalCLIConfig) else dict(config)
+    return LocalCLIConfig(**_validate_profile_config(name, config_dict))
+
+
 def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str, Any]:
     """Validate a local CLI profile loaded from YAML."""
     unknown_fields = set(config_dict) - _CONFIG_FIELD_NAMES
@@ -104,7 +110,7 @@ def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str
         msg = f"Profile '{name}' must define task_flag as a string"
         raise TypeError(msg)
 
-    command_parts = shlex.split(command)
+    command_parts = _split_cli_fragment(name, "command", command)
     if not command_parts or any(_contains_shell_control(part) for part in command_parts):
         msg = f"Profile '{name}' command is not a direct executable invocation"
         raise ValueError(msg)
@@ -154,15 +160,34 @@ def _validate_cli_fragment(profile_name: str, field_name: str, value: str) -> No
     if _contains_shell_control(value):
         msg = f"Profile '{profile_name}' field '{field_name}' contains shell control syntax"
         raise ValueError(msg)
-    if not shlex.split(value):
+    if not _split_cli_fragment(profile_name, field_name, value):
         msg = f"Profile '{profile_name}' field '{field_name}' must contain at least one CLI argument"
         raise ValueError(msg)
+
+
+def _split_cli_fragment(profile_name: str, field_name: str, value: str) -> list[str]:
+    """Split a config-controlled CLI fragment with profile-specific errors."""
+    try:
+        return shlex.split(value)
+    except ValueError as exc:
+        msg = f"Profile '{profile_name}' field '{field_name}' is not valid shell-style syntax"
+        raise ValueError(msg) from exc
 
 
 def _extend_cli_fragment(cmd: list[str], value: str | None) -> None:
     """Append a validated config fragment as one or more subprocess arguments."""
     if value:
         cmd.extend(shlex.split(value))
+
+
+def _validate_profiles_file_source(profiles_file: Path) -> None:
+    """Require the bundled profiles path to be a regular profile file."""
+    if profiles_file.name != "local_cli_profiles.yaml":
+        msg = f"Unexpected profiles file name: {profiles_file}"
+        raise ValueError(msg)
+    if profiles_file.is_symlink() or not profiles_file.is_file():
+        msg = f"Profiles file must be a regular file: {profiles_file}"
+        raise FileNotFoundError(msg)
 
 
 def _validate_profiles_file_permissions(profiles_file: Path) -> None:
@@ -174,6 +199,18 @@ def _validate_profiles_file_permissions(profiles_file: Path) -> None:
     if mode & (stat.S_IWGRP | stat.S_IWOTH):
         msg = f"Profiles file is writable by group or other users: {profiles_file}"
         raise PermissionError(msg)
+
+
+def _validate_subprocess_argument(field_name: str, value: str | None) -> None:
+    """Reject argument values that cannot be passed safely to subprocess."""
+    if value is None:
+        return
+    if not isinstance(value, str):
+        msg = f"{field_name} must be a string"
+        raise TypeError(msg)
+    if "\x00" in value:
+        msg = f"{field_name} contains a NUL byte"
+        raise ValueError(msg)
 
 
 class LocalCLIRunner(SingleAgentRunner):
@@ -224,10 +261,10 @@ class LocalCLIRunner(SingleAgentRunner):
             self.config = _copy_config(profiles[profile])
         elif isinstance(profile, dict):
             # Convert dict to LocalCLIConfig
-            self.config = LocalCLIConfig(**_validate_profile_config("custom", profile))
+            self.config = _validated_config("custom", profile)
         elif isinstance(profile, LocalCLIConfig):
             # Use provided LocalCLIConfig directly
-            self.config = profile
+            self.config = _validated_config("custom", profile)
         else:
             msg = "profile must be a profile name, LocalCLIConfig, or config dict"
             raise TypeError(msg)
@@ -247,10 +284,11 @@ class LocalCLIRunner(SingleAgentRunner):
 
         # Find the profiles file
         profiles_file = Path(__file__).parent / "local_cli_profiles.yaml"
-        if not profiles_file.exists():
+        if not profiles_file.is_file():
             raise FileNotFoundError(
                 f"Profiles file not found: {profiles_file}\nExpected local_cli_profiles.yaml in runners directory."
             )
+        _validate_profiles_file_source(profiles_file)
         _validate_profiles_file_permissions(profiles_file)
 
         # Load and parse YAML
@@ -294,7 +332,7 @@ class LocalCLIRunner(SingleAgentRunner):
         from shutil import which
 
         # Check if command is in PATH
-        command = self.config.command.split()[0]
+        command = shlex.split(self.config.command)[0]
         return which(command) is not None
 
     def get_required_env_vars(self) -> list[str]:
@@ -331,6 +369,10 @@ class LocalCLIRunner(SingleAgentRunner):
             RuntimeError: If tool execution fails or required env vars missing.
             subprocess.TimeoutExpired: If execution exceeds timeout.
         """
+        _validate_subprocess_argument("task", task)
+        _validate_subprocess_argument("working_dir", working_dir)
+        _validate_subprocess_argument("model", model)
+
         # Accept but don't use kwargs (reserved for future extensibility)
         _ = kwargs
 

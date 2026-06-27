@@ -9,6 +9,13 @@ This file locks the intended SecretSync boundary for `agentic-fabric`.
    `VendorData`-level capability surface.
 3. `agentic-fabric` owns runtime selection, tool wrapping, and orchestration.
 
+## Binding Contract
+
+- PyPI distribution: `secrets-sync-python-binding`
+- Python import/module: `secrets_sync`
+- This repository should not import `secretssync` directly; it should consume
+  SecretSync through `vendor-fabric`.
+
 ## This Repository's Role
 
 - Turn SecretSync-related vendor capabilities into framework-visible tools for

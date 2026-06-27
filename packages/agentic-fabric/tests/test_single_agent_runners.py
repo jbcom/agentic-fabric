@@ -232,10 +232,37 @@ profiles:
         with pytest.raises(ValueError, match="direct executable"):
             LocalCLIRunner({"command": "my-tool && rm -rf /", "task_flag": "--prompt"})
 
+    @pytest.mark.parametrize(
+        "field_name,value",
+        [
+            ("task_flag", "--prompt; rm -rf /"),
+            ("subcommand", "run && rm -rf /"),
+            ("auto_approve", "--yes | sh"),
+            ("structured_output", "--json > out"),
+            ("model_flag", "--model $(touch bad)"),
+            ("default_model", "model;touch-bad"),
+            ("working_dir_flag", "--cwd\n--bad"),
+        ],
+    )
+    def test_rejects_shell_control_in_config_cli_fields(self, field_name, value):
+        """Config-controlled CLI fragments should stay single safe arguments."""
+        config = {"command": "my-tool", "task_flag": "--prompt", field_name: value}
+
+        with pytest.raises(ValueError, match=field_name):
+            LocalCLIRunner(config)
+
     def test_rejects_invalid_additional_flags(self):
         """List fields should contain only non-empty strings."""
         with pytest.raises(ValueError, match="additional_flags"):
             LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "additional_flags": ["--ok", ""]})
+
+        with pytest.raises(ValueError, match="additional_flags"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "additional_flags": ["--ok", "--bad;"]})
+
+    def test_rejects_invalid_auth_env_names(self):
+        """Auth env names should be valid environment variable identifiers."""
+        with pytest.raises(ValueError, match="auth_env"):
+            LocalCLIRunner({"command": "my-tool", "task_flag": "--prompt", "auth_env": ["OK", "BAD-NAME"]})
 
     def test_rejects_invalid_optional_scalar_field(self):
         """Optional string fields should reject non-string values."""
@@ -257,6 +284,32 @@ profiles:
             LocalCLIRunner._profiles_cache = None
 
             with pytest.raises(FileNotFoundError, match=r"Expected local_cli_profiles\.yaml"):
+                LocalCLIRunner._load_profiles()
+
+    def test_load_profiles_rejects_non_mapping_yaml(self, tmp_path: Path):
+        """Profiles YAML must have a mapping root and mapping profiles section."""
+        profiles_file = tmp_path / "local_cli_profiles.yaml"
+        profiles_file.write_text("- not\n- a mapping\n", encoding="utf-8")
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+            mock_path.return_value.__truediv__.return_value = profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(TypeError, match="must contain a mapping"):
+                LocalCLIRunner._load_profiles()
+
+    def test_load_profiles_rejects_non_mapping_profiles_section(self, tmp_path: Path):
+        """Profiles YAML must define profiles as a mapping."""
+        profiles_file = tmp_path / "local_cli_profiles.yaml"
+        profiles_file.write_text("profiles:\n  - not-a-mapping\n", encoding="utf-8")
+        with patch("agentic_fabric.runners.local_cli_runner.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+            mock_path.return_value.__truediv__.return_value = profiles_file
+
+            LocalCLIRunner._profiles_cache = None
+
+            with pytest.raises(TypeError, match="profiles"):
                 LocalCLIRunner._load_profiles()
 
     def test_init_with_config_object(self):
@@ -367,7 +420,7 @@ profiles:
             command="test-tool",
             task_flag="--task",
             auth_env=["TEST_API_KEY"],
-            structured_output="--json",
+            structured_output="--output-format json",
         )
         runner = LocalCLIRunner(config)
 
@@ -376,7 +429,7 @@ profiles:
         runner.run("Test task", structured_output=True)
 
         call_args = mock_run.call_args
-        assert "--json" in call_args[0][0]
+        assert call_args[0][0] == ["test-tool", "--task", "Test task", "--output-format", "json"]
 
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")
@@ -407,7 +460,7 @@ profiles:
             command="test-tool",
             task_flag="--task",
             auth_env=["TEST_API_KEY"],
-            additional_flags=["--no-cache", "--verbose"],
+            additional_flags=["--no-cache", "--log-level debug"],
         )
         runner = LocalCLIRunner(config)
 
@@ -418,7 +471,8 @@ profiles:
         call_args = mock_run.call_args
         cmd = call_args[0][0]
         assert "--no-cache" in cmd
-        assert "--verbose" in cmd
+        assert "--log-level" in cmd
+        assert "debug" in cmd
 
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")

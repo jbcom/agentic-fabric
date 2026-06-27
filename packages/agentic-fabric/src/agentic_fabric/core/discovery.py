@@ -93,14 +93,14 @@ def discover_packages(
             # Try each framework directory in priority order
             for dir_name in dirs_to_check:
                 config_dir = pkg_dir / dir_name
-                if config_dir.exists() and (config_dir / "manifest.yaml").exists():
+                if config_dir.is_dir() and (config_dir / "manifest.yaml").exists():
                     packages[pkg_dir.name] = config_dir
                     break  # Use first found (highest priority)
 
     # Also check workspace root for standalone projects
     for dir_name in dirs_to_check:
         config_dir = workspace_root / dir_name
-        if config_dir.exists() and (config_dir / "manifest.yaml").exists():
+        if config_dir.is_dir() and (config_dir / "manifest.yaml").exists():
             # Use the workspace name or a default
             pkg_name = workspace_root.name or "default"
             if pkg_name not in packages:
@@ -140,7 +140,7 @@ def discover_all_framework_configs(
             pkg_configs: dict[str | None, Path] = {}
             for dir_name in FRAMEWORK_DIRS:
                 config_dir = pkg_dir / dir_name
-                if config_dir.exists() and (config_dir / "manifest.yaml").exists():
+                if config_dir.is_dir() and (config_dir / "manifest.yaml").exists():
                     framework = DIR_TO_FRAMEWORK[dir_name]
                     pkg_configs[framework] = config_dir
 
@@ -151,7 +151,7 @@ def discover_all_framework_configs(
     root_configs: dict[str | None, Path] = {}
     for dir_name in FRAMEWORK_DIRS:
         config_dir = workspace_root / dir_name
-        if config_dir.exists() and (config_dir / "manifest.yaml").exists():
+        if config_dir.is_dir() and (config_dir / "manifest.yaml").exists():
             framework = DIR_TO_FRAMEWORK[dir_name]
             root_configs[framework] = config_dir
 

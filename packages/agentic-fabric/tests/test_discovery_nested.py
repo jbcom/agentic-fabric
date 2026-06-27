@@ -110,6 +110,17 @@ class TestDiscoverPackagesNested:
         packages = discover_packages(workspace_root=tmp_path)
         assert packages == {}
 
+    def test_file_shaped_config_path_is_skipped(self, tmp_path: Path) -> None:
+        """A file named like a config directory should not be discovered."""
+        pkg_dir = tmp_path / "packages" / "test_pkg"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / ".crew").write_text("not a directory", encoding="utf-8")
+        (tmp_path / ".langgraph").write_text("not a directory", encoding="utf-8")
+
+        packages = discover_packages(workspace_root=tmp_path)
+
+        assert packages == {}
+
     def test_multiple_packages_discovered(self, tmp_path: Path) -> None:
         """Multiple packages should all be discovered."""
         packages_dir = tmp_path / "packages"

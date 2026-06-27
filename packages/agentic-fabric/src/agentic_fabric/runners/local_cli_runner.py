@@ -21,6 +21,7 @@ Benefits:
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import stat
 import subprocess
@@ -78,6 +79,8 @@ class LocalCLIConfig:
 
 
 _CONFIG_FIELD_NAMES = {item.name for item in fields(LocalCLIConfig)}
+_ENV_VAR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_SHELL_CONTROL_TOKENS = (";", "&&", "||", "|", "`", "$(", "\n", "\r", "<", ">")
 
 
 def _copy_config(config: LocalCLIConfig) -> LocalCLIConfig:
@@ -102,21 +105,36 @@ def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str
         raise TypeError(msg)
 
     command_parts = shlex.split(command)
-    if not command_parts or any(part in {";", "&&", "||", "|"} for part in command_parts):
+    if not command_parts or any(_contains_shell_control(part) for part in command_parts):
         msg = f"Profile '{name}' command is not a direct executable invocation"
         raise ValueError(msg)
+    for part in command_parts:
+        _validate_cli_fragment(name, "command", part)
+
+    if task_flag:
+        _validate_cli_fragment(name, "task_flag", task_flag)
 
     for field_name in ("auth_env", "additional_flags"):
         value = config_dict.get(field_name, [])
         if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
             msg = f"Profile '{name}' field '{field_name}' must be a list of non-empty strings"
             raise ValueError(msg)
+        if field_name == "auth_env":
+            invalid_vars = [item for item in value if not _ENV_VAR_RE.match(item)]
+            if invalid_vars:
+                msg = f"Profile '{name}' field 'auth_env' contains invalid environment variable names: {invalid_vars}"
+                raise ValueError(msg)
+        else:
+            for item in value:
+                _validate_cli_fragment(name, field_name, item)
 
     for field_name in ("subcommand", "auto_approve", "structured_output", "model_flag", "default_model", "working_dir_flag"):
         value = config_dict.get(field_name)
         if value is not None and not isinstance(value, str):
             msg = f"Profile '{name}' field '{field_name}' must be a string when provided"
             raise ValueError(msg)
+        if value:
+            _validate_cli_fragment(name, field_name, value)
 
     timeout = config_dict.get("timeout", 300)
     if not isinstance(timeout, int) or timeout <= 0 or timeout > 3600:
@@ -124,6 +142,27 @@ def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str
         raise ValueError(msg)
 
     return config_dict
+
+
+def _contains_shell_control(value: str) -> bool:
+    """Return whether a config string contains shell control syntax."""
+    return any(token in value for token in _SHELL_CONTROL_TOKENS)
+
+
+def _validate_cli_fragment(profile_name: str, field_name: str, value: str) -> None:
+    """Reject shell control syntax in config-controlled CLI fragments."""
+    if _contains_shell_control(value):
+        msg = f"Profile '{profile_name}' field '{field_name}' contains shell control syntax"
+        raise ValueError(msg)
+    if not shlex.split(value):
+        msg = f"Profile '{profile_name}' field '{field_name}' must contain at least one CLI argument"
+        raise ValueError(msg)
+
+
+def _extend_cli_fragment(cmd: list[str], value: str | None) -> None:
+    """Append a validated config fragment as one or more subprocess arguments."""
+    if value:
+        cmd.extend(shlex.split(value))
 
 
 def _validate_profiles_file_permissions(profiles_file: Path) -> None:
@@ -218,8 +257,20 @@ class LocalCLIRunner(SingleAgentRunner):
         with open(profiles_file, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
+        if not isinstance(data, dict):
+            msg = f"Profiles file must contain a mapping: {profiles_file}"
+            raise TypeError(msg)
+
         profiles = {}
-        for name, config_dict in data.get("profiles", {}).items():
+        raw_profiles = data.get("profiles", {})
+        if not isinstance(raw_profiles, dict):
+            msg = f"Profiles file 'profiles' key must contain a mapping: {profiles_file}"
+            raise TypeError(msg)
+
+        for name, config_dict in raw_profiles.items():
+            if not isinstance(name, str) or not isinstance(config_dict, dict):
+                msg = f"Profiles file has invalid profile entry: {name!r}"
+                raise TypeError(msg)
             profiles[name] = LocalCLIConfig(**_validate_profile_config(name, config_dict))
 
         cls._profiles_cache = profiles
@@ -354,13 +405,14 @@ class LocalCLIRunner(SingleAgentRunner):
 
         # Add subcommand if present (e.g., "ollama run")
         if self.config.subcommand:
-            cmd.append(self.config.subcommand)
+            _extend_cli_fragment(cmd, self.config.subcommand)
 
         # Add model if specified and tool supports it
         # For positional model (like ollama), add before task
         if model:
             if self.config.model_flag:
-                cmd.extend([self.config.model_flag, model])
+                _extend_cli_fragment(cmd, self.config.model_flag)
+                cmd.append(model)
             else:
                 # Positional model (e.g., "ollama run <model>")
                 cmd.append(model)
@@ -370,24 +422,27 @@ class LocalCLIRunner(SingleAgentRunner):
 
         # Add task
         if self.config.task_flag:
-            cmd.extend([self.config.task_flag, task])
+            _extend_cli_fragment(cmd, self.config.task_flag)
+            cmd.append(task)
         else:
             # Positional argument
             cmd.append(task)
 
         # Add auto-approve flag if requested and supported
         if auto_approve and self.config.auto_approve:
-            cmd.append(self.config.auto_approve)
+            _extend_cli_fragment(cmd, self.config.auto_approve)
 
         # Add structured output flag if requested and supported
         if structured_output and self.config.structured_output:
-            cmd.append(self.config.structured_output)
+            _extend_cli_fragment(cmd, self.config.structured_output)
 
         # Add working directory if supported
         if working_dir and self.config.working_dir_flag:
-            cmd.extend([self.config.working_dir_flag, working_dir])
+            _extend_cli_fragment(cmd, self.config.working_dir_flag)
+            cmd.append(working_dir)
 
         # Add any additional flags
-        cmd.extend(self.config.additional_flags)
+        for flag in self.config.additional_flags:
+            _extend_cli_fragment(cmd, flag)
 
         return cmd

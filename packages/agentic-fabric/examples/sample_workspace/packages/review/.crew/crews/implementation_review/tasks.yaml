@@ -1,0 +1,9 @@
+review_code:
+  description: Review the submitted implementation for defects and migration gaps.
+  expected_output: Findings with severity, file references, and suggested fixes.
+  agent: reviewer
+
+review_docs:
+  description: Confirm documentation and examples describe the implementation accurately.
+  expected_output: Documentation alignment notes and missing examples.
+  agent: documenter

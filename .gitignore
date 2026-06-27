@@ -1,0 +1,15 @@
+.DS_Store
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.venv/
+__pycache__/
+build/
+dist/
+htmlcov/
+*.egg-info/
+*.pyc
+docs/_build/
+docs/apidocs/

@@ -1,0 +1,15 @@
+{
+  "release-type": "python",
+  "packages": {
+    "packages/agentic-fabric": {
+      "package-name": "agentic-fabric",
+      "component": "agentic-fabric",
+      "include-component-in-tag": true
+    },
+    "packages/pytest-agentic-fabric": {
+      "package-name": "pytest-agentic-fabric",
+      "component": "pytest-agentic-fabric",
+      "include-component-in-tag": true
+    }
+  }
+}

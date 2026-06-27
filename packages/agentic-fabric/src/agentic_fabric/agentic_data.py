@@ -1,0 +1,264 @@
+"""Agent runtime facade over the vendor and data layers."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Any, ClassVar
+
+from agentic_fabric.runners.registry import RuntimeUnavailableError, install_command, runtime_info, runtime_names
+
+
+try:  # pragma: no cover - exercised when vendor-fabric is installed by consumers
+    from vendor_fabric.vendor_data import VendorData as _VendorDataBase
+except ImportError:  # pragma: no cover - default in this workspace until vendor-fabric is published
+    _VENDOR_FABRIC_AVAILABLE = False
+
+    class _VendorDataBase:  # type: ignore[no-redef]
+        """Small fallback that keeps AgenticData importable without vendor-fabric."""
+
+        def __init__(self, value: Any = None, **_: Any) -> None:
+            self._agentic_value = value
+            self._active_provider: str | None = None
+
+        @property
+        def value(self) -> Any:
+            """Return the wrapped value."""
+            return self._agentic_value
+
+        @property
+        def active_provider(self) -> str | None:
+            """Return the active vendor provider, when available."""
+            return self._active_provider
+
+        def as_builtin(self) -> Any:
+            """Return the wrapped value unchanged."""
+            return self._agentic_value
+
+        def cast(self, value: Any) -> _VendorDataBase:
+            """Replace the wrapped value."""
+            self._agentic_value = value
+            return self
+
+        def open(self, provider_id: str, *, strict: bool = True, **_: Any) -> _VendorDataBase:
+            """Record a provider or raise install guidance when strict."""
+            if strict:
+                msg = (
+                    f"Provider '{provider_id}' requires vendor-fabric. "
+                    "Install vendor-fabric after it is published, then reinstall agentic-fabric."
+                )
+                raise ImportError(msg)
+            self._active_provider = provider_id
+            return self
+
+        def call(self, operation: str, *_: Any, **__: Any) -> Any:
+            """Raise clear guidance for vendor-backed operations."""
+            msg = f"Vendor operation '{operation}' requires vendor-fabric."
+            raise ImportError(msg)
+
+else:
+    _VENDOR_FABRIC_AVAILABLE = True
+
+
+class AgenticData(_VendorDataBase):
+    """VendorData extension with active runtime and agent registry context."""
+
+    runtime_priority: ClassVar[tuple[str, ...]] = tuple(runtime_names())
+
+    def __init__(
+        self,
+        value: Any = None,
+        *,
+        fabric: Any | None = None,
+        agent_registry: Mapping[str, Mapping[str, Any]] | None = None,
+        logger: Any | None = None,
+        active_runtime: str | None = None,
+        **fabric_kwargs: Any,
+    ) -> None:
+        """Initialize data, registered crews, and optional active runtime."""
+        super().__init__(value, fabric=fabric, logger=logger, **fabric_kwargs)
+        self._agent_registry: dict[str, dict[str, Any]] = {
+            name: dict(config) for name, config in (agent_registry or {}).items()
+        }
+        self._active_runtime: str | None = None
+        if active_runtime is not None:
+            self.use_runtime(active_runtime, strict=False)
+
+    @property
+    def agent_registry(self) -> Mapping[str, Mapping[str, Any]]:
+        """Return registered agent/crew definitions."""
+        return MappingProxyType(self._agent_registry)
+
+    @property
+    def active_runtime(self) -> str | None:
+        """Return the active runtime name, when one has been selected."""
+        return self._active_runtime
+
+    @property
+    def vendor_fabric_available(self) -> bool:
+        """Return whether this import is backed by a real VendorData class."""
+        return _VENDOR_FABRIC_AVAILABLE
+
+    def cast(self, value: Any) -> AgenticData:
+        """Mutate the wrapped data while preserving runtime context."""
+        super().cast(value)
+        return self
+
+    def register_agent(self, name: str, crew_config: Mapping[str, Any]) -> AgenticData:
+        """Register a named crew config for ``run_agent`` lookup."""
+        self._agent_registry[name] = dict(crew_config)
+        return self
+
+    def unregister_agent(self, name: str) -> AgenticData:
+        """Remove a named crew config if it exists."""
+        self._agent_registry.pop(name, None)
+        return self
+
+    def use_runtime(self, runtime: str, *, strict: bool = True) -> AgenticData:
+        """Select the active runtime for future agent calls."""
+        normalized = runtime.strip().lower()
+        if normalized == "auto":
+            normalized = self.select_runtime()
+        if strict and not self.is_runtime_available(normalized):
+            raise RuntimeUnavailableError(normalized, install_command(normalized))
+        self._active_runtime = normalized
+        return self
+
+    def clear_runtime(self) -> AgenticData:
+        """Clear the active runtime selection."""
+        self._active_runtime = None
+        return self
+
+    def runtimes(self) -> list[dict[str, Any]]:
+        """Return runtime registry metadata with availability."""
+        info = runtime_info()
+        return list(info) if isinstance(info, list) else [info]
+
+    def runtime_info(self, runtime: str | None = None) -> list[dict[str, Any]] | dict[str, Any]:
+        """Return runtime metadata with current availability."""
+        return runtime_info(runtime)
+
+    def is_runtime_available(self, runtime: str) -> bool:
+        """Return whether a runtime is importable in the current environment."""
+        from agentic_fabric.core.decomposer import is_framework_available
+
+        return is_framework_available(runtime)
+
+    def select_runtime(
+        self,
+        runtime: str | None = None,
+        *,
+        crew_config: Mapping[str, Any] | None = None,
+    ) -> str:
+        """Select a runtime using explicit, active, manifest, then auto priority."""
+        required_runtime = _manifest_runtime(crew_config)
+        requested = _normalize_runtime(runtime)
+        active = _normalize_runtime(self._active_runtime)
+
+        if requested is not None and required_runtime is not None and requested != required_runtime:
+            msg = f"Crew requires {required_runtime} but {requested} was requested"
+            raise ValueError(msg)
+
+        if requested is not None:
+            return _require_available(requested)
+
+        if active is not None:
+            if required_runtime is not None and active != required_runtime:
+                msg = f"Active runtime {active} conflicts with crew requirement {required_runtime}"
+                raise ValueError(msg)
+            return _require_available(active)
+
+        if required_runtime is not None:
+            return _require_available(required_runtime)
+
+        from agentic_fabric.core.decomposer import detect_framework
+
+        return detect_framework()
+
+    def run_crew(
+        self,
+        crew_config: Mapping[str, Any],
+        inputs: Mapping[str, Any] | None = None,
+        *,
+        runtime: str | None = None,
+    ) -> str:
+        """Run one crew config through the selected runtime."""
+        from agentic_fabric.core.decomposer import run_crew_auto
+
+        selected_runtime = self.select_runtime(runtime, crew_config=crew_config)
+        return run_crew_auto(dict(crew_config), inputs=dict(inputs or {}), framework=selected_runtime)
+
+    def run_agent(
+        self,
+        agent: str | Mapping[str, Any],
+        inputs: Mapping[str, Any] | None = None,
+        *,
+        runtime: str | None = None,
+        **input_kwargs: Any,
+    ) -> str:
+        """Run a registered agent/crew by name or a direct crew config."""
+        crew_config = self._lookup_agent(agent)
+        merged_inputs = dict(inputs or {})
+        merged_inputs.update(input_kwargs)
+        return self.run_crew(crew_config, merged_inputs, runtime=runtime)
+
+    def call_runtime(self, capability: str, *args: Any, runtime: str | None = None, **kwargs: Any) -> Any:
+        """Call a declared capability on a selected runtime runner."""
+        from agentic_fabric.core.decomposer import get_runner
+
+        selected_runtime = self.select_runtime(runtime)
+        runner = get_runner(selected_runtime)
+        return runner.call_capability(capability, *args, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        """Expose ``run_<agent>`` helpers while preserving VendorData dispatch."""
+        if name.startswith("run_"):
+            agent_name = name.removeprefix("run_")
+            if agent_name in self._agent_registry:
+                return lambda *args, **kwargs: self.run_agent(agent_name, *args, **kwargs)
+
+        try:
+            return super().__getattr__(name)  # type: ignore[misc]
+        except AttributeError:
+            raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}") from None
+
+    def __dir__(self) -> list[str]:
+        """Include dynamic registered-agent helpers in introspection."""
+        dynamic = [f"run_{name}" for name in self._agent_registry]
+        return sorted({*super().__dir__(), *dynamic})
+
+    def _lookup_agent(self, agent: str | Mapping[str, Any]) -> dict[str, Any]:
+        """Return a crew config from a name or direct mapping."""
+        if isinstance(agent, Mapping):
+            return dict(agent)
+        try:
+            return dict(self._agent_registry[agent])
+        except KeyError as exc:
+            options = ", ".join(sorted(self._agent_registry)) or "none registered"
+            msg = f"Unknown agent '{agent}'. Registered agents: {options}"
+            raise KeyError(msg) from exc
+
+
+def _normalize_runtime(runtime: str | None) -> str | None:
+    """Normalize runtime names and treat auto as no explicit choice."""
+    if runtime is None:
+        return None
+    normalized = runtime.strip().lower()
+    return None if normalized == "auto" else normalized
+
+
+def _manifest_runtime(crew_config: Mapping[str, Any] | None) -> str | None:
+    """Read runtime requirements from a crew manifest/config mapping."""
+    if crew_config is None:
+        return None
+    runtime = crew_config.get("required_framework") or crew_config.get("runtime") or crew_config.get("framework")
+    return _normalize_runtime(str(runtime)) if runtime else None
+
+
+def _require_available(runtime: str) -> str:
+    """Return a runtime or raise install guidance."""
+    from agentic_fabric.core.decomposer import is_framework_available
+
+    if not is_framework_available(runtime):
+        raise RuntimeUnavailableError(runtime, install_command(runtime))
+    return runtime

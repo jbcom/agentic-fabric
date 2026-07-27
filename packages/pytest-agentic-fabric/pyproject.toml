@@ -39,7 +39,7 @@ typing = [
 ]
 dev = [
     "pytest-agentic-fabric[tests,typing]",
-    "ruff>=0.15.20",
+    "ruff>=0.16.0",
 ]
 
 [project.entry-points.pytest11]
@@ -59,3 +59,67 @@ addopts = ["-ra", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
 xfail_strict = true
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "ARG",
+    "BLE001",
+    "C901",
+    "COM",
+    "CPY",
+    "D105",
+    "D205",
+    "D415",
+    "D417",
+    "DTZ007",
+    "E402",
+    "E501",
+    "EM",
+    "ERA001",
+    "FBT",
+    "FIX",
+    "G",
+    "PERF",
+    "PLC0415",
+    "PLR0124",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR0917",
+    "PLR2004",
+    "PLW0603",
+    "PTH",
+    "RET505",
+    "RUF012",
+    "S105",
+    "S110",
+    "S310",
+    "S603",
+    "SLF001",
+    "TCH",
+    "TD",
+    "TID252",
+    "TRY003",
+    "TRY300",
+    "TRY301",
+    "TRY401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "N806", "PLC0415", "PT", "S", "SIM117", "TRY"]
+"src/pytest_agentic_fabric/mocking.py" = ["B009", "B010", "N802"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+lines-after-imports = 2

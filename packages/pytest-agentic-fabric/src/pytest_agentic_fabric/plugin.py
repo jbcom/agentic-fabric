@@ -13,8 +13,8 @@ from typing import Any
 import pytest
 import yaml
 
-from pytest_agentic_fabric.mocking import RUNTIME_MODULES
 from pytest_agentic_fabric.mocking import (  # noqa: F401
+    RUNTIME_MODULES,
     agentic_fabric_mocker,
     fabric_mocker,
     mock_agentic_frameworks,

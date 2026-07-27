@@ -2,6 +2,13 @@
 
 <!-- version list -->
 
+## [1.2.2](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.1...agentic-fabric-v1.2.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* harden security, close config drift, fix real lint suppressions ([#22](https://github.com/jbcom/agentic-fabric/issues/22)) ([42e7d5d](https://github.com/jbcom/agentic-fabric/commit/42e7d5d52cda2141a90b4b61e238867a11911c5f))
+
 ## [1.2.1](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.0...agentic-fabric-v1.2.1) (2026-07-27)
 
 

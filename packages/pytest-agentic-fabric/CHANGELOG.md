@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.3.1...pytest-agentic-fabric-v0.3.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* harden security, close config drift, fix real lint suppressions ([#22](https://github.com/jbcom/agentic-fabric/issues/22)) ([42e7d5d](https://github.com/jbcom/agentic-fabric/commit/42e7d5d52cda2141a90b4b61e238867a11911c5f))
+
 ## [0.3.1](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.3.0...pytest-agentic-fabric-v0.3.1) (2026-07-27)
 
 

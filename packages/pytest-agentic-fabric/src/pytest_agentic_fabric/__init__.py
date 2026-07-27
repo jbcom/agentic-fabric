@@ -13,6 +13,7 @@ from pytest_agentic_fabric.mocking import (
     FabricMocker,
 )
 
+
 __all__ = [
     "ALL_FRAMEWORK_MODULES",
     "CREWAI_MODULES",

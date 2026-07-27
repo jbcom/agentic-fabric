@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-
 project = "Agentic Fabric"
 author = "Jon Bogaty"
-copyright = "2026, Jon Bogaty"  # noqa: A001
+copyright = "2026, Jon Bogaty"
 
 extensions = [
     "myst_parser",

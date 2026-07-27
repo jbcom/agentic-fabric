@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.3.0...pytest-agentic-fabric-v0.3.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* resolve ruff 0.16 lint fallout across workspace ([#19](https://github.com/jbcom/agentic-fabric/issues/19)) ([7666a78](https://github.com/jbcom/agentic-fabric/commit/7666a7855d5b308d87541863abaea8f1f196bc2d))
+
 ## [0.3.0](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.2.0...pytest-agentic-fabric-v0.3.0) (2026-06-27)
 
 

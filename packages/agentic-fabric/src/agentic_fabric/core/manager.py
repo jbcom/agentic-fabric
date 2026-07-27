@@ -118,7 +118,9 @@ class ManagerAgent(ABC):
             ValueError: If fabric_agent_role not found in fabric_agents mapping.
         """
         if fabric_agent_role not in self.fabric_agents:
-            raise ValueError(f"Unknown fabric agent role '{fabric_agent_role}'. Available: {list(self.fabric_agents.keys())}")
+            raise ValueError(
+                f"Unknown fabric agent role '{fabric_agent_role}'. Available: {list(self.fabric_agents.keys())}"
+            )
 
         fabric_agent_name = self.fabric_agents[fabric_agent_role]
 

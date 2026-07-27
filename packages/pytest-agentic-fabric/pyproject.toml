@@ -60,6 +60,15 @@ testpaths = ["tests"]
 xfail_strict = true
 asyncio_default_fixture_loop_scope = "function"
 
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["pytest_agentic_fabric"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120
@@ -115,7 +124,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "N806", "PLC0415", "PT", "S", "SIM117", "TRY"]
-"src/pytest_agentic_fabric/mocking.py" = ["B009", "B010", "N802"]
+# N802: MagicMock/Mock properties intentionally mirror unittest.mock's PascalCase names.
+"src/pytest_agentic_fabric/mocking.py" = ["N802"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

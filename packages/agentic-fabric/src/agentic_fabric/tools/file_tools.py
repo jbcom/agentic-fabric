@@ -12,10 +12,14 @@ CrewAI (or at least Pydantic) installed.
 
 from __future__ import annotations
 
+import logging
 import os
 
 from pathlib import Path
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 try:  # pragma: no cover - exercised by consumers that install CrewAI
@@ -183,7 +187,9 @@ def _resolve_workspace_path(path_value: str) -> tuple[str, Path]:
 
 def _is_allowed_write_path(clean_path: str) -> bool:
     """Return whether a normalized path is under an allowed write directory."""
-    return any(clean_path == allowed_dir or clean_path.startswith(f"{allowed_dir}/") for allowed_dir in ALLOWED_WRITE_DIRS)
+    return any(
+        clean_path == allowed_dir or clean_path.startswith(f"{allowed_dir}/") for allowed_dir in ALLOWED_WRITE_DIRS
+    )
 
 
 def _build_pydantic_schema(
@@ -273,6 +279,7 @@ class GameCodeWriterTool(_BaseTool):  # type: ignore[misc,valid-type]
         except ValueError as e:
             return f"Error: {e!s}"
         except Exception as e:
+            logger.exception("Unexpected error writing file %s", file_path)
             return f"Error writing file: {e!s}"
 
 
@@ -328,6 +335,7 @@ class GameCodeReaderTool(_BaseTool):  # type: ignore[misc,valid-type]
         except ValueError as e:
             return f"Error: {e!s}"
         except Exception as e:
+            logger.exception("Unexpected error reading file %s", file_path)
             return f"Error reading file: {e!s}"
 
 

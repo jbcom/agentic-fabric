@@ -25,6 +25,10 @@ class LangGraphRunner(BaseRunner):
 
     def __init__(self):
         """Initialize LangGraph runner."""
+        # A direct `import` (rather than the registry's cached
+        # is_runtime_available) is deliberate: it is the only check that
+        # reliably honors tests mocking builtins.__import__ to simulate a
+        # missing optional framework.
         try:
             import langgraph  # noqa: F401
         except ImportError as e:
@@ -63,7 +67,11 @@ class LangGraphRunner(BaseRunner):
         # For single-agent configs, create a simple ReAct agent
         agents_config = fabric_agent_config.get("agents", {})
         if len(agents_config) <= 1:
-            return create_react_agent(llm, tools, state_modifier=system_prompt) if system_prompt else create_react_agent(llm, tools)
+            return (
+                create_react_agent(llm, tools, state_modifier=system_prompt)
+                if system_prompt
+                else create_react_agent(llm, tools)
+            )
 
         # For multi-agent configs, still create a single ReAct agent but
         # with a system prompt that encodes all agent roles and tasks.

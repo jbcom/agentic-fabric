@@ -88,7 +88,9 @@ class TestResolveTool:
 
     @pytest.mark.parametrize("side_effect", [ImportError("missing"), AttributeError("missing attr")])
     @patch("agentic_fabric.tools.registry.importlib.import_module")
-    def test_returns_none_when_dynamic_import_fails(self, mock_import_module: MagicMock, side_effect: Exception) -> None:
+    def test_returns_none_when_dynamic_import_fails(
+        self, mock_import_module: MagicMock, side_effect: Exception
+    ) -> None:
         """Failed dynamic imports should be skipped cleanly."""
         mock_import_module.side_effect = side_effect
 

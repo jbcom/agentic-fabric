@@ -15,9 +15,7 @@ from typing import Any, cast
 
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install agentic-fabric[mcp]"
-VENDOR_INSTALL_MESSAGE = (
-    "vendor-fabric[meshy] is required for Meshy MCP adapters. Install it in the same environment."
-)
+VENDOR_INSTALL_MESSAGE = "vendor-fabric[meshy] is required for Meshy MCP adapters. Install it in the same environment."
 
 
 def _install_error(message: str, error: ImportError) -> ImportError:

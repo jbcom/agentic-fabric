@@ -134,7 +134,14 @@ def _validate_profile_config(name: str, config_dict: dict[str, Any]) -> dict[str
             for item in value:
                 _validate_cli_fragment(name, field_name, item)
 
-    for field_name in ("subcommand", "auto_approve", "structured_output", "model_flag", "default_model", "working_dir_flag"):
+    for field_name in (
+        "subcommand",
+        "auto_approve",
+        "structured_output",
+        "model_flag",
+        "default_model",
+        "working_dir_flag",
+    ):
         value = config_dict.get(field_name)
         if value is not None and not isinstance(value, str):
             msg = f"Profile '{name}' field '{field_name}' must be a string when provided"
@@ -202,7 +209,14 @@ def _validate_profiles_file_permissions(profiles_file: Path) -> None:
 
 
 def _validate_subprocess_argument(field_name: str, value: str | None) -> None:
-    """Reject argument values that cannot be passed safely to subprocess."""
+    """Reject argument values that cannot be passed safely to subprocess.
+
+    ``task``, ``model``, and ``working_dir`` are always positional or
+    flag-value content, never CLI flags themselves. A value starting with
+    ``-`` would otherwise be delivered to the child process as an option
+    rather than data -- argument injection, even under ``shell=False`` with
+    argv-list construction.
+    """
     if value is None:
         return
     if not isinstance(value, str):
@@ -210,6 +224,9 @@ def _validate_subprocess_argument(field_name: str, value: str | None) -> None:
         raise TypeError(msg)
     if "\x00" in value:
         msg = f"{field_name} contains a NUL byte"
+        raise ValueError(msg)
+    if value.startswith("-"):
+        msg = f"{field_name} must not start with '-' (would be parsed as a CLI flag): {value!r}"
         raise ValueError(msg)
 
 

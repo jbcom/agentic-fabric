@@ -98,9 +98,10 @@ def agentic_mock_runtime(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], dic
         if "crewai" in modules:
             modules["crewai"].__dict__.update({"Agent": object, "Crew": object, "Task": object})
         if "langgraph.prebuilt" in modules:
-            modules["langgraph.prebuilt"].__dict__["create_react_agent"] = (
-                lambda *args, **kwargs: {"args": args, "kwargs": kwargs}
-            )
+            modules["langgraph.prebuilt"].__dict__["create_react_agent"] = lambda *args, **kwargs: {
+                "args": args,
+                "kwargs": kwargs,
+            }
         if "strands" in modules:
             modules["strands"].__dict__["Agent"] = object
         return modules

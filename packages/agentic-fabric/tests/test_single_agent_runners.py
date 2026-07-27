@@ -440,6 +440,22 @@ profiles:
         with pytest.raises(TypeError, match="task must be a string"):
             runner.run(123)  # type: ignore[arg-type]
 
+    def test_run_rejects_leading_dash_task_argument(self):
+        """A task starting with '-' must not be deliverable as a CLI flag."""
+        config = LocalCLIConfig(command="test-tool", task_flag="--task")
+        runner = LocalCLIRunner(config)
+
+        with pytest.raises(ValueError, match="would be parsed as a CLI flag"):
+            runner.run("--dangerously-skip-permissions")
+
+    def test_run_rejects_leading_dash_working_dir_argument(self):
+        """A working_dir starting with '-' must not be deliverable as a CLI flag."""
+        config = LocalCLIConfig(command="test-tool", task_flag="--task", working_dir_flag="--cwd")
+        runner = LocalCLIRunner(config)
+
+        with pytest.raises(ValueError, match="would be parsed as a CLI flag"):
+            runner.run("task", working_dir="--evil-flag")
+
     @patch.dict("os.environ", {"TEST_API_KEY": "test-key"})
     @patch("subprocess.run")
     def test_run_success(self, mock_run: MagicMock):

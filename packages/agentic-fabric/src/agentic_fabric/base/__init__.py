@@ -135,10 +135,7 @@ def resolve_agent_archetypes(
     Returns:
         New dict with archetypes resolved for each agent.
     """
-    return {
-        name: resolve_archetype(config, archetypes=archetypes)
-        for name, config in agents_config.items()
-    }
+    return {name: resolve_archetype(config, archetypes=archetypes) for name, config in agents_config.items()}
 
 
 __all__ = [

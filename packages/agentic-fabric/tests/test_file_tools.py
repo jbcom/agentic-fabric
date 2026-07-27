@@ -296,9 +296,7 @@ class TestConfigureWriteRestrictions:
             sys.modules.pop("agentic_fabric.tools.file_tools", None)
             monkeypatch.delenv("AGENTIC_FABRIC_WRITE_DIRS", raising=False)
 
-    def test_env_extensions_override_default_allowed_extensions(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_env_extensions_override_default_allowed_extensions(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """AGENTIC_FABRIC_WRITE_EXTENSIONS env var should override the defaults at import time."""
         monkeypatch.setenv("AGENTIC_FABRIC_WRITE_EXTENSIONS", ".py,.toml")
         sys.modules.pop("agentic_fabric.tools.file_tools", None)

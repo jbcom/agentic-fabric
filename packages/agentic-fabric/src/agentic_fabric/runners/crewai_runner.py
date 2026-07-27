@@ -30,7 +30,10 @@ class CrewAIRunner(BaseRunner):
 
     def __init__(self):
         """Initialize CrewAI runner."""
-        # Verify CrewAI is available
+        # Verify CrewAI is available. A direct `import` (rather than the
+        # registry's cached is_runtime_available) is deliberate: it is the
+        # only check that reliably honors tests mocking builtins.__import__
+        # to simulate a missing optional framework.
         try:
             import crewai  # noqa: F401
         except ImportError as e:
@@ -190,7 +193,9 @@ class CrewAIRunner(BaseRunner):
 
         sources = []
         for knowledge_path_value in knowledge_paths:
-            knowledge_path = knowledge_path_value if isinstance(knowledge_path_value, Path) else Path(knowledge_path_value)
+            knowledge_path = (
+                knowledge_path_value if isinstance(knowledge_path_value, Path) else Path(knowledge_path_value)
+            )
             if not knowledge_path.is_dir():
                 continue
 

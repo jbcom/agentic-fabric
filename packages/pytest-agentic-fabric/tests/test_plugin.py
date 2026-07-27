@@ -169,9 +169,10 @@ def test_fabric_mocker_crewai_helpers(fabric_mocker: FabricMocker) -> None:
     assert fabric_mocker.patch_crewai_task() is not None
     assert fabric_mocker.patch_crewai_crew() is not None
     assert fabric_mocker.patch_crewai_process() is not None
-    assert fabric_mocker.patch_knowledge_source() is modules[
-        "crewai.knowledge.source.text_file_knowledge_source"
-    ].TextFileKnowledgeSource
+    assert (
+        fabric_mocker.patch_knowledge_source()
+        is modules["crewai.knowledge.source.text_file_knowledge_source"].TextFileKnowledgeSource
+    )
     assert fabric_mocker.mock_crewai_agent(role="Tester").role == "Tester"
     assert fabric_mocker.mock_crewai_task(description="Task").description == "Task"
     assert fabric_mocker.mock_crewai_crew(result="done").kickoff().raw == "done"
@@ -264,13 +265,16 @@ def test_shared_config_fixtures(
 def test_agentic_workspace_fixture(agentic_workspace: Path) -> None:
     """Workspace fixture should create a discoverable .fabric package."""
     manifest = agentic_workspace / "packages" / "sample" / ".fabric" / "manifest.yaml"
-    agents = agentic_workspace / "packages" / "sample" / ".fabric" / "fabric_agents" / "test_fabric_agent" / "agents.yaml"
+    agents = (
+        agentic_workspace / "packages" / "sample" / ".fabric" / "fabric_agents" / "test_fabric_agent" / "agents.yaml"
+    )
     tasks = agentic_workspace / "packages" / "sample" / ".fabric" / "fabric_agents" / "test_fabric_agent" / "tasks.yaml"
 
     assert manifest.exists()
-    assert yaml.safe_load(manifest.read_text(encoding="utf-8"))["fabric_agents"]["test_fabric_agent"][
-        "description"
-    ] == "A test fabric agent"
+    assert (
+        yaml.safe_load(manifest.read_text(encoding="utf-8"))["fabric_agents"]["test_fabric_agent"]["description"]
+        == "A test fabric agent"
+    )
     assert yaml.safe_load(agents.read_text(encoding="utf-8"))["tester"]["role"] == "Tester"
     assert yaml.safe_load(tasks.read_text(encoding="utf-8"))["verify"]["agent"] == "tester"
 

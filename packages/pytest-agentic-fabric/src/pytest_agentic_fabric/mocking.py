@@ -32,6 +32,27 @@ RUNTIME_MODULES: dict[str, tuple[str, ...]] = {
 ALL_FRAMEWORK_MODULES: tuple[str, ...] = (*CREWAI_MODULES, *LANGGRAPH_MODULES, *STRANDS_MODULES)
 
 
+def _set_module_attr(module: ModuleType, name: str, value: Any) -> None:
+    """Set an attribute on a dynamically fabricated ``ModuleType`` stand-in.
+
+    ``ModuleType`` has no statically known attributes, so mypy rejects direct
+    assignment for these constant-named attrs. Centralizing the ``Any`` cast
+    here keeps every call site a plain-looking assignment while satisfying
+    both mypy and ruff's B010 (setattr-with-constant) rule.
+    """
+    module.__dict__[name] = value
+
+
+def _get_module_attr(module: ModuleType, name: str) -> Any:
+    """Read an attribute from a dynamically fabricated ``ModuleType`` stand-in.
+
+    Mirrors :func:`_set_module_attr` for reads, avoiding ruff's B009
+    (getattr-with-constant) while keeping the ``ModuleType`` duck-typing
+    explicit and centralized.
+    """
+    return module.__dict__[name]
+
+
 @dataclass
 class FabricMocker:
     """Convenience wrapper around pytest-mock for optional agent runtime tests."""
@@ -114,11 +135,11 @@ class FabricMocker:
     def mock_crewai(self) -> dict[str, ModuleType]:
         """Install fake CrewAI modules with common entry points."""
         modules = self.mock_modules(CREWAI_MODULES)
-        setattr(modules["crewai"], "Agent", self.mocker.MagicMock())
-        setattr(modules["crewai"], "Crew", self.mocker.MagicMock())
-        setattr(modules["crewai"], "Task", self.mocker.MagicMock())
-        setattr(modules["crewai"], "Process", self.mocker.MagicMock())
-        setattr(
+        _set_module_attr(modules["crewai"], "Agent", self.mocker.MagicMock())
+        _set_module_attr(modules["crewai"], "Crew", self.mocker.MagicMock())
+        _set_module_attr(modules["crewai"], "Task", self.mocker.MagicMock())
+        _set_module_attr(modules["crewai"], "Process", self.mocker.MagicMock())
+        _set_module_attr(
             modules["crewai.knowledge.source.text_file_knowledge_source"],
             "TextFileKnowledgeSource",
             self.mocker.MagicMock(),
@@ -165,24 +186,24 @@ class FabricMocker:
         """Patch or return the CrewAI text-file knowledge source mock."""
         self._ensure_crewai()
         module = self.mocked_modules["crewai.knowledge.source.text_file_knowledge_source"]
-        return getattr(module, "TextFileKnowledgeSource")
+        return _get_module_attr(module, "TextFileKnowledgeSource")
 
     def mock_langgraph(self) -> dict[str, ModuleType]:
         """Install fake LangGraph modules with common entry points."""
         modules = self.mock_modules(LANGGRAPH_MODULES)
-        setattr(modules["langgraph.prebuilt"], "create_react_agent", self.mocker.MagicMock())
-        setattr(modules["langchain_anthropic"], "ChatAnthropic", self.mocker.MagicMock())
+        _set_module_attr(modules["langgraph.prebuilt"], "create_react_agent", self.mocker.MagicMock())
+        _set_module_attr(modules["langchain_anthropic"], "ChatAnthropic", self.mocker.MagicMock())
         return modules
 
     def patch_create_react_agent(self) -> Any:
         """Patch or return ``langgraph.prebuilt.create_react_agent``."""
         self._ensure_langgraph()
-        return getattr(self.mocked_modules["langgraph.prebuilt"], "create_react_agent")
+        return _get_module_attr(self.mocked_modules["langgraph.prebuilt"], "create_react_agent")
 
     def patch_chat_anthropic(self) -> Any:
         """Patch or return ``langchain_anthropic.ChatAnthropic``."""
         self._ensure_langgraph()
-        return getattr(self.mocked_modules["langchain_anthropic"], "ChatAnthropic")
+        return _get_module_attr(self.mocked_modules["langchain_anthropic"], "ChatAnthropic")
 
     def mock_langgraph_graph(self, result: str = "Test response") -> Any:
         """Create a LangGraph graph mock whose ``invoke`` returns one message."""
@@ -195,13 +216,13 @@ class FabricMocker:
     def mock_strands(self) -> dict[str, ModuleType]:
         """Install fake Strands modules with common entry points."""
         modules = self.mock_modules(STRANDS_MODULES)
-        setattr(modules["strands"], "Agent", self.mocker.MagicMock())
+        _set_module_attr(modules["strands"], "Agent", self.mocker.MagicMock())
         return modules
 
     def patch_strands_agent(self) -> Any:
         """Patch or return ``strands.Agent``."""
         self._ensure_strands()
-        return getattr(self.mocked_modules["strands"], "Agent")
+        return _get_module_attr(self.mocked_modules["strands"], "Agent")
 
     def mock_strands_agent(self, result: str = "Test response") -> Any:
         """Create a Strands agent mock whose call returns text."""

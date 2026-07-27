@@ -271,7 +271,11 @@ def _manifest_runtime(fabric_agent_config: Mapping[str, Any] | None) -> str | No
     """Read runtime requirements from a fabric agent manifest/config mapping."""
     if fabric_agent_config is None:
         return None
-    runtime = fabric_agent_config.get("required_framework") or fabric_agent_config.get("runtime") or fabric_agent_config.get("framework")
+    runtime = (
+        fabric_agent_config.get("required_framework")
+        or fabric_agent_config.get("runtime")
+        or fabric_agent_config.get("framework")
+    )
     return _normalize_runtime(str(runtime)) if runtime else None
 
 

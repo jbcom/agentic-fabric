@@ -65,7 +65,9 @@ def test_run_fabric_agent_uses_registered_config_and_runtime(monkeypatch: pytest
     """Named fabric agents should route through run_fabric_agent_auto with merged inputs."""
     calls: list[tuple[dict[str, Any], dict[str, Any], str | None]] = []
 
-    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
+    def fake_run_fabric_agent_auto(
+        fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None
+    ) -> str:
         calls.append((fabric_agent_config, inputs, framework))
         return "done"
 
@@ -214,7 +216,9 @@ def test_run_fabric_agent_accepts_direct_mapping(monkeypatch: pytest.MonkeyPatch
     """Direct fabric agent config mappings should bypass registry lookup."""
     calls: list[tuple[dict[str, Any], dict[str, Any], str | None]] = []
 
-    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None) -> str:
+    def fake_run_fabric_agent_auto(
+        fabric_agent_config: dict[str, Any], inputs: dict[str, Any], framework: str | None = None
+    ) -> str:
         calls.append((fabric_agent_config, inputs, framework))
         return "done"
 
@@ -264,7 +268,9 @@ def test_vendor_tools_delegate_to_vendor_capability_catalog(monkeypatch: pytest.
 def test_dynamic_helpers_and_missing_attributes(monkeypatch: pytest.MonkeyPatch) -> None:
     """Registered fabric agents should appear as dynamic run_<fabric_agent> helpers."""
     monkeypatch.setattr("agentic_fabric.core.decomposer.is_framework_available", lambda runtime: True)
-    monkeypatch.setattr("agentic_fabric.core.decomposer.run_fabric_agent_auto", lambda fabric_agent_config, inputs, framework: "done")
+    monkeypatch.setattr(
+        "agentic_fabric.core.decomposer.run_fabric_agent_auto", lambda fabric_agent_config, inputs, framework: "done"
+    )
 
     data = AgenticData(fabric_agents={"reviewer": {"name": "reviewer", "runtime": "crewai"}})
 

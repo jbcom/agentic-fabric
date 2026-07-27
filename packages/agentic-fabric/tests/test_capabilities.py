@@ -38,7 +38,10 @@ class TestCapabilityCollection:
 
         assert "build_fabric_agent" in runner.capability_map()
         assert "run_fabric_agent" in runner.capability_map()
-        assert runner.call_capability("run_fabric_agent", {"name": "fabric_agent"}, {"task": "go"}) == "{'name': 'fabric_agent'}:{'task': 'go'}"
+        assert (
+            runner.call_capability("run_fabric_agent", {"name": "fabric_agent"}, {"task": "go"})
+            == "{'name': 'fabric_agent'}:{'task': 'go'}"
+        )
 
         with pytest.raises(TypeError):
             runner.capability_map()["new"] = runner.capability_map()["run"]  # type: ignore[index]

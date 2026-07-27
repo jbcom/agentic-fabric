@@ -585,7 +585,9 @@ class TestLangGraphRunner:
         mock_create = fabric_mocker.patch_create_react_agent()
         fabric_mocker.patch_chat_anthropic()
         resolved_tool = fabric_mocker.MagicMock()
-        fabric_mocker.patch("agentic_fabric.runners.langgraph_runner.resolve_langgraph_tools", return_value=[resolved_tool])
+        fabric_mocker.patch(
+            "agentic_fabric.runners.langgraph_runner.resolve_langgraph_tools", return_value=[resolved_tool]
+        )
 
         runner = LangGraphRunner()
         fabric_agent_config = {
@@ -648,9 +650,7 @@ class TestLangGraphRunner:
         assert "..." in prompt
         assert prompt.count("A") == 200
 
-    def test_build_fabric_agent_uses_system_prompt_for_multi_agent(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_build_fabric_agent_uses_system_prompt_for_multi_agent(self, fabric_mocker: FabricMocker) -> None:
         """Multi-agent configs should pass the system prompt to create_react_agent."""
         fabric_mocker.mock_langgraph()
 
@@ -678,9 +678,7 @@ class TestLangGraphRunner:
         assert "Researcher" in kwargs["state_modifier"]
         assert "Writer" in kwargs["state_modifier"]
 
-    def test_get_llm_uses_chat_ollama_when_ollama_base_url_set(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_get_llm_uses_chat_ollama_when_ollama_base_url_set(self, fabric_mocker: FabricMocker) -> None:
         """OLLAMA_BASE_URL should route get_llm to ChatOllama."""
         import types as _types
 
@@ -709,9 +707,7 @@ class TestLangGraphRunner:
 class TestStrandsRunnerOllama:
     """Tests for the Strands runner Ollama provider path."""
 
-    def test_is_ollama_mode_true_when_ollama_base_url_set(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_is_ollama_mode_true_when_ollama_base_url_set(self, fabric_mocker: FabricMocker) -> None:
         """OLLAMA_BASE_URL should enable Ollama mode in the Strands runner."""
         fabric_mocker.mock_strands()
         fabric_mocker.patch.dict("os.environ", {"OLLAMA_BASE_URL": "http://localhost:11434"}, clear=False)
@@ -722,14 +718,10 @@ class TestStrandsRunnerOllama:
 
         assert runner._is_ollama_mode() is True
 
-    def test_is_ollama_mode_true_when_provider_env_set(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_is_ollama_mode_true_when_provider_env_set(self, fabric_mocker: FabricMocker) -> None:
         """AGENTIC_FABRIC_LLM_PROVIDER=ollama should enable Ollama mode."""
         fabric_mocker.mock_strands()
-        fabric_mocker.patch.dict(
-            "os.environ", {"AGENTIC_FABRIC_LLM_PROVIDER": "ollama"}, clear=False
-        )
+        fabric_mocker.patch.dict("os.environ", {"AGENTIC_FABRIC_LLM_PROVIDER": "ollama"}, clear=False)
 
         from agentic_fabric.runners.strands_runner import StrandsRunner
 
@@ -737,9 +729,7 @@ class TestStrandsRunnerOllama:
 
         assert runner._is_ollama_mode() is True
 
-    def test_get_ollama_model_returns_ollama_model_instance(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_get_ollama_model_returns_ollama_model_instance(self, fabric_mocker: FabricMocker) -> None:
         """_get_ollama_model should construct a Strands OllamaModel."""
         fabric_mocker.mock_strands()
 
@@ -767,9 +757,7 @@ class TestStrandsRunnerOllama:
         )
         assert result is MockOllamaModel.return_value
 
-    def test_build_fabric_agent_uses_ollama_model_when_ollama_mode(
-        self, fabric_mocker: FabricMocker
-    ) -> None:
+    def test_build_fabric_agent_uses_ollama_model_when_ollama_mode(self, fabric_mocker: FabricMocker) -> None:
         """build_fabric_agent should attach an OllamaModel when in Ollama mode."""
         import types as _types
 

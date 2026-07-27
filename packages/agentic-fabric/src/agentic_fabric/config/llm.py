@@ -16,7 +16,9 @@ from enum import Enum
 try:
     from crewai import LLM
 except ImportError:
-    # Allow module to load even if crewai not installed (for testing)
+    # CrewAI stays an optional, lazily-imported dependency (upstream ChromaDB
+    # advisory) -- this module must load without it, deferring the failure to
+    # first actual use of `LLM` rather than to import time.
     LLM = None  # type: ignore[assignment]
 
 
@@ -97,10 +99,7 @@ LLM_CONFIGS = {
 
 def _is_ollama_mode() -> bool:
     """Return whether Ollama is the configured LLM provider."""
-    return (
-        os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama"
-        or bool(os.getenv("OLLAMA_BASE_URL"))
-    )
+    return os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama" or bool(os.getenv("OLLAMA_BASE_URL"))
 
 
 def _get_ollama_model() -> str:

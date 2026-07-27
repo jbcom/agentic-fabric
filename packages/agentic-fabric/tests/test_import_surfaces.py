@@ -31,10 +31,7 @@ def test_package_version_falls_back_when_not_installed(monkeypatch: pytest.Monke
     # The actual __init__.py does: try: __version__ = version("agentic-fabric") except PackageNotFoundError: __version__ = "1.1.0"
     namespace: dict[str, Any] = {"version": missing_version, "PackageNotFoundError": PackageNotFoundError}
     exec(
-        "try:\n"
-        "    __version__ = version('agentic-fabric')\n"
-        "except PackageNotFoundError:\n"
-        "    __version__ = '1.1.0'\n",
+        "try:\n    __version__ = version('agentic-fabric')\nexcept PackageNotFoundError:\n    __version__ = '1.1.0'\n",
         namespace,
     )
 

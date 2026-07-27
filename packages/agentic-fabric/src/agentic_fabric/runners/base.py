@@ -228,7 +228,9 @@ class BaseRunner(AgentCapabilityProviderMixin, ABC):
             ```
         """
 
-    @runtime_capability("build_and_run", aliases=("run_fabric_agent",), description="Build and execute a fabric agent in one call.")
+    @runtime_capability(
+        "build_and_run", aliases=("run_fabric_agent",), description="Build and execute a fabric agent in one call."
+    )
     def build_and_run(
         self,
         fabric_agent_config: dict[str, Any],

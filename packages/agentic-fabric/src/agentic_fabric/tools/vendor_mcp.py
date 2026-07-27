@@ -11,10 +11,13 @@ import asyncio
 import builtins
 import inspect
 import json
+import logging
 
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast, get_origin, get_type_hints
 
+
+logger = logging.getLogger(__name__)
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install agentic-fabric[mcp]"
 VENDOR_INSTALL_MESSAGE = (
@@ -45,7 +48,12 @@ def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
     sig = inspect.signature(method)
     try:
         type_hints = get_type_hints(method)
-    except Exception:
+    except (NameError, TypeError):
+        logger.warning(
+            "Could not resolve type hints for %r; falling back to string-typed schema.",
+            method,
+            exc_info=True,
+        )
         type_hints = {}
     properties: dict[str, dict[str, Any]] = {}
     required: list[str] = []

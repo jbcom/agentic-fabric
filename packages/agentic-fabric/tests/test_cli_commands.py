@@ -144,7 +144,9 @@ def test_cmd_run_dispatches_single_agent_runner(capsys: pytest.CaptureFixture[st
     args = SimpleNamespace(json=False, runner="fake", package=None, fabric_agent=None)
     calls: list[tuple[SimpleNamespace, bool]] = []
 
-    with patch.object(cli, "_cmd_run_single_agent", side_effect=lambda args, use_json, start_time: calls.append((args, use_json))):
+    with patch.object(
+        cli, "_cmd_run_single_agent", side_effect=lambda args, use_json, start_time: calls.append((args, use_json))
+    ):
         cli.cmd_run(args)
 
     assert calls == [(args, False)]
@@ -281,7 +283,9 @@ def test_cmd_run_text_uses_empty_input_and_requested_or_auto_framework(
     )
     calls: list[dict[str, Any]] = []
 
-    def fake_run_fabric_agent_auto(fabric_agent_config: dict[str, Any], inputs: dict[str, str], framework: str | None = None) -> str:
+    def fake_run_fabric_agent_auto(
+        fabric_agent_config: dict[str, Any], inputs: dict[str, str], framework: str | None = None
+    ) -> str:
         calls.append({"fabric_agent_config": fabric_agent_config, "inputs": inputs, "framework": framework})
         return "done"
 

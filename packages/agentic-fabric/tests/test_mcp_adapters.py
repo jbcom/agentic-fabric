@@ -341,7 +341,9 @@ def install_fake_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
         get_connector_info=lambda name, *, include_unavailable=True: {"name": name, "available": True},
         list_connector_categories=list_connector_categories,
         list_connector_capabilities=lambda *, include_unavailable=True: ["search"],
-        list_connectors_by_category=lambda category, *, include_unavailable=True: [{"name": "demo", "category": category}],
+        list_connectors_by_category=lambda category, *, include_unavailable=True: [
+            {"name": "demo", "category": category}
+        ],
         list_connectors_by_capability=lambda capability, *, include_unavailable=True: [
             {"name": "demo", "capability": capability}
         ],

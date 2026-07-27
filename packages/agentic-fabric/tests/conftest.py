@@ -29,6 +29,8 @@ from pytest_agentic_fabric.plugin import (  # noqa: F401
     temp_fabric_dir,
 )
 
+from agentic_fabric.runners.registry import clear_runtime_cache
+
 
 def pytest_addoption(parser: Any) -> None:
     """Register test-suite options for live E2E coverage."""
@@ -64,6 +66,20 @@ def pytest_collection_modifyitems(config: Any, items: list[pytest.Item]) -> None
             test_frameworks = framework_markers.intersection(item.keywords)
             if test_frameworks and framework_filter not in test_frameworks:
                 item.add_marker(skip_framework)
+
+
+@pytest.fixture(autouse=True)
+def _clear_runtime_availability_cache() -> Generator[None, Any, None]:
+    """Reset the runner registry's import-availability cache between tests.
+
+    Tests that mock ``builtins.__import__`` to simulate a missing optional
+    framework populate ``_AVAILABILITY_CACHE`` with a stale ``False`` for the
+    duration of the mock. Without clearing it, that stale result leaks into
+    later tests that expect the framework to import successfully.
+    """
+    clear_runtime_cache()
+    yield
+    clear_runtime_cache()
 
 
 @pytest.fixture(autouse=True)

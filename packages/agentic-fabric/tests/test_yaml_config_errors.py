@@ -134,10 +134,7 @@ class TestGetFabricAgentConfigErrors:
         """Agents and tasks YAML roots must be mappings."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "fabric_agents:\n"
-            "  test_fabric_agent:\n"
-            "    agents: agents.yaml\n"
-            "    tasks: tasks.yaml\n",
+            "fabric_agents:\n  test_fabric_agent:\n    agents: agents.yaml\n    tasks: tasks.yaml\n",
             encoding="utf-8",
         )
         (tmp_path / "agents.yaml").write_text("- not\n- a mapping\n", encoding="utf-8")
@@ -156,10 +153,7 @@ class TestGetFabricAgentConfigErrors:
         """Empty but present agents/tasks files should load as empty mappings."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "fabric_agents:\n"
-            "  test_fabric_agent:\n"
-            "    agents: agents.yaml\n"
-            "    tasks: tasks.yaml\n",
+            "fabric_agents:\n  test_fabric_agent:\n    agents: agents.yaml\n    tasks: tasks.yaml\n",
             encoding="utf-8",
         )
         (tmp_path / "agents.yaml").write_text("", encoding="utf-8")
@@ -174,10 +168,7 @@ class TestGetFabricAgentConfigErrors:
         """Agents and tasks YAML should use explicit UTF-8 decoding."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "fabric_agents:\n"
-            "  test_fabric_agent:\n"
-            "    agents: agents.yaml\n"
-            "    tasks: tasks.yaml\n",
+            "fabric_agents:\n  test_fabric_agent:\n    agents: agents.yaml\n    tasks: tasks.yaml\n",
             encoding="utf-8",
         )
         (tmp_path / "agents.yaml").write_text("agent:\n  role: Café reviewer\n", encoding="utf-8")
@@ -258,10 +249,7 @@ class TestGetFabricAgentConfigErrors:
         """Manifest agents paths must stay inside the config directory."""
         manifest_file = tmp_path / "manifest.yaml"
         manifest_file.write_text(
-            "fabric_agents:\n"
-            "  test_fabric_agent:\n"
-            "    agents: ../outside_agents.yaml\n"
-            "    tasks: tasks.yaml\n"
+            "fabric_agents:\n  test_fabric_agent:\n    agents: ../outside_agents.yaml\n    tasks: tasks.yaml\n"
         )
 
         with pytest.raises(ValueError, match="Manifest path must be relative"):
@@ -281,10 +269,7 @@ class TestGetFabricAgentConfigErrors:
 
         manifest_file = config_dir / "manifest.yaml"
         manifest_file.write_text(
-            "fabric_agents:\n"
-            "  test_fabric_agent:\n"
-            "    agents: agents-link.yaml\n"
-            "    tasks: tasks.yaml\n",
+            "fabric_agents:\n  test_fabric_agent:\n    agents: agents-link.yaml\n    tasks: tasks.yaml\n",
             encoding="utf-8",
         )
 

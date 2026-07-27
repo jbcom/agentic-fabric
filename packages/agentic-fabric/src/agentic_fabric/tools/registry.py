@@ -74,7 +74,9 @@ def _allowed_import_prefixes() -> tuple[str, ...]:
 
 def _is_import_allowed(module_name: str) -> bool:
     """Return whether a fully qualified tool module may be imported."""
-    return any(module_name == prefix.rstrip(".") or module_name.startswith(prefix) for prefix in _allowed_import_prefixes())
+    return any(
+        module_name == prefix.rstrip(".") or module_name.startswith(prefix) for prefix in _allowed_import_prefixes()
+    )
 
 
 def _resolve_vendor_tool(tool_name: str) -> Any | None:
@@ -134,7 +136,9 @@ def resolve_tool(tool_name: str) -> Any | None:
             module_name, _, attr_name = canonical_name.rpartition(".")
             if module_name and attr_name:
                 if not _is_import_allowed(module_name):
-                    logger.warning("Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name)
+                    logger.warning(
+                        "Skipping tool '%s': module is not in AGENTIC_FABRIC_TOOL_IMPORT_ALLOWLIST", tool_name
+                    )
                     return None
                 return _build_factory(module_name, attr_name)()
     except (ImportError, AttributeError) as exc:

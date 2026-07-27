@@ -68,7 +68,9 @@ def test_run_fabric_agent_defaults_inputs_to_empty_dict(monkeypatch: pytest.Monk
     calls: list[tuple[Any, ...]] = []
 
     monkeypatch.setattr(fabric_runner, "discover_packages", lambda workspace_root: {"pkg": tmp_path})
-    monkeypatch.setattr(fabric_runner, "get_fabric_agent_config", lambda path, fabric_agent_name: {"name": fabric_agent_name})
+    monkeypatch.setattr(
+        fabric_runner, "get_fabric_agent_config", lambda path, fabric_agent_name: {"name": fabric_agent_name}
+    )
 
     def fake_run_fabric_agent_auto(config: dict[str, Any], inputs: dict[str, Any] | None = None) -> str:
         calls.append(("run", config, inputs))

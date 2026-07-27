@@ -23,6 +23,10 @@ class StrandsRunner(BaseRunner):
 
     def __init__(self):
         """Initialize Strands runner."""
+        # A direct `import` (rather than the registry's cached
+        # is_runtime_available) is deliberate: it is the only check that
+        # reliably honors tests mocking builtins.__import__ to simulate a
+        # missing optional framework.
         try:
             import strands  # noqa: F401
         except ImportError as e:
@@ -88,10 +92,7 @@ class StrandsRunner(BaseRunner):
         """Return whether Ollama is the configured LLM provider."""
         import os
 
-        return (
-            os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama"
-            or bool(os.getenv("OLLAMA_BASE_URL"))
-        )
+        return os.getenv("AGENTIC_FABRIC_LLM_PROVIDER", "").lower() == "ollama" or bool(os.getenv("OLLAMA_BASE_URL"))
 
     def _get_ollama_model(self, model_override: str | None = None):
         """Return a Strands OllamaModel for local inference."""

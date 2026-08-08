@@ -20,7 +20,7 @@ pytest-agentic-fabric = { workspace = true }
 [dependency-groups]
 dev = [
     "mypy>=2.3.0",
-    "ruff>=0.16.0",
+    "ruff>=0.16.1",
     "tox>=4.58.0",
     "tox-gh>=1.8.0",
     "tox-uv>=1.36.0",

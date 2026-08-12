@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-fabric"
 version = "1.2.2"
-description = "Framework-agnostic agent fabric orchestration for CrewAI, LangGraph, Strands, local CLI runners, and vendor-fabric tools"
+description = "Framework-agnostic agent orchestration with A2A, MCP, runtime adapters, and vendor-fabric tools"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 readme = "README.md"
 authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
 maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
-keywords = ["crewai", "langgraph", "strands", "ai-agents", "multi-agent", "orchestration", "vendor-fabric"]
+keywords = ["a2a", "mcp", "crewai", "langgraph", "strands", "ai-agents", "multi-agent", "orchestration", "vendor-fabric"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

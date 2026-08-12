@@ -8,5 +8,18 @@ Read `AGENTS.md` first in Codex sessions; it contains durable repository
 guidance, validation commands, and package boundary rules.
 
 The implemented surface includes `AgenticData`, lazy runtime registry metadata,
-capability decorators, vendor-tool references, and the sibling
-`pytest-agentic-fabric` package.
+capability decorators, vendor-tool references, A2A 1.0 JSON-RPC applications,
+MCP 2.0 tool servers, and the sibling `pytest-agentic-fabric` package.
+
+`vendor-fabric` is the required provider layer. Agentic Fabric exposes its
+public capability facade to agents; provider discovery, credentials, connector
+implementation, and network calls stay in Vendor Fabric.
+
+```bash
+pip install "agentic-fabric[a2a,mcp,github]"
+agentic-fabric-vendor-a2a --url https://agents.example.com/a2a
+agentic-fabric-vendor-mcp
+```
+
+See the [package README](packages/agentic-fabric/README.md) for protocol
+contracts, deployment guidance, and supported vendor extras.

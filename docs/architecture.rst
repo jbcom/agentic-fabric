@@ -12,6 +12,7 @@ Boundary
 - discovery and manifest loading
 - universal fabric agent composition
 - runner adapters for optional agent frameworks
+- A2A Agent Cards, JSON-RPC task execution, and MCP tool servers
 - tool resolution for built-in, MCP-style, fully qualified, and
   vendor-backed tools
 - agent-facing tool catalogs built from ``vendor-fabric`` capability
@@ -35,9 +36,8 @@ extends ``ExtendedData``. The full-stack inheritance line is:
    ExtendedData -> VendorData -> AgenticData
 
 ``AgenticData`` owns agent runtime context. It does not reimplement data
-containers or provider sync. Those behaviors come from inherited layers
-when ``vendor-fabric`` is installed, and from an import-safe fallback
-otherwise.
+containers or provider sync. Those behaviors come from the required
+``vendor-fabric`` layer; provider-specific SDKs remain optional and lazy.
 
 .. code:: python
 
@@ -126,6 +126,19 @@ Lazy vendor tool references are supported with
 When ``vendor-fabric`` is installed, ``AgenticData.vendor_tools()`` reads
 ``VendorData.capabilities()`` and returns lazy agent-facing wrappers for
 those provider operations.
+
+Protocol Surfaces
+-----------------
+
+A2A and MCP are agent-side interfaces, so their cards, routes, task events,
+tool schemas, transports, and protocol errors live here. They lower calls into
+``AgenticData`` and public ``vendor-fabric`` capabilities. They do not own
+credentials, connector construction, capability dispatch, or provider IO.
+
+The A2A surface advertises only the protocol binding it actually implements:
+version 1.0 JSON-RPC. The MCP surface targets SDK 2.x and returns complete
+typed results with structured content plus a text fallback. Both keep protocol
+SDK imports lazy behind their matching extras.
 
 Testing Package
 ---------------

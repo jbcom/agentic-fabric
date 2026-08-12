@@ -21,8 +21,9 @@ This file locks the intended SecretSync boundary for `agentic-fabric`.
 - Turn SecretSync-related vendor capabilities into framework-visible tools for
   CrewAI, LangGraph, Strands, MCP, and related runtimes.
 - Preserve the superclass chain `ExtendedData -> VendorData -> AgenticData`.
-- Keep install guidance honest: vendor extras and agent runtime extras are
-  separate concerns unless an explicit passthrough extra is later added.
+- Keep install guidance honest: the explicit `secrets-sync` passthrough extra
+  installs `vendor-fabric[secrets-sync]`; A2A and MCP remain separate protocol
+  extras.
 
 ## Required Direction
 

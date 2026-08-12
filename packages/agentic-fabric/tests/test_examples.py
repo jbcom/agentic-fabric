@@ -48,6 +48,8 @@ def test_mcp_adapters_example_inspects_owned_entry_points() -> None:
     summary = inspect_mcp_adapters()
 
     assert summary["extra"] == "mcp"
+    assert summary["sdk"] == "mcp>=2,<3"
+    assert summary["protocol"] == "2026-07-28"
     assert summary["entry_points"] == {
         "vendor": "agentic-fabric-vendor-mcp",
         "meshy": "agentic-fabric-meshy-mcp",
@@ -57,6 +59,7 @@ def test_mcp_adapters_example_inspects_owned_entry_points() -> None:
     assert "vendor-fabric[meshy]" in summary["install_guidance"]["meshy"]
     assert summary["client_config"]["mcpServers"]["vendor-fabric"]["command"] == "agentic-fabric-vendor-mcp"
     assert summary["client_config"]["mcpServers"]["meshy"]["command"] == "agentic-fabric-meshy-mcp"
+    assert summary["result_contract"]["structured_content"] is True
 
 
 def test_discovery_workflow_script_outputs_json() -> None:

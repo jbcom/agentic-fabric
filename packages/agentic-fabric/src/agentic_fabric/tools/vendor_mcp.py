@@ -15,11 +15,13 @@ import types
 from collections.abc import Callable, Mapping
 from typing import Any, get_args, get_origin, get_type_hints
 
+from agentic_fabric.tools.mcp import MCP_INSTALL_MESSAGE as _MCP_INSTALL_MESSAGE
 from agentic_fabric.tools.mcp import MCPToolAdapter, create_tool_server, run_tool_server
 
 
 logger = logging.getLogger(__name__)
 
+MCP_INSTALL_MESSAGE = _MCP_INSTALL_MESSAGE
 VENDOR_INSTALL_MESSAGE = "vendor-fabric is required by agentic-fabric. Reinstall agentic-fabric in this environment."
 
 

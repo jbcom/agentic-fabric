@@ -13,6 +13,8 @@ def inspect_mcp_adapters() -> dict[str, Any]:
     """Return deterministic MCP adapter configuration examples."""
     return {
         "extra": "mcp",
+        "sdk": "mcp>=2,<3",
+        "protocol": "2026-07-28",
         "entry_points": {
             "vendor": "agentic-fabric-vendor-mcp",
             "meshy": "agentic-fabric-meshy-mcp",
@@ -32,6 +34,11 @@ def inspect_mcp_adapters() -> dict[str, Any]:
                     "env": {"MESHY_API_KEY": "<set-in-shell-or-client-secret-store>"},
                 },
             }
+        },
+        "result_contract": {
+            "structured_content": True,
+            "text_fallback": True,
+            "input_validation": "JSON Schema Draft 2020-12",
         },
     }
 

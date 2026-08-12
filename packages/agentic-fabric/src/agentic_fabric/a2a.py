@@ -152,7 +152,7 @@ def create_agent_executor(spec: A2AAgentSpec) -> Any:
     sdk = _require_a2a()
     agent_executor_base = sdk["AgentExecutor"]
 
-    class FabricAgentExecutor(agent_executor_base):
+    class FabricAgentExecutor(agent_executor_base):  # type: ignore[misc, valid-type]
         """Bridge an application handler into A2A task events."""
 
         def __init__(self) -> None:

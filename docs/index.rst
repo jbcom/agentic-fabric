@@ -11,18 +11,20 @@ LangGraph, Strands, or local CLI runners.
    pip install agentic-fabric
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
+   pip install "agentic-fabric[a2a]"
    pip install "agentic-fabric[mcp]"
    pip install "agentic-fabric[scraping]"
 
 Local CLI runners are part of the core install because they shell out to
 external executables and require no third-party Python framework. LangGraph,
-Strands, MCP, scraping helpers, and vendor providers are opt-in extras. CrewAI
+Strands, A2A, MCP, scraping helpers, and vendor providers are opt-in extras. CrewAI
 support stays lazy but CrewAI itself is an external install while its ChromaDB
 dependency path has an upstream critical advisory with no patched version.
 
-Vendor-backed passthrough extras are deferred until ``vendor-fabric`` is
-published with a stable optional-extra contract. Until then, vendor references
-stay lazy and report install guidance at use time.
+``vendor-fabric`` is the required provider layer. Provider SDKs remain opt-in
+through matching ``anthropic``, ``aws``, ``cursor``, ``github``, ``google``,
+``meshy``, ``secrets-sync``, ``slack``, ``vault``, and ``zoom`` passthrough
+extras.
 
 Core imports stay lightweight. Optional frameworks and vendor SDKs are
 loaded only when a runner, tool, or adapter is resolved.
@@ -33,6 +35,7 @@ loaded only when a runner, tool, or adapter is resolved.
    getting-started
    architecture
    agentic-workflows
+   protocols
    vendor-fabric
    pillars
    development

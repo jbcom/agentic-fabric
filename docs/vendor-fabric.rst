@@ -1,9 +1,10 @@
 Vendor Fabric Integration
 =========================
 
-``agentic-fabric`` does not declare passthrough ``vendor-fabric`` extras
-until ``vendor-fabric`` is published and resolvable from PyPI. The core
-package still imports without vendor SDKs installed.
+``vendor-fabric`` is a required ``agentic-fabric`` dependency. Provider SDKs
+remain optional: this package declares matching ``anthropic``, ``aws``,
+``cursor``, ``github``, ``google``, ``meshy``, ``secrets-sync``, ``slack``,
+``vault``, and ``zoom`` passthrough extras.
 
 The integration rule is simple: vendor IO, provider capability metadata,
 and the SecretSync Python facade/capability surface belong in
@@ -11,9 +12,9 @@ and the SecretSync Python facade/capability surface belong in
 belong in ``secrets-sync``. Fabric agent orchestration, runtime selection, and
 agent-facing framework wrappers belong here.
 
-``AgenticData`` subclasses ``VendorData`` when ``vendor-fabric`` is
-installed. Until then, it keeps runtime context importable and raises
-clear guidance for vendor-backed operations.
+``AgenticData`` always subclasses ``VendorData``. This makes the layer contract
+explicit and prevents a fallback class from silently creating a second,
+incomplete provider-dispatch path.
 
 Vendor-backed tools use lazy references:
 
@@ -24,9 +25,9 @@ Vendor-backed tools use lazy references:
    tool = resolve_tool("vendor://github/get_file")
    result = tool(path="README.md")
 
-.. note:: Vendor-backed tools require ``vendor-fabric`` to be installed.
-   Without it, calling the tool raises an ``ImportError`` with install
-   guidance.
+.. note:: A provider-backed operation still requires its matching optional
+   extra and credentials. Base ``vendor-fabric`` does not eagerly import those
+   provider SDKs.
 
 Those wrappers route through ``AgenticData.call`` and ``VendorData``
 capabilities. Agent code should not import cloud SDKs or provider
@@ -48,11 +49,10 @@ capability route into a lazy ``VendorCapabilityTool``. The provider
 connectors, install availability, and dispatch behavior still come from
 ``vendor-fabric``.
 
-MCP ownership follows the same boundary. ``agentic-fabric`` owns the
-``agentic-fabric-vendor-mcp`` and ``agentic-fabric-meshy-mcp`` adapter entry
-points because MCP is an agent runtime transport. The underlying connector
-classes, provider methods, Meshy capability metadata, credentials, and network
-calls remain in ``vendor-fabric`` and are imported lazily only when the MCP
-server is created. If those lazy imports fail, the adapter reports the
-``agentic-fabric[mcp]`` or ``vendor-fabric[...]`` install guidance and preserves
-the original import failure for provider-extra debugging.
+A2A and MCP ownership follows the same boundary. ``agentic-fabric`` owns Agent
+Cards, task events, tool schemas, typed results, and transport entry points.
+The underlying connector classes, capability metadata, credentials, and
+network calls remain in ``vendor-fabric``. The generic vendor interfaces call
+only public package catalog functions, ``VendorData.capabilities()``, and
+``AgenticData.call()``; no private registry traversal or connector logic is
+duplicated here.

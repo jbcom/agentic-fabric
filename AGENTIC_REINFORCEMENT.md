@@ -8,14 +8,14 @@ This repository creates the runtime- and agent-aware superclass on top of
 - `AgenticData` extends `VendorData`, not `ExtendedData` directly.
 - Preserve vendor-layer semantics while adding runtime context, fabric agent registry
   behavior, runner dispatch, and agent-facing tool exposure.
-- The local `_VendorDataBase` fallback is an importability shim, not a second
-  architecture. Keep it minimal and temporary in spirit.
+- `vendor-fabric` is a required dependency. Do not restore a local fallback or
+  create a second provider-dispatch architecture.
 
 ## What This Repository Owns
 
 - runtime discovery and selection
 - runner registries and runtime adapters
-- CrewAI, LangGraph, Strands, and MCP-facing tool wrappers
+- CrewAI, LangGraph, Strands, A2A, and MCP-facing protocol/tool wrappers
 - agent-facing tool catalogs built from vendor capabilities
 - fabric agent, session, and agent orchestration context
 

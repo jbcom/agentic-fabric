@@ -14,5 +14,5 @@ python examples/mcp_adapters.py
 The bundled `sample_workspace/` directory demonstrates a framework-agnostic
 `.fabric/` layout.
 
-`mcp_adapters.py` shows the agentic-fabric-owned MCP entry points and a
-client configuration shape without importing the MCP SDK or provider packages.
+`mcp_adapters.py` shows the MCP 2.x entry points, protocol/result contract, and
+a client configuration shape without importing the MCP SDK or provider SDKs.

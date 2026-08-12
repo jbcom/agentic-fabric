@@ -292,6 +292,19 @@ def test_a2a_executor_cancellation_is_terminal(monkeypatch: pytest.MonkeyPatch) 
     assert empty_queue.events[0].context_id == ""
 
 
+def test_a2a_executor_ignores_late_failure_after_cancellation(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_fake_a2a(monkeypatch)
+
+    def fail(_request: a2a.A2ARequest) -> None:
+        raise RuntimeError("late failure")
+
+    executor = a2a.create_agent_executor(make_spec(fail))
+    executor._cancelled.add("task-1")
+    queue = FakeQueue()
+    asyncio.run(executor.execute(FakeContext(message=make_message()), queue))
+    assert [event.state for event in queue.events if event.kind == "status"] == ["working"]
+
+
 def test_vendor_a2a_spec_routes_structured_and_text_requests() -> None:
     class Data:
         def __init__(self) -> None:

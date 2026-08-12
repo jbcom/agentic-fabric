@@ -169,12 +169,7 @@ class AgenticData(VendorData):
             if fabric_agent_name in self._fabric_agents:
                 return lambda *args, **kwargs: self.run_fabric_agent(fabric_agent_name, *args, **kwargs)
 
-        # When real VendorData is installed, it may define __getattr__ for
-        # provider dispatch. Try the superclass, but fall through to a clean
-        # AttributeError if neither this class nor the superclass handles it.
-        if hasattr(super(), "__getattr__"):
-            return super().__getattr__(name)  # type: ignore[misc]
-        raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}")
+        return super().__getattr__(name)
 
     def __dir__(self) -> list[str]:
         """Include dynamic registered-fabric-agent helpers in introspection."""

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import builtins
+import inspect
 import sys
 import types
 
@@ -415,7 +416,9 @@ def test_vendor_mcp_schema_and_metadata_helpers() -> None:
     assert schema["properties"]["optional"]["default"] is None
     assert schema["additionalProperties"] is True
     assert unresolved_schema["properties"]["value"] == {}
+    assert vendor_mcp._annotation_schema(inspect.Parameter.empty) == {}
     assert vendor_mcp._metadata_value({"name": "mapping"}, "name") == "mapping"
+    assert vendor_mcp._metadata_value(types.SimpleNamespace(get=lambda key, default: "getter"), "name") == "getter"
     assert vendor_mcp._metadata_value(types.SimpleNamespace(name="attribute"), "name") == "attribute"
     assert vendor_mcp._metadata_value(object(), "missing", "fallback") == "fallback"
     assert vendor_mcp._tool_name("demo provider", "list/things") == "demo_provider_list_things"

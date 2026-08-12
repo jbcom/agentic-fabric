@@ -1,4 +1,4 @@
-"""MCP v2 adapter for vendor-fabric Meshy capability definitions."""
+"""MCP adapter for vendor-fabric Meshy capability definitions."""
 
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def _unknown_tool_text(name: str) -> str:
 
 
 def create_server() -> Any:
-    """Create an MCP v2 server with Meshy provider capabilities."""
+    """Create an MCP server with Meshy provider capabilities."""
     from agentic_fabric import __version__
 
     return create_tool_server(

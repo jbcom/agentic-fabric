@@ -13,7 +13,7 @@ def inspect_mcp_adapters() -> dict[str, Any]:
     """Return deterministic MCP adapter configuration examples."""
     return {
         "extra": "mcp",
-        "sdk": "mcp>=2,<3",
+        "sdk": "mcp>=1.23,<2",
         "protocol": "2026-07-28",
         "entry_points": {
             "vendor": "agentic-fabric-vendor-mcp",

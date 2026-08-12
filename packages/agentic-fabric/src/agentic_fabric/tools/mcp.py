@@ -2,8 +2,8 @@
 
 The public adapter is intentionally provider-neutral. Provider discovery,
 credentials, and calls remain in ``vendor-fabric``; this module only maps
-agent-facing callables onto the MCP 2026-07-28 tool contract implemented by
-the MCP Python SDK v2.
+agent-facing callables onto the structured tool contract implemented by the
+current MCP Python SDK line.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-MCP_INSTALL_MESSAGE = "MCP SDK v2 is not installed. Install with: pip install agentic-fabric[mcp]"
+MCP_INSTALL_MESSAGE = "MCP SDK is not installed. Install with: pip install agentic-fabric[mcp]"
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,7 @@ class MCPToolAdapter:
 
 
 def _require_mcp() -> tuple[Any, ...]:
-    """Import the MCP v2 low-level server surface lazily."""
+    """Import the low-level MCP server surface lazily."""
     try:
         from jsonschema import Draft202012Validator
         from jsonschema.exceptions import ValidationError
@@ -91,7 +91,7 @@ def create_tool_server(
     format_error: Callable[[Exception, Mapping[str, Any]], str] = _default_error,
     format_unknown_tool: Callable[[str], str] | None = None,
 ) -> Any:
-    """Create an MCP v2 server for a finite collection of tool adapters.
+    """Create an MCP server for a finite collection of tool adapters.
 
     The server validates every call against the advertised JSON Schema,
     returns both text and structured content, marks execution failures with
@@ -186,7 +186,7 @@ def create_tool_server(
 
 
 def run_tool_server(server: Any) -> None:
-    """Run an MCP v2 server over stdio with legacy-client compatibility."""
+    """Run an MCP server over stdio with legacy-client compatibility."""
     try:
         from mcp.server.stdio import stdio_server
     except ImportError as exc:

@@ -48,7 +48,7 @@ def test_mcp_adapters_example_inspects_owned_entry_points() -> None:
     summary = inspect_mcp_adapters()
 
     assert summary["extra"] == "mcp"
-    assert summary["sdk"] == "mcp>=2,<3"
+    assert summary["sdk"] == "mcp>=1.23,<2"
     assert summary["protocol"] == "2026-07-28"
     assert summary["entry_points"] == {
         "vendor": "agentic-fabric-vendor-mcp",

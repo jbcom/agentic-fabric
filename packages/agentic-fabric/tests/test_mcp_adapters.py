@@ -1,4 +1,4 @@
-"""Tests for the MCP v2 server and vendor adapters."""
+"""Tests for the MCP server and vendor adapters."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ class FakeMCPError(Exception):
 
 
 class FakeServer:
-    """MCP v2 low-level server stand-in."""
+    """MCP low-level server stand-in."""
 
     def __init__(
         self,
@@ -71,7 +71,7 @@ class RunnableServer:
 
 
 def install_fake_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Install the constructor-based MCP v2 surface used by adapters."""
+    """Install the constructor-based MCP surface used by adapters."""
     mcp_module = types.ModuleType("mcp")
     server_module = types.ModuleType("mcp.server")
     shared_module = types.ModuleType("mcp.shared")
@@ -258,7 +258,7 @@ def test_generic_mcp_server_rejects_duplicate_names_and_invalid_output(
 
 def test_generic_mcp_reports_missing_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
     reject_imports(monkeypatch, "mcp")
-    with pytest.raises(ImportError, match="SDK v2"):
+    with pytest.raises(ImportError, match="MCP SDK"):
         mcp_server.create_tool_server("missing", [])
 
 
@@ -271,7 +271,7 @@ def test_generic_mcp_run_server(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_generic_mcp_run_server_reports_missing_stdio(monkeypatch: pytest.MonkeyPatch) -> None:
     reject_imports(monkeypatch, "mcp.server.stdio")
-    with pytest.raises(ImportError, match="SDK v2"):
+    with pytest.raises(ImportError, match="MCP SDK"):
         mcp_server.run_tool_server(RunnableServer([]))
 
 

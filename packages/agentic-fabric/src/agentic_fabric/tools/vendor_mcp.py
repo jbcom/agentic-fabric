@@ -1,4 +1,4 @@
-"""MCP v2 adapter for public ``vendor-fabric`` capabilities.
+"""MCP adapter for public ``vendor-fabric`` capabilities.
 
 Provider discovery, capability routing, credentials, and connector calls stay
 in ``vendor-fabric``. This module converts that public facade into MCP tools
@@ -274,7 +274,7 @@ def _unknown_tool_text(name: str) -> str:
 
 
 def create_server(data: Any | None = None) -> Any:
-    """Create an MCP v2 server exposing the public vendor capability facade."""
+    """Create an MCP server exposing the public vendor capability facade."""
     from agentic_fabric import AgenticData, __version__
 
     vendor_fabric = _require_vendor_fabric()

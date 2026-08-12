@@ -32,7 +32,7 @@ dependencies = [
 a2a = ["a2a-sdk[http-server]>=1.1.2,<2.0.0", "uvicorn>=0.35.0"]
 langgraph = ["langgraph>=0.2.0", "langchain-anthropic>=0.3.0", "langchain-ollama>=0.3.0"]
 strands = ["strands-agents[ollama]>=0.1.0"]
-mcp = ["mcp>=2.0.0,<3.0.0"]
+mcp = ["jsonschema>=4.26.0", "mcp>=1.23.0,<2.0.0"]
 scraping = ["beautifulsoup4>=4.12.0", "requests>=2.31.0"]
 anthropic = ["vendor-fabric[anthropic]>=2.1.5,<3.0.0"]
 aws = ["vendor-fabric[aws]>=2.1.5,<3.0.0"]
@@ -46,6 +46,7 @@ vault = ["vendor-fabric[vault]>=2.1.5,<3.0.0"]
 zoom = ["vendor-fabric[zoom]>=2.1.5,<3.0.0"]
 tests = [
     "coverage[toml]>=7.14.3",
+    "jsonschema>=4.26.0",
     "pytest-agentic-fabric[tests]",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",

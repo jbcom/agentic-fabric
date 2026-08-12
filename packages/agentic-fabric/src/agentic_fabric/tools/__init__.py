@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from agentic_fabric.tools.file_tools import DirectoryListTool, GameCodeReaderTool, GameCodeWriterTool
+    from agentic_fabric.tools.mcp import MCPToolAdapter, create_tool_server, run_tool_server
     from agentic_fabric.tools.scraping_tools import CrawlWebsiteTool, ScrapeWebsiteTool
     from agentic_fabric.tools.vendor import VendorCapabilityTool, vendor_capability_tools
 
@@ -23,6 +24,8 @@ def _load_attr(module_name: str, attr_name: str) -> Any:
 
 
 def __getattr__(name: str) -> Any:
+    if name in {"MCPToolAdapter", "create_tool_server", "run_tool_server"}:
+        return _load_attr("agentic_fabric.tools.mcp", name)
     if name in {"DirectoryListTool", "GameCodeReaderTool", "GameCodeWriterTool"}:
         return _load_attr("agentic_fabric.tools.file_tools", name)
     if name in {"CrawlWebsiteTool", "ScrapeWebsiteTool"}:
@@ -67,10 +70,13 @@ __all__ = [
     "DirectoryListTool",
     "GameCodeReaderTool",
     "GameCodeWriterTool",
+    "MCPToolAdapter",
     "ScrapeWebsiteTool",
     "VendorCapabilityTool",
+    "create_tool_server",
     "get_all_tools",
     "get_file_tools",
     "get_scraping_tools",
+    "run_tool_server",
     "vendor_capability_tools",
 ]

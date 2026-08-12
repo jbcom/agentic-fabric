@@ -25,13 +25,25 @@ classifiers = [
 ]
 dependencies = [
     "pyyaml>=6.0.3",
+    "vendor-fabric>=2.1.5,<3.0.0",
 ]
 
 [project.optional-dependencies]
+a2a = ["a2a-sdk[http-server]>=1.1.2,<2.0.0", "uvicorn>=0.35.0"]
 langgraph = ["langgraph>=0.2.0", "langchain-anthropic>=0.3.0", "langchain-ollama>=0.3.0"]
 strands = ["strands-agents[ollama]>=0.1.0"]
-mcp = ["mcp>=1.0.0"]
+mcp = ["mcp>=2.0.0,<3.0.0"]
 scraping = ["beautifulsoup4>=4.12.0", "requests>=2.31.0"]
+anthropic = ["vendor-fabric[anthropic]>=2.1.5,<3.0.0"]
+aws = ["vendor-fabric[aws]>=2.1.5,<3.0.0"]
+cursor = ["vendor-fabric[cursor]>=2.1.5,<3.0.0"]
+github = ["vendor-fabric[github]>=2.1.5,<3.0.0"]
+google = ["vendor-fabric[google]>=2.1.5,<3.0.0"]
+meshy = ["vendor-fabric[meshy]>=2.1.5,<3.0.0"]
+secrets-sync = ["vendor-fabric[secrets-sync]>=2.1.5,<3.0.0"]
+slack = ["vendor-fabric[slack]>=2.1.5,<3.0.0"]
+vault = ["vendor-fabric[vault]>=2.1.5,<3.0.0"]
+zoom = ["vendor-fabric[zoom]>=2.1.5,<3.0.0"]
 tests = [
     "coverage[toml]>=7.14.3",
     "pytest-agentic-fabric[tests]",
@@ -63,6 +75,7 @@ docs = [
 agentic-fabric = "agentic_fabric.main:main"
 agentic-fabric-meshy-mcp = "agentic_fabric.tools.meshy_mcp:main"
 agentic-fabric-vendor-mcp = "agentic_fabric.tools.vendor_mcp:main"
+agentic-fabric-vendor-a2a = "agentic_fabric.a2a:main"
 
 [project.urls]
 Documentation = "https://jonbogaty.com/agentic-fabric/"

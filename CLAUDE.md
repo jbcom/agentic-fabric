@@ -28,7 +28,7 @@ Commands are defined in `tox.ini` and run via `tox -e <env>` (use `uvx --with to
 Extended operating protocols, package/layer boundaries, preferred commands, and release flow live in `AGENTS.md` — read it before non-trivial work. This CLAUDE.md deliberately does not restate that content (DRY). Topics `AGENTS.md` covers:
 
 - Workspace scope: `packages/agentic-fabric` + `packages/pytest-agentic-fabric` + Sphinx `docs/`
-- Layer boundaries: `extended-data` (data primitives) → `vendor-fabric` (vendor connectors, SecretSync facade, provider dispatch) → `agentic-fabric` (runtime discovery, runner adapters, agent tool wrappers, MCP). `AgenticData extends VendorData extends ExtendedData`; agent code must not call vendor SDKs directly.
+- Layer boundaries: `extended-data` (data primitives) → `vendor-fabric` (vendor connectors, SecretSync facade, provider dispatch) → `agentic-fabric` (runtime discovery, runner adapters, A2A/MCP surfaces, agent tool wrappers). `AgenticData extends VendorData extends ExtendedData`; agent code must not call vendor SDKs directly.
 - Preferred tox/uv commands and the "no `skip_missing_interpreters`, all four Pythons" rule.
 - Expectations: README/docs/examples/tests stay aligned, optional framework imports stay lazy + registry-backed, vendor tools routed through `vendor-fabric` capabilities, library runtime uses logging (CLI/examples may write user-facing output).
 - Release flow: release-please owns versions via `ci.yml` / `release.yml` / `cd.yml` (PyPI publish + GitHub Pages Sphinx deploy); do not hand-edit versions/tags.
@@ -37,6 +37,6 @@ Extended operating protocols, package/layer boundaries, preferred commands, and 
 
 - **Pillars** (see `docs/pillars.rst`): Declare Once · Data And Context Move Together (`AgenticData` carries data + provider + runtime + logging + tool registry) · Lazy by Default · Capabilities Over Boilerplate (decorators + `__init_subclass__`, no custom dunders) · Clear Boundaries · Testable Adapters · Frameworks Are Optional, Contracts Are Not.
 - **Architecture source of truth:** `docs/architecture.rst` — runtime selection precedence, capability registry (`agentic_fabric.capabilities`), `vendor://provider/operation` lazy tool references.
-- Docs are Sphinx `.rst` under `docs/` (Furo theme); toctree in `docs/index.rst` covers getting-started, architecture, agentic-workflows, vendor-fabric, pillars, development, api/index. Docs build is treated as warnings-fatal (`-W -E`).
-- Optional extras are install-gated: `[langgraph]`, `[strands]`, `[mcp]`, `[scraping]`; CrewAI stays lazy (upstream ChromaDB advisory). Vendor passthrough extras deferred until `vendor-fabric` publishes a stable extra contract.
+- Docs are Sphinx `.rst` under `docs/` (Furo theme); toctree in `docs/index.rst` covers getting-started, architecture, agentic-workflows, protocols, vendor-fabric, pillars, development, api/index. Docs build is treated as warnings-fatal (`-W -E`).
+- Optional extras are install-gated: `[langgraph]`, `[strands]`, `[a2a]`, `[mcp]`, `[scraping]`, and named provider passthrough extras; CrewAI stays lazy (upstream ChromaDB advisory). Base `vendor-fabric` is required while provider SDK imports remain lazy.
 - Coverage is 100% enforced per package — write tests in the same change as any public behavior.

@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-fabric"
 version = "1.2.2"
-description = "Framework-agnostic agent fabric orchestration for CrewAI, LangGraph, Strands, local CLI runners, and vendor-fabric tools"
+description = "Framework-agnostic agent orchestration with A2A, MCP, runtime adapters, and vendor-fabric tools"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 readme = "README.md"
 authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
 maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
-keywords = ["crewai", "langgraph", "strands", "ai-agents", "multi-agent", "orchestration", "vendor-fabric"]
+keywords = ["a2a", "mcp", "crewai", "langgraph", "strands", "ai-agents", "multi-agent", "orchestration", "vendor-fabric"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -25,15 +25,28 @@ classifiers = [
 ]
 dependencies = [
     "pyyaml>=6.0.3",
+    "vendor-fabric>=2.1.5,<3.0.0",
 ]
 
 [project.optional-dependencies]
+a2a = ["a2a-sdk[http-server]>=1.1.2,<2.0.0", "uvicorn>=0.35.0"]
 langgraph = ["langgraph>=0.2.0", "langchain-anthropic>=0.3.0", "langchain-ollama>=0.3.0"]
 strands = ["strands-agents[ollama]>=0.1.0"]
-mcp = ["mcp>=1.0.0"]
+mcp = ["jsonschema>=4.26.0", "mcp>=1.23.0,<2.0.0"]
 scraping = ["beautifulsoup4>=4.12.0", "requests>=2.31.0"]
+anthropic = ["vendor-fabric[anthropic]>=2.1.5,<3.0.0"]
+aws = ["vendor-fabric[aws]>=2.1.5,<3.0.0"]
+cursor = ["vendor-fabric[cursor]>=2.1.5,<3.0.0"]
+github = ["vendor-fabric[github]>=2.1.5,<3.0.0"]
+google = ["vendor-fabric[google]>=2.1.5,<3.0.0"]
+meshy = ["vendor-fabric[meshy]>=2.1.5,<3.0.0"]
+secrets-sync = ["vendor-fabric[secrets-sync]>=2.1.5,<3.0.0"]
+slack = ["vendor-fabric[slack]>=2.1.5,<3.0.0"]
+vault = ["vendor-fabric[vault]>=2.1.5,<3.0.0"]
+zoom = ["vendor-fabric[zoom]>=2.1.5,<3.0.0"]
 tests = [
     "coverage[toml]>=7.14.3",
+    "jsonschema>=4.26.0",
     "pytest-agentic-fabric[tests]",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
@@ -63,6 +76,7 @@ docs = [
 agentic-fabric = "agentic_fabric.main:main"
 agentic-fabric-meshy-mcp = "agentic_fabric.tools.meshy_mcp:main"
 agentic-fabric-vendor-mcp = "agentic_fabric.tools.vendor_mcp:main"
+agentic-fabric-vendor-a2a = "agentic_fabric.a2a:main"
 
 [project.urls]
 Documentation = "https://jonbogaty.com/agentic-fabric/"

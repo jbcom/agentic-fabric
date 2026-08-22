@@ -1,94 +1,66 @@
-"""Tests for MCP transport adapters."""
+"""Tests for the MCP server and vendor adapters."""
 
 from __future__ import annotations
 
 import asyncio
 import builtins
+import inspect
 import sys
 import types
 
-from dataclasses import dataclass
+from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
 
+from jsonschema.exceptions import SchemaError
+
+from agentic_fabric.tools import mcp as mcp_server
 from agentic_fabric.tools import meshy_mcp, vendor_mcp
 
 
-@dataclass
-class FakeTextContent:
-    type: str
-    text: str
+class FakeModel:
+    """Small Pydantic-like protocol result used by the fake SDK."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.__dict__.update(kwargs)
 
 
-class FakeTool:
-    def __init__(self, name: str, description: str, inputSchema: dict[str, Any]) -> None:
-        self.name = name
-        self.description = description
-        self.inputSchema = inputSchema
+class FakeMCPError(Exception):
+    """Record a protocol error code and message."""
+
+    def __init__(self, code: int, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
 
 
 class FakeServer:
-    """Minimal MCP server stand-in that records registered handlers."""
+    """MCP low-level server stand-in."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        *,
+        version: str = "",
+        instructions: str | None = None,
+        on_list_tools: Any = None,
+        on_call_tool: Any = None,
+    ) -> None:
         self.name = name
-        self.list_tools_handler: Any | None = None
-        self.call_tool_handler: Any | None = None
+        self.version = version
+        self.instructions = instructions
+        self.on_list_tools = on_list_tools
+        self.on_call_tool = on_call_tool
 
-    def list_tools(self) -> Any:
-        def decorator(func: Any) -> Any:
-            self.list_tools_handler = func
-            return func
-
-        return decorator
-
-    def call_tool(self) -> Any:
-        def decorator(func: Any) -> Any:
-            self.call_tool_handler = func
-            return func
-
-        return decorator
-
-
-def install_fake_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Install fake MCP modules for adapter tests."""
-    mcp_module = types.ModuleType("mcp")
-    server_module = types.ModuleType("mcp.server")
-    types_module = types.ModuleType("mcp.types")
-    server_module.Server = FakeServer
-    types_module.Tool = FakeTool
-    types_module.TextContent = FakeTextContent
-
-    monkeypatch.setitem(sys.modules, "mcp", mcp_module)
-    monkeypatch.setitem(sys.modules, "mcp.server", server_module)
-    monkeypatch.setitem(sys.modules, "mcp.types", types_module)
-
-
-def install_fake_stdio(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Any, Any, Any]]:
-    """Install a fake MCP stdio server and return recorded run calls."""
-    calls: list[tuple[Any, Any, Any]] = []
-
-    class FakeStdio:
-        async def __aenter__(self) -> tuple[str, str]:
-            return ("read", "write")
-
-        async def __aexit__(
-            self,
-            exc_type: type[BaseException] | None,
-            exc: BaseException | None,
-            traceback: types.TracebackType | None,
-        ) -> bool:
-            return False
-
-    stdio_module = types.ModuleType("mcp.server.stdio")
-    stdio_module.stdio_server = FakeStdio
-    monkeypatch.setitem(sys.modules, "mcp.server.stdio", stdio_module)
-    return calls
+    def create_initialization_options(self) -> dict[str, bool]:
+        return {"ready": True}
 
 
 class RunnableServer:
-    def __init__(self, calls: list[tuple[Any, Any, Any]]) -> None:
+    """Server stand-in for stdio lifecycle tests."""
+
+    def __init__(self, calls: list[tuple[Any, ...]]) -> None:
         self.calls = calls
 
     def create_initialization_options(self) -> dict[str, bool]:
@@ -98,335 +70,322 @@ class RunnableServer:
         self.calls.append((read_stream, write_stream, options))
 
 
-def install_fake_extended_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Install fake extended-data helpers to cover optional success branches."""
-    extended_data_module = types.ModuleType("extended_data")
-    containers_module = types.ModuleType("extended_data.containers")
-    redaction_module = types.ModuleType("extended_data.primitives.redaction")
-    io_module = types.ModuleType("extended_data.io")
+def install_fake_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Install the constructor-based MCP surface used by adapters."""
+    mcp_module = types.ModuleType("mcp")
+    server_module = types.ModuleType("mcp.server")
+    shared_module = types.ModuleType("mcp.shared")
+    exceptions_module = types.ModuleType("mcp.shared.exceptions")
+    types_module = types.ModuleType("mcp.types")
+    server_module.Server = FakeServer
+    exceptions_module.MCPError = FakeMCPError
+    types_module.INVALID_PARAMS = -32602
+    for name in ("CallToolResult", "ListToolsResult", "TextContent", "Tool"):
+        setattr(types_module, name, FakeModel)
+    monkeypatch.setitem(sys.modules, "mcp", mcp_module)
+    monkeypatch.setitem(sys.modules, "mcp.server", server_module)
+    monkeypatch.setitem(sys.modules, "mcp.shared", shared_module)
+    monkeypatch.setitem(sys.modules, "mcp.shared.exceptions", exceptions_module)
+    monkeypatch.setitem(sys.modules, "mcp.types", types_module)
 
-    containers_module.to_builtin = lambda value: {"converted": value}
-    redaction_module.redact_sensitive_data = lambda value: {"redacted": value}
-    redaction_module.redact_sensitive_text = lambda value, *, values=None: f"redacted:{value}"
-    io_module.wrap_raw_data_for_export = lambda payload, **kwargs: f"wrapped:{payload}:{sorted(kwargs)}"
 
-    monkeypatch.setitem(sys.modules, "extended_data", extended_data_module)
-    monkeypatch.setitem(sys.modules, "extended_data.containers", containers_module)
-    monkeypatch.setitem(sys.modules, "extended_data.primitives.redaction", redaction_module)
-    monkeypatch.setitem(sys.modules, "extended_data.io", io_module)
+def install_fake_stdio(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Any, ...]]:
+    """Install a fake stdio transport and return the run-call ledger."""
+    calls: list[tuple[Any, ...]] = []
+
+    @asynccontextmanager
+    async def stdio_server() -> Any:
+        yield "read", "write"
+
+    stdio_module = types.ModuleType("mcp.server.stdio")
+    stdio_module.stdio_server = stdio_server
+    monkeypatch.setitem(sys.modules, "mcp.server.stdio", stdio_module)
+    return calls
 
 
 def reject_imports(monkeypatch: pytest.MonkeyPatch, prefix: str) -> None:
-    """Reject imports under a package prefix."""
+    """Reject imports for a module prefix while preserving other imports."""
     real_import = builtins.__import__
 
-    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
+    def reject(name: str, *args: Any, **kwargs: Any) -> Any:
         if name == prefix or name.startswith(f"{prefix}."):
-            raise ImportError(f"missing {prefix}")
+            raise ImportError(f"blocked {name}")
         return real_import(name, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
+    monkeypatch.setattr(builtins, "__import__", reject)
 
 
-def test_meshy_mcp_reports_missing_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "mcp")
-
-    with pytest.raises(ImportError, match=r"agentic-fabric\[mcp\]"):
-        meshy_mcp.create_server()
-
-
-def test_meshy_mcp_create_tools_reports_missing_mcp_types(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "mcp.types")
-
-    with pytest.raises(ImportError, match=r"agentic-fabric\[mcp\]"):
-        meshy_mcp._create_mcp_tools()
-
-
-def test_meshy_mcp_reports_missing_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_mcp(monkeypatch)
-    reject_imports(monkeypatch, "vendor_fabric")
-
-    with pytest.raises(ImportError, match=r"vendor-fabric\[meshy\]"):
-        meshy_mcp.create_server()
-
-
-def test_meshy_mcp_preserves_provider_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setitem(sys.modules, "vendor_fabric", types.ModuleType("vendor_fabric"))
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", types.ModuleType("vendor_fabric.meshy"))
-
-    with pytest.raises(ImportError) as exc_info:
-        meshy_mcp._require_meshy_tool_definitions()
-
-    assert "vendor-fabric[meshy] is required" in str(exc_info.value)
-    assert "Original import error:" in str(exc_info.value)
-
-
-def test_meshy_mcp_exposes_vendor_tool_definitions(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generic_mcp_server_lists_calls_validates_and_reports_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
 
-    class FakeSchema:
-        @staticmethod
-        def model_json_schema() -> dict[str, Any]:
-            return {"properties": {"prompt": {"type": "string"}}, "required": ["prompt"]}
+    async def asynchronous(*, value: int) -> dict[str, int]:
+        return {"value": value + 1}
 
-    def generate(prompt: str) -> dict[str, str]:
-        return {"ok": prompt}
+    def failure(*, token: str) -> None:
+        raise RuntimeError(f"bad {token}")
 
-    vendor_module = types.ModuleType("vendor_fabric")
-    meshy_module = types.ModuleType("vendor_fabric.meshy")
-    tools_module = types.ModuleType("vendor_fabric.meshy.tools")
-    tools_module.TOOL_DEFINITIONS = [
-        {
-            "name": "text3d_generate",
-            "description": "Generate a model.",
-            "schema": FakeSchema,
-            "func": generate,
-        }
-    ]
-    monkeypatch.setitem(sys.modules, "vendor_fabric", vendor_module)
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", meshy_module)
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy.tools", tools_module)
+    server = mcp_server.create_tool_server(
+        "demo",
+        [
+            mcp_server.MCPToolAdapter(
+                "increment",
+                "Increment a number.",
+                {
+                    "type": "object",
+                    "properties": {"value": {"type": "integer"}},
+                    "required": ["value"],
+                    "additionalProperties": False,
+                },
+                asynchronous,
+            ),
+            mcp_server.MCPToolAdapter(
+                "failure",
+                "Fail safely.",
+                {
+                    "type": "object",
+                    "properties": {"token": {"type": "string"}},
+                    "required": ["token"],
+                },
+                failure,
+                output_schema={"type": "object"},
+            ),
+        ],
+        version="2.3",
+        instructions="Use carefully.",
+    )
 
-    server = meshy_mcp.create_server()
-    listed = asyncio.run(server.list_tools_handler())
-    result = asyncio.run(server.call_tool_handler("text3d_generate", {"prompt": "cube"}))
-    unknown = asyncio.run(server.call_tool_handler("missing", None))
+    listed = asyncio.run(server.on_list_tools(None, None))
+    success = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="increment", arguments={"value": 2})))
+    invalid = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="increment", arguments={"value": "x"})))
+    failure_result = asyncio.run(
+        server.on_call_tool(None, types.SimpleNamespace(name="failure", arguments={"token": "secret"}))
+    )
 
-    assert server.name == "meshy-ai"
-    assert [(tool.name, tool.description, tool.inputSchema) for tool in listed] == [
-        (
-            "text3d_generate",
-            "Generate a model.",
-            {"type": "object", "properties": {"prompt": {"type": "string"}}, "required": ["prompt"]},
-        )
-    ]
-    assert "cube" in result[0].text
-    assert "Unknown tool: missing" in unknown[0].text
+    assert server.name == "demo"
+    assert server.version == "2.3"
+    assert server.instructions == "Use carefully."
+    assert [tool.name for tool in listed.tools] == ["increment", "failure"]
+    assert listed.tools[0].input_schema["required"] == ["value"]
+    assert listed.tools[1].output_schema == {"type": "object"}
+    assert success.structured_content == {"value": 3}
+    assert '"value": 3' in success.content[0].text
+    assert success.is_error is False
+    assert invalid.is_error is True
+    assert "ValidationError" in invalid.structured_content["error"]
+    assert failure_result.is_error is True
+    assert "bad secret" in failure_result.structured_content["error"]
+
+    with pytest.raises(FakeMCPError) as exc_info:
+        asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="missing", arguments=None)))
+    assert exc_info.value.code == -32602
+    assert exc_info.value.message == "Unknown tool: missing"
 
 
-def test_meshy_mcp_handles_tool_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generic_mcp_server_custom_normalization_and_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
-
-    def explode(prompt: str) -> dict[str, str]:
-        raise RuntimeError(f"failed {prompt}")
-
-    tools_module = types.ModuleType("vendor_fabric.meshy.tools")
-    tools_module.TOOL_DEFINITIONS = [{"name": "explode", "schema": None, "func": explode}]
-    monkeypatch.setitem(sys.modules, "vendor_fabric", types.ModuleType("vendor_fabric"))
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", types.ModuleType("vendor_fabric.meshy"))
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy.tools", tools_module)
-
-    server = meshy_mcp.create_server()
-    result = asyncio.run(server.call_tool_handler("explode", {"prompt": "cube"}))
-
-    assert "failed cube" in result[0].text
-
-
-def test_meshy_mcp_awaits_async_provider_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_mcp(monkeypatch)
-
-    async def generate(prompt: str) -> dict[str, str]:
-        return {"async": prompt}
-
-    tools_module = types.ModuleType("vendor_fabric.meshy.tools")
-    tools_module.TOOL_DEFINITIONS = [{"name": "async_generate", "schema": None, "func": generate}]
-    monkeypatch.setitem(sys.modules, "vendor_fabric", types.ModuleType("vendor_fabric"))
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", types.ModuleType("vendor_fabric.meshy"))
-    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy.tools", tools_module)
-
-    server = meshy_mcp.create_server()
-    result = asyncio.run(server.call_tool_handler("async_generate", {"prompt": "cube"}))
-
-    assert "cube" in result[0].text
-    assert "coroutine" not in result[0].text
-
-
-def test_meshy_mcp_helper_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "extended_data")
 
     class Dumpable:
         def model_dump(self) -> dict[str, bool]:
             return {"dumped": True}
 
-    assert meshy_mcp._schema_for_definition({}) == {"type": "object", "properties": {}, "required": []}
-    assert meshy_mcp._schema_for_definition({"schema": object()}) == {
-        "type": "object",
-        "properties": {},
-        "required": [],
-    }
-    assert str(meshy_mcp._install_error("install it", ImportError())) == "install it"
-    assert meshy_mcp._to_builtin(Dumpable()) == {"dumped": True}
-    assert meshy_mcp._to_builtin([Dumpable()]) == [{"dumped": True}]
-    assert meshy_mcp._jsonable_tool_result(Dumpable()) == {"dumped": True}
-    assert meshy_mcp._jsonable_tool_result([Dumpable()]) == [{"dumped": True}]
-    assert sorted(meshy_mcp._jsonable_tool_result({2, 1})) == [1, 2]
+    def make_dumpable() -> Dumpable:
+        return Dumpable()
 
-    monkeypatch.setattr(meshy_mcp, "_to_builtin", lambda value: {2, 1} if value == "converted-set" else value)
-    assert sorted(meshy_mcp._jsonable_tool_result("converted-set")) == [1, 2]
+    server = mcp_server.create_tool_server(
+        "custom",
+        [mcp_server.MCPToolAdapter("dump", "Dump.", {"type": "object"}, make_dumpable)],
+        normalize_result=lambda value: {"normalized": value.model_dump()},
+        format_error=lambda error, arguments: "safe-error",
+        format_unknown_tool=lambda name: f"safe:{name}",
+    )
+    result = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="dump", arguments=None)))
+    assert result.structured_content == {"normalized": {"dumped": True}}
 
+    with pytest.raises(FakeMCPError, match="safe:absent"):
+        asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="absent", arguments={})))
 
-def test_meshy_mcp_uses_extended_data_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_extended_data(monkeypatch)
-
-    assert meshy_mcp._to_builtin({"value": 1}) == {"converted": {"value": 1}}
-    assert meshy_mcp._redact_sensitive_data({"token": "secret"}) == {"redacted": {"token": "secret"}}
-    assert meshy_mcp._redact_sensitive_text("secret") == "redacted:secret"
-    assert meshy_mcp._tool_payload_text({"ok": True}).startswith("wrapped:")
+    assert mcp_server._default_normalize(Dumpable()) == {"dumped": True}
+    assert mcp_server._default_normalize({"items": (Dumpable(),)}) == {"items": [{"dumped": True}]}
+    assert mcp_server._default_normalize("text") == "text"
+    assert mcp_server._default_error(ValueError("bad"), {}) == "ValueError: bad"
+    assert mcp_server._json_text({"value": object()}).startswith("{")
 
 
-def test_meshy_mcp_run_server_and_main(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generic_mcp_server_rejects_invalid_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_fake_mcp(monkeypatch)
+
+    with pytest.raises(SchemaError):
+        mcp_server.create_tool_server(
+            "bad",
+            [mcp_server.MCPToolAdapter("bad", "Bad.", {"type": "not-a-json-type"}, lambda: None)],
+        )
+
+    with pytest.raises(SchemaError):
+        mcp_server.create_tool_server(
+            "bad-output",
+            [
+                mcp_server.MCPToolAdapter(
+                    "bad",
+                    "Bad.",
+                    {"type": "object"},
+                    lambda: None,
+                    output_schema={"type": "not-a-json-type"},
+                )
+            ],
+        )
+
+
+def test_generic_mcp_server_rejects_duplicate_names_and_invalid_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_fake_mcp(monkeypatch)
+    duplicate = mcp_server.MCPToolAdapter("same", "Same.", {"type": "object"}, dict)
+    with pytest.raises(ValueError, match="must be unique"):
+        mcp_server.create_tool_server("duplicate", [duplicate, duplicate])
+
+    invalid_output = mcp_server.MCPToolAdapter(
+        "invalid-output",
+        "Invalid output.",
+        {"type": "object"},
+        dict,
+        output_schema={"type": "array"},
+    )
+    server = mcp_server.create_tool_server("output", [invalid_output])
+    result = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="invalid-output", arguments={})))
+    assert result.is_error is True
+    assert result.structured_content["error"].startswith("ValidationError:")
+
+
+def test_generic_mcp_reports_missing_sdk(monkeypatch: pytest.MonkeyPatch) -> None:
+    reject_imports(monkeypatch, "mcp")
+    with pytest.raises(ImportError, match="MCP SDK"):
+        mcp_server.create_tool_server("missing", [])
+
+
+def test_generic_mcp_run_server(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
     calls = install_fake_stdio(monkeypatch)
-    server = RunnableServer(calls)
-
-    meshy_mcp.run_server(server)
-
+    mcp_server.run_tool_server(RunnableServer(calls))
     assert calls == [("read", "write", {"ready": True})]
 
-    calls.clear()
-    monkeypatch.setattr(meshy_mcp, "create_server", lambda: RunnableServer(calls))
 
-    meshy_mcp.run_server()
-
-    assert calls == [("read", "write", {"ready": True})]
-
-    called: list[bool] = []
-    monkeypatch.setattr(meshy_mcp, "run_server", lambda: called.append(True))
-
-    meshy_mcp.main()
-
-    assert called == [True]
-
-
-def test_meshy_mcp_run_server_reports_missing_stdio(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generic_mcp_run_server_reports_missing_stdio(monkeypatch: pytest.MonkeyPatch) -> None:
     reject_imports(monkeypatch, "mcp.server.stdio")
-
-    with pytest.raises(ImportError, match=r"agentic-fabric\[mcp\]"):
-        meshy_mcp.run_server(RunnableServer([]))
-
-
-def install_fake_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Install a fake vendor-fabric registry and data surface."""
-
-    class DemoConnector:
-        def search(self, query: str, limit: int = 5) -> dict[str, Any]:
-            """Search demo records.
-
-            query: Search text.
-            limit: Maximum results.
-            """
-            return {"query": query, "limit": limit}
-
-        def status(self) -> dict[str, str]:
-            return {"status": "ok"}
-
-        async def async_lookup(self) -> dict[str, bool]:
-            return {"async": True}
-
-        def fail(self) -> dict[str, bool]:
-            raise RuntimeError("connector failed")
-
-    async def list_available_connectors() -> list[str]:
-        return ["demo"]
-
-    def list_connector_categories(*, include_unavailable: bool = True) -> list[str]:
-        raise RuntimeError("category failed")
-
-    registry = types.SimpleNamespace(
-        _list_connector_classes=lambda: {"demo": DemoConnector},
-        get_connector=lambda name: DemoConnector(),
-        list_connectors=lambda *, include_unavailable=True: ["demo"],
-        list_available_connectors=list_available_connectors,
-        list_connector_info=lambda *, include_unavailable=True: [{"name": "demo", "available": True}],
-        get_connector_info=lambda name, *, include_unavailable=True: {"name": name, "available": True},
-        list_connector_categories=list_connector_categories,
-        list_connector_capabilities=lambda *, include_unavailable=True: ["search"],
-        list_connectors_by_category=lambda category, *, include_unavailable=True: [
-            {"name": "demo", "category": category}
-        ],
-        list_connectors_by_capability=lambda capability, *, include_unavailable=True: [
-            {"name": "demo", "capability": capability}
-        ],
-    )
-
-    vendor_module = types.ModuleType("vendor_fabric")
-    vendor_module.registry = registry
-    surface_module = types.ModuleType("vendor_fabric.surface")
-    surface_module.connector_data_methods = lambda connector_class: [
-        ("close", connector_class.search),
-        ("search", connector_class.search),
-        ("status", connector_class.status),
-        ("async_lookup", connector_class.async_lookup),
-        ("fail", connector_class.fail),
-    ]
-
-    monkeypatch.setitem(sys.modules, "vendor_fabric", vendor_module)
-    monkeypatch.setitem(sys.modules, "vendor_fabric.surface", surface_module)
+    with pytest.raises(ImportError, match="MCP SDK"):
+        mcp_server.run_tool_server(RunnableServer([]))
 
 
-def test_vendor_mcp_reports_missing_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "mcp")
+class DemoConnector:
+    """Public fake connector class exposed through vendor-fabric."""
 
-    with pytest.raises(ImportError, match=r"agentic-fabric\[mcp\]"):
-        vendor_mcp.create_server()
+    def search(self, query: str, limit: int = 5) -> dict[str, Any]:
+        """Search demo records.
 
+        query: Search text.
+        limit: Maximum results.
+        """
+        return {"query": query, "limit": limit}
 
-def test_vendor_mcp_reports_missing_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_mcp(monkeypatch)
-    reject_imports(monkeypatch, "vendor_fabric")
+    async def async_lookup(self) -> dict[str, bool]:
+        """Look up asynchronously."""
+        return {"async": True}
 
-    with pytest.raises(ImportError, match="vendor-fabric is required"):
-        vendor_mcp.create_server()
-
-
-def test_vendor_mcp_preserves_provider_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    vendor_module = types.ModuleType("vendor_fabric")
-    vendor_module.registry = types.SimpleNamespace()
-    monkeypatch.setitem(sys.modules, "vendor_fabric", vendor_module)
-
-    with pytest.raises(ImportError) as exc_info:
-        vendor_mcp._require_vendor_fabric()
-
-    assert "vendor-fabric is required" in str(exc_info.value)
-    assert "Original import error:" in str(exc_info.value)
+    def fail(self, token: str) -> None:
+        """Fail with a secret-bearing message."""
+        raise RuntimeError(f"connector failed for {token}")
 
 
-def test_vendor_mcp_exposes_catalog_and_connector_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+class FakeVendorData:
+    """VendorData-shaped facade for adapter tests."""
+
+    def __init__(self, capabilities: list[dict[str, Any]] | None = None) -> None:
+        self._capabilities = capabilities or [
+            {"provider": "demo", "operation": "search", "method": "search", "description": "Search."},
+            {"provider": "demo", "operation": "async_lookup", "method": "async_lookup"},
+            {"provider": "demo", "operation": "fail", "method": "fail"},
+        ]
+        self.active_provider: str | None = None
+        self.opens: list[tuple[str, bool]] = []
+
+    def capabilities(self, *, include_unavailable: bool = True) -> list[dict[str, Any]]:
+        assert include_unavailable is False
+        return self._capabilities
+
+    def open(self, provider: str, *, strict: bool = True) -> FakeVendorData:
+        self.active_provider = provider
+        self.opens.append((provider, strict))
+        return self
+
+    def call(self, operation: str, provider: str, **kwargs: Any) -> Any:
+        return getattr(DemoConnector(), operation)(**kwargs)
+
+
+def install_fake_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
+    """Install a public-only fake vendor-fabric package."""
+    vendor = types.ModuleType("vendor_fabric")
+    vendor.get_connector_class = lambda name: DemoConnector
+    vendor.list_connectors = lambda *, include_unavailable=True: ["demo"]
+    vendor.list_available_connectors = lambda: ["demo"]
+    vendor.list_connector_info = lambda *, include_unavailable=True: [{"name": "demo"}]
+    vendor.get_connector_info = lambda name, *, include_unavailable=True: {"name": name}
+    vendor.list_connector_categories = lambda *, include_unavailable=True: ["testing"]
+    vendor.list_connector_capabilities = lambda *, include_unavailable=True: ["search"]
+    vendor.list_connectors_by_category = lambda category, *, include_unavailable=True: [category]
+    vendor.list_connectors_by_capability = lambda capability, *, include_unavailable=True: [capability]
+    monkeypatch.setitem(sys.modules, "vendor_fabric", vendor)
+    return vendor
+
+
+def test_vendor_mcp_exposes_public_catalog_and_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mcp(monkeypatch)
     install_fake_vendor_fabric(monkeypatch)
+    data = FakeVendorData()
 
-    server = vendor_mcp.create_server()
-    listed = asyncio.run(server.list_tools_handler())
-    names = {tool.name for tool in listed}
-    catalog_result = asyncio.run(server.call_tool_handler("fabric_vendors_list", None))
-    available_result = asyncio.run(server.call_tool_handler("fabric_vendors_list_available", {}))
-    category_error = asyncio.run(server.call_tool_handler("fabric_vendors_list_categories", {}))
-    connector_result = asyncio.run(server.call_tool_handler("demo_search", {"query": "alpha", "limit": 2}))
-    status_result = asyncio.run(server.call_tool_handler("demo_status", {}))
-    async_result = asyncio.run(server.call_tool_handler("demo_async_lookup", {}))
-    connector_error = asyncio.run(server.call_tool_handler("demo_fail", {}))
-    unknown = asyncio.run(server.call_tool_handler("missing", {}))
+    server = vendor_mcp.create_server(data)
+    listed = asyncio.run(server.on_list_tools(None, None))
+    names = {tool.name for tool in listed.tools}
+    catalog = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="fabric_vendors_list", arguments=None)))
+    search = asyncio.run(
+        server.on_call_tool(
+            None,
+            types.SimpleNamespace(name="demo_search", arguments={"query": "alpha", "limit": 2}),
+        )
+    )
+    asynchronous = asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="demo_async_lookup", arguments={})))
+    failure = asyncio.run(
+        server.on_call_tool(None, types.SimpleNamespace(name="demo_fail", arguments={"token": "secret-value"}))
+    )
 
     assert server.name == "vendor-fabric"
     assert "fabric_vendors_list" in names
     assert "demo_search" in names
-    assert "demo" in catalog_result[0].text
-    assert "demo" in available_result[0].text
-    assert "category failed" in category_error[0].text
-    assert "alpha" in connector_result[0].text
-    assert "ok" in status_result[0].text
-    assert "async" in async_result[0].text
-    assert "connector failed" in connector_error[0].text
-    assert "Unknown tool: missing" in unknown[0].text
+    assert catalog.structured_content == ["demo"]
+    assert search.structured_content == {"query": "alpha", "limit": 2}
+    assert asynchronous.structured_content == {"async": True}
+    assert failure.is_error is True
+    assert "secret-value" not in failure.content[0].text
+    assert data.opens == [("demo", False)]
 
 
-def test_vendor_mcp_helper_branches(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "extended_data")
+def test_vendor_mcp_catalog_and_protocol_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_fake_mcp(monkeypatch)
+    vendor = install_fake_vendor_fabric(monkeypatch)
+    vendor.list_connector_categories = lambda *, include_unavailable=True: (_ for _ in ()).throw(
+        RuntimeError("catalog failed")
+    )
+    server = vendor_mcp.create_server(FakeVendorData())
 
-    class Dumpable:
-        def model_dump(self) -> dict[str, bool]:
-            return {"dumped": True}
+    failed = asyncio.run(
+        server.on_call_tool(None, types.SimpleNamespace(name="fabric_vendors_list_categories", arguments={}))
+    )
+    assert failed.is_error is True
+    assert "catalog failed" in failed.content[0].text
 
+    with pytest.raises(FakeMCPError, match="Unknown tool: missing"):
+        asyncio.run(server.on_call_tool(None, types.SimpleNamespace(name="missing", arguments={})))
+
+
+def test_vendor_mcp_schema_and_metadata_helpers() -> None:
     def typed(
         self: object,
         count: int,
@@ -434,77 +393,159 @@ def test_vendor_mcp_helper_branches(monkeypatch: pytest.MonkeyPatch) -> None:
         enabled: bool,
         items: list[str],
         payload: dict[str, Any],
-        optional: str = "value",
-    ) -> dict[str, Any]:
+        optional: str | None = None,
+        *values: str,
+        **extra: Any,
+    ) -> None:
         """Typed method.
 
         count: Count value.
         """
-        return {}
 
-    def unresolved(value: MissingType) -> dict[str, Any]:  # noqa: F821
-        return {}
+    def unresolved(value: MissingType) -> None:  # noqa: F821
+        return None
 
     schema = vendor_mcp._get_method_schema(typed)
     unresolved_schema = vendor_mcp._get_method_schema(unresolved)
-
-    assert schema["properties"]["count"]["type"] == "integer"
+    assert schema["properties"]["count"] == {"type": "integer", "description": "Count value."}
     assert schema["properties"]["ratio"]["type"] == "number"
     assert schema["properties"]["enabled"]["type"] == "boolean"
-    assert schema["properties"]["items"]["type"] == "array"
+    assert schema["properties"]["items"]["items"] == {"type": "string"}
     assert schema["properties"]["payload"]["type"] == "object"
-    assert schema["properties"]["optional"]["default"] == "value"
-    assert schema["properties"]["count"]["description"] == "Count value."
-    assert unresolved_schema["properties"]["value"]["type"] == "string"
-    assert vendor_mcp._connector_classes(types.SimpleNamespace()) == {}
-    assert str(vendor_mcp._install_error("install it", ImportError())) == "install it"
-    assert vendor_mcp._to_builtin(Dumpable()) == {"dumped": True}
-    assert vendor_mcp._to_builtin([Dumpable()]) == [{"dumped": True}]
+    assert schema["properties"]["optional"]["anyOf"] == [{"type": "string"}, {"type": "null"}]
+    assert schema["properties"]["optional"]["default"] is None
+    assert schema["additionalProperties"] is True
+    assert unresolved_schema["properties"]["value"] == {}
+    assert vendor_mcp._annotation_schema(inspect.Parameter.empty) == {}
+    assert vendor_mcp._metadata_value({"name": "mapping"}, "name") == "mapping"
+    assert vendor_mcp._metadata_value(types.SimpleNamespace(get=lambda key, default: "getter"), "name") == "getter"
+    assert vendor_mcp._metadata_value(types.SimpleNamespace(name="attribute"), "name") == "attribute"
+    assert vendor_mcp._metadata_value(object(), "missing", "fallback") == "fallback"
+    assert vendor_mcp._tool_name("demo provider", "list/things") == "demo_provider_list_things"
+    assert str(vendor_mcp._install_error("install", ImportError())) == "install"
+    assert "Original import error: detail" in str(vendor_mcp._install_error("install", ImportError("detail")))
+
+
+def test_vendor_mcp_skips_bad_metadata_and_rejects_collisions(monkeypatch: pytest.MonkeyPatch) -> None:
+    vendor = install_fake_vendor_fabric(monkeypatch)
+    assert vendor_mcp._capability_tool_adapters(vendor, FakeVendorData([{}])) == []
+
+    data = FakeVendorData(
+        [
+            {"provider": "demo", "operation": "async lookup", "method": "async_lookup"},
+            {"provider": "demo", "operation": "async_lookup", "method": "async_lookup"},
+        ]
+    )
+    with pytest.raises(ValueError, match="collide"):
+        vendor_mcp._capability_tool_adapters(vendor, data)
+
+
+def test_vendor_mcp_reports_missing_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
+    reject_imports(monkeypatch, "vendor_fabric")
+    with pytest.raises(ImportError, match="required by agentic-fabric"):
+        vendor_mcp._require_vendor_fabric()
+
+
+def test_vendor_mcp_normalization_helpers() -> None:
+    class Dumpable:
+        def model_dump(self) -> dict[str, bool]:
+            return {"dumped": True}
+
     assert vendor_mcp._jsonable_tool_result(Dumpable()) == {"dumped": True}
-    assert vendor_mcp._jsonable_tool_result([Dumpable()]) == [{"dumped": True}]
     assert sorted(vendor_mcp._jsonable_tool_result({2, 1})) == [1, 2]
-
-    monkeypatch.setattr(vendor_mcp, "_to_builtin", lambda value: {2, 1} if value == "converted-set" else value)
-    assert sorted(vendor_mcp._jsonable_tool_result("converted-set")) == [1, 2]
-
-
-def test_vendor_mcp_uses_extended_data_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_extended_data(monkeypatch)
-
-    assert vendor_mcp._to_builtin({"value": 1}) == {"converted": {"value": 1}}
-    assert vendor_mcp._redact_sensitive_data({"token": "secret"}) == {"redacted": {"token": "secret"}}
-    assert vendor_mcp._tool_error_text(RuntimeError("secret")) == "Error: RuntimeError: redacted:secret"
-    assert vendor_mcp._unknown_tool_text("secret") == "Unknown tool: redacted:secret"
-    assert vendor_mcp._tool_result_text({"ok": True}).startswith("wrapped:")
+    assert "RuntimeError" in vendor_mcp._tool_error_text(RuntimeError("bad"), {})
+    assert vendor_mcp._unknown_tool_text("missing") == "Unknown tool: missing"
 
 
 def test_vendor_mcp_run_server_and_main(monkeypatch: pytest.MonkeyPatch) -> None:
-    install_fake_mcp(monkeypatch)
-    install_fake_vendor_fabric(monkeypatch)
-    calls = install_fake_stdio(monkeypatch)
-    server = RunnableServer(calls)
-
+    calls: list[Any] = []
+    monkeypatch.setattr(vendor_mcp, "run_tool_server", calls.append)
+    server = object()
     vendor_mcp.run_server(server)
+    assert calls == [server]
 
-    assert calls == [("read", "write", {"ready": True})]
-
-    calls.clear()
-    monkeypatch.setattr(vendor_mcp, "create_server", lambda: RunnableServer(calls))
-
+    monkeypatch.setattr(vendor_mcp, "create_server", lambda: "created")
     vendor_mcp.run_server()
+    assert calls == [server, "created"]
 
-    assert calls == [("read", "write", {"ready": True})]
-
-    called: list[bool] = []
-    monkeypatch.setattr(vendor_mcp, "run_server", lambda: called.append(True))
-
+    monkeypatch.setattr(vendor_mcp, "run_server", lambda: calls.append("main"))
     vendor_mcp.main()
+    assert calls[-1] == "main"
 
-    assert called == [True]
+
+def install_fake_meshy(monkeypatch: pytest.MonkeyPatch, definitions: list[dict[str, Any]]) -> None:
+    """Install provider-owned Meshy tool definitions."""
+    package = types.ModuleType("vendor_fabric.meshy")
+    tools_module = types.ModuleType("vendor_fabric.meshy.tools")
+    tools_module.TOOL_DEFINITIONS = definitions
+    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy", package)
+    monkeypatch.setitem(sys.modules, "vendor_fabric.meshy.tools", tools_module)
 
 
-def test_vendor_mcp_run_server_reports_missing_stdio(monkeypatch: pytest.MonkeyPatch) -> None:
-    reject_imports(monkeypatch, "mcp.server.stdio")
+def test_meshy_mcp_exposes_provider_definitions(monkeypatch: pytest.MonkeyPatch) -> None:
+    install_fake_mcp(monkeypatch)
 
-    with pytest.raises(ImportError, match=r"agentic-fabric\[mcp\]"):
-        vendor_mcp.run_server(RunnableServer([]))
+    class Schema:
+        @classmethod
+        def model_json_schema(cls) -> dict[str, Any]:
+            return {
+                "properties": {"prompt": {"type": "string"}},
+                "required": ["prompt"],
+                "$defs": {"unused": {"type": "string"}},
+            }
+
+    async def generate(prompt: str) -> dict[str, str]:
+        return {"asset": prompt}
+
+    install_fake_meshy(
+        monkeypatch,
+        [{"name": "generate", "description": "Generate an asset.", "schema": Schema, "func": generate}],
+    )
+    server = meshy_mcp.create_server()
+    listed = asyncio.run(server.on_list_tools(None, None))
+    result = asyncio.run(
+        server.on_call_tool(None, types.SimpleNamespace(name="generate", arguments={"prompt": "duck"}))
+    )
+
+    assert server.name == "meshy-ai"
+    assert listed.tools[0].input_schema["type"] == "object"
+    assert listed.tools[0].input_schema["$defs"]
+    assert result.structured_content == {"asset": "duck"}
+
+
+def test_meshy_mcp_helper_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert meshy_mcp._schema_for_definition({}) == {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": False,
+    }
+    assert str(meshy_mcp._install_error("install", ImportError())) == "install"
+    assert "detail" in str(meshy_mcp._install_error("install", ImportError("detail")))
+
+    class Dumpable:
+        def model_dump(self) -> dict[str, bool]:
+            return {"dumped": True}
+
+    assert meshy_mcp._jsonable_tool_result(Dumpable()) == {"dumped": True}
+    assert meshy_mcp._jsonable_tool_result([Dumpable()]) == [{"dumped": True}]
+    assert sorted(meshy_mcp._jsonable_tool_result({2, 1})) == [1, 2]
+    assert "RuntimeError" in meshy_mcp._tool_error_text(RuntimeError("bad"), {})
+    assert meshy_mcp._unknown_tool_text("missing") == "Unknown tool: missing"
+
+
+def test_meshy_mcp_reports_missing_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    reject_imports(monkeypatch, "vendor_fabric.meshy")
+    with pytest.raises(ImportError, match=r"agentic-fabric\[meshy,mcp\]"):
+        meshy_mcp._require_meshy_tool_definitions()
+
+
+def test_meshy_mcp_run_server_and_main(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
+    monkeypatch.setattr(meshy_mcp, "run_tool_server", calls.append)
+    server = object()
+    meshy_mcp.run_server(server)
+    monkeypatch.setattr(meshy_mcp, "create_server", lambda: "created")
+    meshy_mcp.run_server()
+    monkeypatch.setattr(meshy_mcp, "run_server", lambda: calls.append("main"))
+    meshy_mcp.main()
+    assert calls == [server, "created", "main"]

@@ -6,78 +6,12 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, ClassVar
 
+from vendor_fabric.vendor_data import VendorData
+
 from agentic_fabric.runners.registry import RuntimeUnavailableError, install_command, runtime_info, runtime_names
 
 
-try:  # pragma: no cover - exercised when vendor-fabric is installed by consumers
-    from vendor_fabric.vendor_data import VendorData as _VendorDataBase
-except ImportError:  # pragma: no cover - default in this workspace until vendor-fabric is published
-    _VENDOR_FABRIC_AVAILABLE = False
-
-    class _VendorDataBase:  # type: ignore[no-redef]
-        """Small fallback that keeps AgenticData importable without vendor-fabric.
-
-        This is an importability shim, not a second architecture. It implements
-        the minimal ``VendorData`` surface needed for ``AgenticData`` to function.
-        Methods that require vendor-fabric raise clear ``ImportError`` guidance.
-
-        Omitted vs. real ``VendorData``: ``capabilities()`` returns an empty list
-        (so ``vendor_tools()`` degrades gracefully instead of crashing).
-        """
-
-        def __init__(self, value: Any = None, *, fabric: Any = None, logger: Any = None, **_: Any) -> None:
-            self._agentic_value = value
-            self._active_provider: str | None = None
-            self._logger = logger
-
-        @property
-        def value(self) -> Any:
-            """Return the wrapped value."""
-            return self._agentic_value
-
-        @property
-        def active_provider(self) -> str | None:
-            """Return the active vendor provider, when available."""
-            return self._active_provider
-
-        def as_builtin(self) -> Any:
-            """Return the wrapped value unchanged."""
-            return self._agentic_value
-
-        def cast(self, value: Any) -> _VendorDataBase:
-            """Replace the wrapped value."""
-            self._agentic_value = value
-            return self
-
-        def open(self, provider_id: str, *, strict: bool = True, **_: Any) -> _VendorDataBase:
-            """Record a provider or raise install guidance when strict."""
-            if strict:
-                msg = (
-                    f"Provider '{provider_id}' requires vendor-fabric. "
-                    "Install vendor-fabric after it is published, then reinstall agentic-fabric."
-                )
-                raise ImportError(msg)
-            self._active_provider = provider_id
-            return self
-
-        def call(self, operation: str, *_: Any, **__: Any) -> Any:
-            """Raise clear guidance for vendor-backed operations."""
-            msg = f"Vendor operation '{operation}' requires vendor-fabric."
-            raise ImportError(msg)
-
-        def capabilities(self, provider: str | None = None, *, include_unavailable: bool = True) -> list[Any]:
-            """Return an empty capability list without vendor-fabric.
-
-            Without vendor-fabric, no provider capabilities are available.
-            This lets ``vendor_tools()`` degrade gracefully (returns ``[]``).
-            """
-            return []
-
-else:
-    _VENDOR_FABRIC_AVAILABLE = True
-
-
-class AgenticData(_VendorDataBase):
+class AgenticData(VendorData):
     """VendorData extension with active runtime and fabric agent registry context."""
 
     runtime_priority: ClassVar[tuple[str, ...]] = tuple(runtime_names())
@@ -113,8 +47,8 @@ class AgenticData(_VendorDataBase):
 
     @property
     def vendor_fabric_available(self) -> bool:
-        """Return whether this import is backed by a real VendorData class."""
-        return _VENDOR_FABRIC_AVAILABLE
+        """Return whether the required vendor layer is available."""
+        return True
 
     def cast(self, value: Any) -> AgenticData:
         """Mutate the wrapped data while preserving runtime context."""
@@ -235,12 +169,7 @@ class AgenticData(_VendorDataBase):
             if fabric_agent_name in self._fabric_agents:
                 return lambda *args, **kwargs: self.run_fabric_agent(fabric_agent_name, *args, **kwargs)
 
-        # When real VendorData is installed, it may define __getattr__ for
-        # provider dispatch. Try the superclass, but fall through to a clean
-        # AttributeError if neither this class nor the superclass handles it.
-        if hasattr(super(), "__getattr__"):
-            return super().__getattr__(name)  # type: ignore[misc]
-        raise AttributeError(f"{type(self).__name__!s} has no attribute {name!r}")
+        return super().__getattr__(name)
 
     def __dir__(self) -> list[str]:
         """Include dynamic registered-fabric-agent helpers in introspection."""

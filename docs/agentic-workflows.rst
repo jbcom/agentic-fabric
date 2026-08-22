@@ -58,7 +58,7 @@ is lazy and can use an externally installed CrewAI runtime, but
 ``agentic-fabric`` does not publish a CrewAI extra while CrewAI's ChromaDB
 dependency path has an upstream critical advisory with no patched version.
 Install the runtime you actually execute; the package does not publish an
-aggregate AI or all-frameworks extra. ``mcp`` and ``scraping`` remain focused
+aggregate AI or all-frameworks extra. ``a2a``, ``mcp``, and ``scraping`` remain focused
 optional tool surfaces. Local CLI runners are configured profiles over external
 executables and do not require a Python extra:
 
@@ -99,7 +99,7 @@ their configured workspace directories.
 MCP Adapters
 ------------
 
-The ``mcp`` extra installs the MCP transport dependency. Provider
+The ``mcp`` extra installs MCP SDK 2.x and its 2026-07-28 protocol surface. Provider
 implementation still belongs to ``vendor-fabric``; this package only owns the
 runtime-visible adapter layer:
 
@@ -108,10 +108,32 @@ runtime-visible adapter layer:
    agentic-fabric-vendor-mcp
    agentic-fabric-meshy-mcp
 
-``agentic-fabric-vendor-mcp`` exposes credential-free vendor catalog tools and
-public ``vendor-fabric`` data methods. ``agentic-fabric-meshy-mcp`` adapts the
+``agentic-fabric-vendor-mcp`` exposes credential-free public vendor catalog
+functions and available ``VendorData`` capability routes.
+``agentic-fabric-meshy-mcp`` adapts the
 Meshy capability definitions from ``vendor_fabric.meshy.tools`` into MCP tool
-metadata. Install the matching ``vendor-fabric`` package and provider extras
-in the same environment before running provider-backed MCP tools. Startup
-errors include the install guidance plus the original import failure so a
-missing provider extra is distinguishable from a missing adapter dependency.
+metadata. Inputs and declared outputs are JSON-Schema validated. Results carry
+both ``structuredContent`` and a serialized text block for older clients;
+execution failures use ``isError`` while unknown tool names remain protocol
+errors.
+
+A2A Adapters
+------------
+
+The ``a2a`` extra installs the official A2A 1.x server SDK. A registered fabric
+agent can be exposed over Agent Card discovery and JSON-RPC without changing
+its runtime definition:
+
+.. code:: python
+
+   from agentic_fabric import create_a2a_app, create_fabric_agent_spec
+
+   spec = create_fabric_agent_spec("reviewer", "https://agents.example.com/a2a")
+   app = create_a2a_app(spec)
+
+The executor emits one valid task lifecycle: the Task first, then working
+status, an artifact, and a terminal status. ``create_vendor_a2a_app`` accepts
+structured ``provider``, ``operation``, and ``arguments`` values and delegates
+to ``AgenticData.call``. Production deployments must add authentication,
+authorization, rate limiting, HTTPS, audit logging, and a durable task store at
+the ASGI boundary.

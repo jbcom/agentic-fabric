@@ -41,6 +41,15 @@ except PackageNotFoundError:  # pragma: no cover - only hit when not installed
     __version__ = "1.2.2"
 
 # Core exports - framework-agnostic functionality
+from agentic_fabric.a2a import (
+    A2AAgentSpec,
+    A2ARequest,
+    A2ASkillSpec,
+    create_a2a_app,
+    create_fabric_agent_spec,
+    create_vendor_a2a_app,
+    create_vendor_agent_spec,
+)
 from agentic_fabric.agentic_data import AgenticData
 from agentic_fabric.capabilities import (
     AgentCapabilityProviderMixin,
@@ -68,6 +77,9 @@ from agentic_fabric.core.manager import ManagerAgent
 
 
 __all__ = [
+    "A2AAgentSpec",
+    "A2ARequest",
+    "A2ASkillSpec",
     "AgentCapabilityProviderMixin",
     "AgentCapabilitySpec",
     "AgenticData",
@@ -75,6 +87,10 @@ __all__ = [
     "__version__",
     "agent_capability",
     "compose_fabric_agent",
+    "create_a2a_app",
+    "create_fabric_agent_spec",
+    "create_vendor_a2a_app",
+    "create_vendor_agent_spec",
     "detect_framework",
     "discover_all_framework_configs",
     "discover_packages",

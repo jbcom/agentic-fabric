@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
-
-from pathlib import Path
 from typing import Any
 
 import pytest
+
+from vendor_fabric.vendor_data import VendorData
 
 from agentic_fabric import AgenticData
 from agentic_fabric.runners.registry import RuntimeUnavailableError
@@ -90,63 +87,13 @@ def test_unknown_fabric_agent_lists_registered_names() -> None:
         data.run_fabric_agent("writer")
 
 
-def test_fallback_vendor_guidance_when_vendor_fabric_missing() -> None:
-    """The no-vendor fallback should fail with install guidance."""
-    data = AgenticData()
-    if data.vendor_fabric_available:
-        pytest.skip("vendor-fabric is installed in this environment")
+def test_agentic_data_uses_required_vendor_data_base() -> None:
+    """AgenticData should always preserve the published vendor-layer contract."""
+    data = AgenticData("value")
 
-    with pytest.raises(ImportError, match="vendor-fabric"):
-        data.open("github")
-
-
-def test_fallback_vendor_records_provider_when_not_strict() -> None:
-    """The no-vendor fallback should still keep non-strict provider context."""
-    data = AgenticData()
-    if data.vendor_fabric_available:
-        pytest.skip("vendor-fabric is installed in this environment")
-
-    assert data.open("github", strict=False) is data
-    assert data.active_provider == "github"
-
-    with pytest.raises(ImportError, match="Vendor operation 'sync' requires vendor-fabric"):
-        data.call("sync")
-
-
-def test_agentic_data_import_branch_with_vendor_fabric(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The module should subclass real VendorData when vendor-fabric is importable."""
-    import agentic_fabric.agentic_data as current_agentic_data
-
-    fake_vendor_fabric = types.ModuleType("vendor_fabric")
-    fake_vendor_data = types.ModuleType("vendor_fabric.vendor_data")
-
-    class VendorData:
-        def __init__(self, value: Any = None, **_: Any) -> None:
-            self.value = value
-
-        def cast(self, value: Any) -> VendorData:
-            self.value = value
-            return self
-
-    fake_vendor_data.VendorData = VendorData
-    monkeypatch.setitem(sys.modules, "vendor_fabric", fake_vendor_fabric)
-    monkeypatch.setitem(sys.modules, "vendor_fabric.vendor_data", fake_vendor_data)
-
-    spec = importlib.util.spec_from_file_location(
-        "_agentic_data_vendor_branch",
-        Path(current_agentic_data.__file__),
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    data = module.AgenticData("value")
-
-    assert module._VENDOR_FABRIC_AVAILABLE is True
     assert data.vendor_fabric_available is True
     assert isinstance(data, VendorData)
-    assert data.value == "value"
+    assert data.as_builtin() == "value"
 
 
 def test_fabric_agents_are_read_only_and_unregister_is_chainable() -> None:
@@ -277,49 +224,14 @@ def test_dynamic_helpers_and_missing_attributes(monkeypatch: pytest.MonkeyPatch)
     assert "run_reviewer" in dir(data)
     assert data.run_reviewer() == "done"
 
-    with pytest.raises(AttributeError, match="has no attribute 'missing'"):
-        data.missing
-
-
-def test_fallback_vendor_data_base_capabilities_returns_empty_list() -> None:
-    """The no-vendor fallback should expose an empty capabilities list."""
-    data = AgenticData()
-    if data.vendor_fabric_available:
-        pytest.skip("vendor-fabric is installed in this environment")
-
-    assert data.capabilities() == []
-    assert data.capabilities("github", include_unavailable=False) == []
+    assert callable(data.missing)
 
 
 def test_agentic_data_delegates_to_vendor_data_getattr(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When the real VendorData defines __getattr__, AgenticData should delegate to it."""
-    import agentic_fabric.agentic_data as current_agentic_data
-
-    fake_vendor_fabric = types.ModuleType("vendor_fabric")
-    fake_vendor_data = types.ModuleType("vendor_fabric.vendor_data")
-
-    class VendorDataWithGetattr:
-        def __init__(self, value: Any = None, **_: Any) -> None:
-            self.value = value
-
-        def __getattr__(self, name: str) -> Any:
-            if name == "dispatched_provider":
-                return "vendor-dispatched"
-            raise AttributeError(f"VendorData has no attribute {name!r}")
-
-    fake_vendor_data.VendorData = VendorDataWithGetattr
-    monkeypatch.setitem(sys.modules, "vendor_fabric", fake_vendor_fabric)
-    monkeypatch.setitem(sys.modules, "vendor_fabric.vendor_data", fake_vendor_data)
-
-    spec = importlib.util.spec_from_file_location(
-        "_agentic_data_getattr_delegation",
-        Path(current_agentic_data.__file__),
+    """AgenticData should delegate unresolved names to VendorData dispatch."""
+    monkeypatch.setattr(
+        VendorData,
+        "__getattr__",
+        lambda self, name: "vendor-dispatched" if name == "dispatched_provider" else None,
     )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    data = module.AgenticData("value")
-
-    assert data.dispatched_provider == "vendor-dispatched"
+    assert AgenticData("value").dispatched_provider == "vendor-dispatched"

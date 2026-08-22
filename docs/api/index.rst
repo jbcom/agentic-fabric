@@ -13,6 +13,7 @@ from the rendered sidebar.
 
    ../apidocs/index
    ../apidocs/agentic_fabric/agentic_fabric.__main__
+   ../apidocs/agentic_fabric/agentic_fabric.a2a
    ../apidocs/agentic_fabric/agentic_fabric.agentic_data
    ../apidocs/agentic_fabric/agentic_fabric.base
    ../apidocs/agentic_fabric/agentic_fabric.capabilities
@@ -40,6 +41,7 @@ from the rendered sidebar.
    ../apidocs/agentic_fabric/agentic_fabric.tools.adapters
    ../apidocs/agentic_fabric/agentic_fabric.tools.file_tools
    ../apidocs/agentic_fabric/agentic_fabric.tools.meshy_mcp
+   ../apidocs/agentic_fabric/agentic_fabric.tools.mcp
    ../apidocs/agentic_fabric/agentic_fabric.tools.registry
    ../apidocs/agentic_fabric/agentic_fabric.tools.scraping_tools
    ../apidocs/agentic_fabric/agentic_fabric.tools.vendor

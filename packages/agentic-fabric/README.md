@@ -23,17 +23,22 @@ pip install "agentic-fabric[langgraph]"
 pip install "agentic-fabric[strands]"
 
 # Non-framework optional surfaces
+pip install "agentic-fabric[a2a]"
 pip install "agentic-fabric[mcp]"
 pip install "agentic-fabric[scraping]"
+
+# Add only the provider SDKs the agent actually calls
+pip install "agentic-fabric[github,slack]"
 ```
 
 Local CLI runners do not require a Python extra. Install the external CLI
 (`aider`, `claude`, `codex`, `ollama`, or a custom executable) and inspect
 profiles with `agentic-fabric list-runners --json`.
 
-Vendor-backed passthrough extras will be added after the upstream
-`vendor-fabric` optional-extra contract is published and stable. Until then,
-vendor references stay lazy and report install guidance at use time.
+`vendor-fabric` is a required dependency and owns provider routing. The
+`anthropic`, `aws`, `cursor`, `github`, `google`, `meshy`, `secrets-sync`,
+`slack`, `vault`, and `zoom` extras pass through to its matching optional
+dependencies. Provider SDK imports remain lazy.
 
 There is no aggregate AI extra. Install exactly the framework or provider path
 you use. The CrewAI adapter remains lazy, but `agentic-fabric` does not publish
@@ -115,7 +120,7 @@ result = session.run_fabric_agent("reviewer", runtime="crewai")
 - Framework-neutral file tools: built-in filesystem tools can be resolved
   without installing CrewAI or Pydantic; framework adapters add schema wrappers
   only when their optional dependencies are present.
-- Focused extras: `langgraph`, `strands`, `mcp`, `scraping`,
+- Focused extras: `langgraph`, `strands`, `a2a`, `mcp`, `scraping`,
   `tests`, `typing`, `docs`, and `dev`.
 - `AgenticData`: carries data, registered fabric agents, active runtime selection, and
   vendor-layer context together.
@@ -130,8 +135,8 @@ result = session.run_fabric_agent("reviewer", runtime="crewai")
 - Hierarchical orchestration: `ManagerAgent` delegates across fabric agents.
 - Package discovery: finds `.fabric/`, `.crewai/`, `.langgraph/`, and
   `.strands/` directories.
-- Vendor passthrough extras are deferred until `vendor-fabric` is published
-  with a stable optional-extra contract.
+- Vendor passthrough extras install the matching `vendor-fabric` provider
+  dependency without moving connector behavior into this package.
 - CLI and library: use from the command line or import as a module.
 
 ## Framework Priority
@@ -161,24 +166,59 @@ Profiles are loaded from the packaged `local_cli_profiles.yaml`, validated
 before use, and rejected on POSIX systems if the profiles file is group- or
 world-writable.
 
+## A2A Interfaces
+
+The `a2a` extra installs the official A2A Python SDK and Starlette/Uvicorn
+HTTP surface. Agentic Fabric implements A2A Protocol 1.0 with Agent Card
+discovery and the JSON-RPC binding:
+
+```python
+from agentic_fabric import create_fabric_agent_spec, create_a2a_app
+
+spec = create_fabric_agent_spec("reviewer", "https://agents.example.com/a2a")
+app = create_a2a_app(spec)
+```
+
+`create_vendor_a2a_app()` exposes a single structured skill accepting
+`provider`, `operation`, and `arguments`; execution delegates to
+`AgenticData.call()` and therefore to `VendorData`. The bundled development
+entry point is:
+
+```bash
+agentic-fabric-vendor-a2a --host 127.0.0.1 --port 8000 \
+  --url https://agents.example.com/a2a
+```
+
+The app uses an in-memory task store and declares streaming but not push
+notifications. Wrap it with application authentication, authorization, rate
+limits, audit logging, HTTPS, and a durable task store before production use.
+Only JSON-RPC is advertised; HTTP+JSON/REST and gRPC are not silently claimed.
+
 ## MCP Adapters
 
-The `mcp` extra installs the MCP transport dependency and enables two console
-entry points:
+The `mcp` extra installs the stable MCP Python SDK 2.x, which implements the
+2026-07-28 protocol while retaining earlier-client compatibility. It enables
+two stdio console entry points:
 
 ```bash
 agentic-fabric-vendor-mcp
 agentic-fabric-meshy-mcp
 ```
 
-`agentic-fabric-vendor-mcp` exposes credential-free vendor catalog tools and
-public `vendor-fabric` data methods. `agentic-fabric-meshy-mcp` converts
+`agentic-fabric-vendor-mcp` exposes credential-free public catalog functions
+and currently available `VendorData.capabilities()`. Calls route through
+`AgenticData.call()`; the adapter never imports connector implementations or
+uses Vendor Fabric's private registry. `agentic-fabric-meshy-mcp` converts
 Meshy capability metadata from `vendor-fabric[meshy]` into MCP tools. Both
-servers import provider code lazily; install the matching `vendor-fabric`
-package/extras in the same environment before running provider-backed tools.
-If provider startup fails, the adapter error includes the `agentic-fabric[mcp]`
-or `vendor-fabric[...]` install guidance plus the original import failure so
-missing provider extras are visible.
+servers validate tool inputs against Draft 2020-12 JSON Schema and return both
+structured content and a serialized text fallback. Declared output schemas are
+also enforced. Provider results and diagnostics pass through Extended Data's
+redaction helpers before leaving the process.
+
+The generic `MCPToolAdapter` and `create_tool_server()` API can expose an
+application-owned callable set without a vendor dependency. The shipped CLIs
+use stdio; applications can mount the returned SDK server over another MCP 2.x
+transport when they own the transport security policy.
 
 ## Repository Boundary
 
@@ -187,8 +227,12 @@ missing provider extras are visible.
 - `vendor-fabric` owns vendor connectors, provider-backed sync, the SecretSync
   Python facade/capability surfaces, provider capability metadata, and provider
   dispatch.
-- `agentic-fabric` owns fabric agent discovery, runner selection, framework adapters,
-  agent-facing tool wrappers, and orchestration.
+- `agentic-fabric` owns fabric agent discovery, runner selection, framework
+  adapters, A2A/MCP protocol surfaces, agent-facing tool wrappers, and
+  orchestration.
+
+Protocol behavior follows the current [A2A 1.0 specification](https://a2a-protocol.org/latest/specification/)
+and [MCP 2026-07-28 tool specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools).
 
 Full guides and API documentation are published at
 [jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/).

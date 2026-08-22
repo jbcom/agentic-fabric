@@ -15,14 +15,17 @@ Install the runtime extras you actually use:
 
    pip install "agentic-fabric[langgraph]"
    pip install "agentic-fabric[strands]"
+   pip install "agentic-fabric[a2a]"
    pip install "agentic-fabric[mcp]"
    pip install "agentic-fabric[scraping]"
+   pip install "agentic-fabric[github,slack]"
 
-``mcp`` exposes MCP integration dependencies. ``scraping`` installs the
-first-party requests/BeautifulSoup scraping helpers. Vendor passthrough extras
-are deferred until ``vendor-fabric`` is published with a stable optional-extra
-contract. There is no aggregate AI or all-frameworks extra. Test, typing, docs,
-and dev extras are reserved for repository validation and package maintenance.
+``a2a`` installs the official A2A 1.x HTTP server SDK. ``mcp`` installs the MCP
+2.x SDK. ``scraping`` installs the first-party requests/BeautifulSoup helpers.
+``vendor-fabric`` is required; named provider extras pass through to its
+matching optional dependencies. There is no aggregate AI or all-frameworks
+extra. Test, typing, docs, and dev extras are reserved for repository
+validation and package maintenance.
 
 Local CLI runners do not require a Python extra. They shell out to external
 executables that you install separately:

@@ -1,28 +1,28 @@
-"""MCP adapters for vendor-fabric provider capabilities.
+"""MCP adapter for public ``vendor-fabric`` capabilities.
 
-This module lives in agentic-fabric because MCP is a runtime-visible tool
-transport. The provider implementation and capability metadata stay in
-vendor-fabric and are imported lazily only when the MCP server is created.
+Provider discovery, capability routing, credentials, and connector calls stay
+in ``vendor-fabric``. This module converts that public facade into MCP tools
+without importing connector implementations or private registry functions.
 """
 
 from __future__ import annotations
 
-import asyncio
-import builtins
 import inspect
-import json
 import logging
+import re
+import types
 
-from collections.abc import Callable, Iterable, Mapping
-from typing import Any, cast, get_origin, get_type_hints
+from collections.abc import Callable, Mapping
+from typing import Any, get_args, get_origin, get_type_hints
+
+from agentic_fabric.tools.mcp import MCP_INSTALL_MESSAGE as _MCP_INSTALL_MESSAGE
+from agentic_fabric.tools.mcp import MCPToolAdapter, create_tool_server, run_tool_server
 
 
 logger = logging.getLogger(__name__)
 
-MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install agentic-fabric[mcp]"
-VENDOR_INSTALL_MESSAGE = (
-    "vendor-fabric is required for vendor MCP adapters. Install vendor-fabric in the same environment."
-)
+MCP_INSTALL_MESSAGE = _MCP_INSTALL_MESSAGE
+VENDOR_INSTALL_MESSAGE = "vendor-fabric is required by agentic-fabric. Reinstall agentic-fabric in this environment."
 
 
 def _install_error(message: str, error: ImportError) -> ImportError:
@@ -33,309 +33,274 @@ def _install_error(message: str, error: ImportError) -> ImportError:
     return ImportError(message)
 
 
-def _require_vendor_fabric() -> tuple[Any, Callable[..., Any]]:
-    """Load vendor-fabric registry and surface helpers lazily."""
+def _require_vendor_fabric() -> Any:
+    """Load only the public vendor-fabric package surface."""
     try:
-        from vendor_fabric import registry
-        from vendor_fabric.surface import connector_data_methods
+        import vendor_fabric
     except ImportError as exc:
         raise _install_error(VENDOR_INSTALL_MESSAGE, exc) from exc
-    return registry, connector_data_methods
+    return vendor_fabric
+
+
+def _annotation_schema(annotation: Any) -> dict[str, Any]:
+    """Map a Python annotation to the useful subset of JSON Schema."""
+    if annotation in {inspect.Parameter.empty, Any}:
+        return {}
+    if annotation is str:
+        return {"type": "string"}
+    if annotation is int:
+        return {"type": "integer"}
+    if annotation is float:
+        return {"type": "number"}
+    if annotation is bool:
+        return {"type": "boolean"}
+    if annotation is type(None):
+        return {"type": "null"}
+
+    origin = get_origin(annotation)
+    arguments = get_args(annotation)
+    if origin is list:
+        schema: dict[str, Any] = {"type": "array"}
+        if arguments:
+            schema["items"] = _annotation_schema(arguments[0])
+        return schema
+    if origin is dict:
+        return {"type": "object"}
+    if origin in {types.UnionType, __import__("typing").Union}:
+        return {"anyOf": [_annotation_schema(argument) for argument in arguments]}
+    return {}
 
 
 def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
-    """Generate a JSON schema from a provider method signature."""
-    sig = inspect.signature(method)
+    """Generate an MCP input schema from a provider method signature."""
+    signature = inspect.signature(method)
     try:
         type_hints = get_type_hints(method)
     except (NameError, TypeError):
         logger.warning(
-            "Could not resolve type hints for %r; falling back to string-typed schema.",
+            "Could not resolve type hints for %r; using unconstrained schemas for unresolved parameters.",
             method,
             exc_info=True,
         )
         type_hints = {}
+
     properties: dict[str, dict[str, Any]] = {}
     required: list[str] = []
+    additional_properties = False
+    doc_lines = method.__doc__.splitlines() if method.__doc__ else []
 
-    for name, param in sig.parameters.items():
-        if name in {"self", "cls"}:
+    for name, parameter in signature.parameters.items():
+        if name in {"self", "cls"} or parameter.kind is inspect.Parameter.VAR_POSITIONAL:
+            continue
+        if parameter.kind is inspect.Parameter.VAR_KEYWORD:
+            additional_properties = True
             continue
 
-        prop: dict[str, Any] = {"type": "string"}
-        ann = type_hints.get(name, param.annotation)
-        if ann != inspect.Parameter.empty:
-            if ann is int:
-                prop = {"type": "integer"}
-            elif ann is float:
-                prop = {"type": "number"}
-            elif ann is bool:
-                prop = {"type": "boolean"}
-            elif ann is list or get_origin(ann) is list:
-                prop = {"type": "array"}
-            elif ann is dict or get_origin(ann) is dict:
-                prop = {"type": "object"}
+        annotation = type_hints.get(name, parameter.annotation)
+        prop = _annotation_schema(annotation)
+        for line in doc_lines:
+            if f"{name.lower()}:" in line.lower():
+                prop["description"] = line.split(":", 1)[-1].strip()
+                break
 
-        if method.__doc__:
-            for line in method.__doc__.split("\n"):
-                if f"{name}:" in line.lower():
-                    prop["description"] = line.split(":", 1)[-1].strip()
-                    break
-
-        if param.default != inspect.Parameter.empty:
-            prop["default"] = param.default
-        else:
+        if parameter.default is inspect.Parameter.empty:
             required.append(name)
-
+        else:
+            prop["default"] = parameter.default
         properties[name] = prop
 
-    return {"type": "object", "properties": properties, "required": required}
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": properties,
+        "required": required,
+        "additionalProperties": additional_properties,
+    }
 
 
-def _get_public_methods(
-    connector_class: builtins.type[Any],
-    connector_data_methods: Callable[[builtins.type[Any]], list[tuple[str, Callable[..., Any]]]],
-) -> list[tuple[str, Callable[..., Any]]]:
-    """Get public provider data methods for MCP exposure."""
-    return connector_data_methods(connector_class)
-
-
-def _connector_classes(registry: Any) -> Mapping[str, builtins.type[Any]]:
-    """Return connector classes for runtime method exposure.
-
-    vendor-fabric currently keeps class discovery internal. The MCP adapter
-    isolates that private call so catalog tools still work if the public
-    surface changes before a stable method-list API is published.
-    """
-    list_connector_classes = getattr(registry, "_list_connector_classes", None)
-    if not callable(list_connector_classes):
-        return {}
-    return cast(Mapping[str, builtins.type[Any]], list_connector_classes())
-
-
-def _catalog_tool_definitions(registry: Any) -> dict[str, dict[str, Any]]:
-    """Build credential-free vendor catalog MCP tools."""
+def _catalog_tool_adapters(vendor_fabric: Any) -> list[MCPToolAdapter]:
+    """Build credential-free adapters from public vendor catalog functions."""
     include_unavailable_schema: dict[str, Any] = {
         "type": "object",
         "properties": {"include_unavailable": {"type": "boolean", "default": True}},
-        "required": [],
+        "additionalProperties": False,
     }
-    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
-    name_schema: dict[str, Any] = {
-        "type": "object",
-        "properties": {
-            "name": {"type": "string"},
-            "include_unavailable": {"type": "boolean", "default": True},
-        },
-        "required": ["name"],
-    }
-    category_schema: dict[str, Any] = {
-        "type": "object",
-        "properties": {
-            "category": {"type": "string"},
-            "include_unavailable": {"type": "boolean", "default": True},
-        },
-        "required": ["category"],
-    }
-    capability_schema: dict[str, Any] = {
-        "type": "object",
-        "properties": {
-            "capability": {"type": "string"},
-            "include_unavailable": {"type": "boolean", "default": True},
-        },
-        "required": ["capability"],
-    }
+    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "additionalProperties": False}
 
-    return {
-        "fabric_vendors_list": {
-            "description": "List vendors registered in the fabric catalog.",
-            "parameters": include_unavailable_schema,
-            "handler": registry.list_connectors,
-        },
-        "fabric_vendors_list_available": {
-            "description": "List vendors currently available in this environment.",
-            "parameters": empty_schema,
-            "handler": registry.list_available_connectors,
-        },
-        "fabric_vendors_list_info": {
-            "description": "List vendor catalog metadata.",
-            "parameters": include_unavailable_schema,
-            "handler": registry.list_connector_info,
-        },
-        "fabric_vendor_get_info": {
-            "description": "Get catalog metadata for one vendor.",
-            "parameters": name_schema,
-            "handler": registry.get_connector_info,
-        },
-        "fabric_vendors_list_categories": {
-            "description": "List vendor categories in the fabric catalog.",
-            "parameters": include_unavailable_schema,
-            "handler": registry.list_connector_categories,
-        },
-        "fabric_vendors_list_capabilities": {
-            "description": "List vendor capabilities in the fabric catalog.",
-            "parameters": include_unavailable_schema,
-            "handler": registry.list_connector_capabilities,
-        },
-        "fabric_vendors_list_by_category": {
-            "description": "List vendor catalog entries for a category.",
-            "parameters": category_schema,
-            "handler": registry.list_connectors_by_category,
-        },
-        "fabric_vendors_list_by_capability": {
-            "description": "List vendor catalog entries for a capability.",
-            "parameters": capability_schema,
-            "handler": registry.list_connectors_by_capability,
-        },
-    }
+    def named_schema(field: str) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                field: {"type": "string"},
+                "include_unavailable": {"type": "boolean", "default": True},
+            },
+            "required": [field],
+            "additionalProperties": False,
+        }
+
+    definitions = (
+        (
+            "fabric_vendors_list",
+            "List vendors registered in the fabric catalog.",
+            include_unavailable_schema,
+            vendor_fabric.list_connectors,
+        ),
+        (
+            "fabric_vendors_list_available",
+            "List vendors currently available in this environment.",
+            empty_schema,
+            vendor_fabric.list_available_connectors,
+        ),
+        (
+            "fabric_vendors_list_info",
+            "List vendor catalog metadata.",
+            include_unavailable_schema,
+            vendor_fabric.list_connector_info,
+        ),
+        (
+            "fabric_vendor_get_info",
+            "Get catalog metadata for one vendor.",
+            named_schema("name"),
+            vendor_fabric.get_connector_info,
+        ),
+        (
+            "fabric_vendors_list_categories",
+            "List vendor categories in the fabric catalog.",
+            include_unavailable_schema,
+            vendor_fabric.list_connector_categories,
+        ),
+        (
+            "fabric_vendors_list_capabilities",
+            "List vendor capabilities in the fabric catalog.",
+            include_unavailable_schema,
+            vendor_fabric.list_connector_capabilities,
+        ),
+        (
+            "fabric_vendors_list_by_category",
+            "List vendor catalog entries for a category.",
+            named_schema("category"),
+            vendor_fabric.list_connectors_by_category,
+        ),
+        (
+            "fabric_vendors_list_by_capability",
+            "List vendor catalog entries for a capability.",
+            named_schema("capability"),
+            vendor_fabric.list_connectors_by_capability,
+        ),
+    )
+    return [MCPToolAdapter(name, description, schema, handler) for name, description, schema, handler in definitions]
+
+
+def _metadata_value(metadata: Any, key: str, default: Any = None) -> Any:
+    """Read capability metadata from a mapping-like vendor value."""
+    if isinstance(metadata, Mapping):
+        return metadata.get(key, default)
+    getter = getattr(metadata, "get", None)
+    if callable(getter):
+        return getter(key, default)
+    return getattr(metadata, key, default)
+
+
+def _tool_name(provider: str, operation: str) -> str:
+    """Return an MCP-safe, stable name for a vendor capability."""
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", f"{provider}_{operation}")
+
+
+def _capability_tool_adapters(vendor_fabric: Any, data: Any) -> list[MCPToolAdapter]:
+    """Adapt available ``VendorData`` capability routes to MCP tools."""
+    from agentic_fabric.tools.vendor import VendorCapabilityTool
+
+    adapters: list[MCPToolAdapter] = []
+    seen: set[str] = set()
+    for metadata in data.capabilities(include_unavailable=False):
+        provider = str(_metadata_value(metadata, "provider", "")).strip()
+        operation = str(_metadata_value(metadata, "operation", "")).strip()
+        method_name = str(_metadata_value(metadata, "method", operation)).strip()
+        if not provider or not operation or not method_name:
+            continue
+
+        connector_class = vendor_fabric.get_connector_class(provider)
+        method = getattr(connector_class, method_name)
+        name = _tool_name(provider, operation)
+        if name in seen:
+            msg = f"Vendor capabilities collide on MCP tool name {name!r}"
+            raise ValueError(msg)
+        seen.add(name)
+        description = str(_metadata_value(metadata, "description", "")).strip()
+        if not description and method.__doc__:
+            description = method.__doc__.splitlines()[0].strip()
+        handler = VendorCapabilityTool.from_metadata(metadata, data=data)
+        adapters.append(
+            MCPToolAdapter(
+                name=name,
+                description=description or f"Run {provider}.{operation} through vendor-fabric.",
+                input_schema=_get_method_schema(method),
+                handler=handler,
+            )
+        )
+    return adapters
 
 
 def _to_builtin(value: Any) -> Any:
-    try:
-        from extended_data.containers import to_builtin
-    except ImportError:
-        if hasattr(value, "model_dump"):
-            return value.model_dump()
-        if isinstance(value, Mapping):
-            return {key: _to_builtin(item) for key, item in value.items()}
-        if isinstance(value, Iterable) and not isinstance(value, str | bytes | bytearray):
-            return [_to_builtin(item) for item in value]
-        return value
-    return to_builtin(value)
+    """Lower Extended Data and model values to built-in containers."""
+    from extended_data.containers import to_builtin
 
-
-def _redact_sensitive_data(value: Any) -> Any:
-    try:
-        from extended_data.primitives.redaction import redact_sensitive_data
-    except ImportError:
-        return value
-    return redact_sensitive_data(value)
-
-
-def _redact_sensitive_text(value: object, *, values: Iterable[Any] | None = None) -> str:
-    try:
-        from extended_data.primitives.redaction import redact_sensitive_text
-    except ImportError:
-        return str(value)
-    return redact_sensitive_text(value, values=values)
+    return to_builtin(value.model_dump() if hasattr(value, "model_dump") else value)
 
 
 def _jsonable_tool_result(result: Any) -> Any:
-    """Lower provider tool results to JSON-compatible redacted data."""
-    if hasattr(result, "model_dump"):
-        result = result.model_dump()
-    elif isinstance(result, Iterable) and not isinstance(result, str | bytes | bytearray | Mapping):
-        result = [item.model_dump() if hasattr(item, "model_dump") else item for item in result]
+    """Lower provider results to JSON-compatible redacted data."""
+    from extended_data.primitives.redaction import redact_sensitive_data
+
     result = _to_builtin(result)
     if isinstance(result, set | frozenset):
         result = [_to_builtin(item) for item in result]
-    return _redact_sensitive_data(result)
+    return redact_sensitive_data(result)
 
 
-def _tool_error_text(error: Exception, values: Iterable[Any] | None = None) -> str:
-    """Return an MCP-safe error string without raw secret values."""
-    return f"Error: {type(error).__name__}: {_redact_sensitive_text(error, values=values)}"
+def _tool_error_text(error: Exception, arguments: Mapping[str, Any]) -> str:
+    """Return an MCP-safe execution diagnostic without raw argument values."""
+    from extended_data.primitives.redaction import redact_sensitive_text
+
+    redacted = redact_sensitive_text(error, values=arguments.values())
+    return f"{type(error).__name__}: {redacted}"
 
 
 def _unknown_tool_text(name: str) -> str:
-    """Return an MCP-safe unknown-tool diagnostic."""
-    return f"Unknown tool: {_redact_sensitive_text(name)}"
+    """Return an MCP-safe unknown-tool protocol diagnostic."""
+    from extended_data.primitives.redaction import redact_sensitive_text
+
+    return f"Unknown tool: {redact_sensitive_text(name)}"
 
 
-def _tool_result_text(result: Any) -> str:
-    """Return a serialized MCP tool result."""
-    payload = _jsonable_tool_result(result)
-    try:
-        from extended_data.io import wrap_raw_data_for_export
-    except ImportError:
-        return json.dumps(payload, indent=2, default=str)
-    return wrap_raw_data_for_export(payload, allow_encoding="json", indent_2=True, default=str)
+def create_server(data: Any | None = None) -> Any:
+    """Create an MCP server exposing the public vendor capability facade."""
+    from agentic_fabric import AgenticData, __version__
 
-
-def create_server() -> Any:
-    """Create an MCP server exposing vendor-fabric provider capabilities."""
-    try:
-        from mcp.server import Server
-        from mcp.types import TextContent, Tool
-    except ImportError as exc:
-        raise ImportError(MCP_INSTALL_MESSAGE) from exc
-
-    registry, connector_data_methods = _require_vendor_fabric()
-    server = Server("vendor-fabric")
-    tools: dict[str, dict[str, Any]] = _catalog_tool_definitions(registry)
-
-    for connector_name, connector_class in _connector_classes(registry).items():
-        for method_name, method in _get_public_methods(connector_class, connector_data_methods):
-            if method_name in {"close", "request", "get_input", "register_tool"}:
-                continue
-
-            description = method.__doc__.split("\n")[0].strip() if method.__doc__ else ""
-            tools[f"{connector_name}_{method_name}"] = {
-                "connector": connector_name,
-                "method": method_name,
-                "description": description or f"{connector_name}.{method_name}()",
-                "parameters": _get_method_schema(method),
-            }
-
-    tool_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.list_tools)
-    call_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.call_tool)
-
-    @tool_decorator()
-    async def list_tools() -> list[Tool]:
-        return [
-            Tool(name=name, description=tool["description"], inputSchema=tool["parameters"])
-            for name, tool in tools.items()
-        ]
-
-    @call_decorator()
-    async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextContent]:
-        tool_arguments = arguments or {}
-        if name not in tools:
-            return [TextContent(type="text", text=_unknown_tool_text(name))]
-
-        tool = tools[name]
-        handler = tool.get("handler")
-        if callable(handler):
-            try:
-                result = handler(**tool_arguments)
-                if inspect.iscoroutine(result):
-                    result = await result
-                return [TextContent(type="text", text=_tool_result_text(result))]
-            except Exception as exc:
-                return [TextContent(type="text", text=_tool_error_text(exc, tool_arguments.values()))]
-
-        try:
-            connector = registry.get_connector(tool["connector"])
-            method = getattr(connector, tool["method"])
-            result = method(**tool_arguments)
-            if inspect.iscoroutine(result):
-                result = await result
-            return [TextContent(type="text", text=_tool_result_text(result))]
-        except Exception as exc:
-            return [TextContent(type="text", text=_tool_error_text(exc, tool_arguments.values()))]
-
-    return server
+    vendor_fabric = _require_vendor_fabric()
+    data = data or AgenticData()
+    tools = [*_catalog_tool_adapters(vendor_fabric), *_capability_tool_adapters(vendor_fabric, data)]
+    return create_tool_server(
+        "vendor-fabric",
+        tools,
+        version=__version__,
+        instructions=(
+            "Use catalog tools to inspect provider availability, then call only exposed provider capability tools. "
+            "Provider credentials and execution are handled by vendor-fabric."
+        ),
+        normalize_result=_jsonable_tool_result,
+        format_error=_tool_error_text,
+        format_unknown_tool=_unknown_tool_text,
+    )
 
 
 def run_server(server: Any | None = None) -> None:
     """Run the vendor MCP adapter over stdio."""
-    try:
-        from mcp.server.stdio import stdio_server
-    except ImportError as exc:
-        raise ImportError(MCP_INSTALL_MESSAGE) from exc
-
-    if server is None:
-        server = create_server()
-
-    async def run() -> None:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, server.create_initialization_options())
-
-    asyncio.run(run())
+    run_tool_server(server or create_server())
 
 
 def main() -> None:
-    """Entry point for the vendor MCP adapter."""
+    """Run the vendor MCP console entry point."""
     run_server()
 
 

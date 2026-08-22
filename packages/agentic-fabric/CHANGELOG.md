@@ -2,6 +2,13 @@
 
 <!-- version list -->
 
+## [1.2.3](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.2...agentic-fabric-v1.2.3) (2026-08-22)
+
+
+### Bug Fixes
+
+* align MCP adapter dependencies ([66a1a72](https://github.com/jbcom/agentic-fabric/commit/66a1a72535be435f25663e8a843019da3b5db2e0))
+
 ## [1.2.2](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.1...agentic-fabric-v1.2.2) (2026-07-27)
 
 

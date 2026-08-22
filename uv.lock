@@ -59,7 +59,7 @@ wheels = [
 
 [[package]]
 name = "agentic-fabric"
-version = "1.2.2"
+version = "1.2.3"
 source = { editable = "packages/agentic-fabric" }
 dependencies = [
     { name = "pyyaml" },

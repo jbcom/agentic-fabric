@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## [1.3.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.3...agentic-fabric-v1.3.0) (2026-08-24)
+
+
+### Features
+
+* **repo:** establish sourcey agentic release controls ([340d16d](https://github.com/jbcom/agentic-fabric/commit/340d16da24f354470ff603e3991ebdb13c39d68b))
+* **repo:** establish sourcey agentic release controls ([268d298](https://github.com/jbcom/agentic-fabric/commit/268d2983a5df51d2514f0ad725158f5abc46168b))
+
 ## [1.2.3](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.2...agentic-fabric-v1.2.3) (2026-08-22)
 
 

@@ -4,7 +4,7 @@
 
 This repository is the public `jbcom/agentic-fabric` workspace.
 
-Documentation: [jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/)
+Documentation: [agentic.coach](https://agentic.coach/)
 
 Read `AGENTS.md` first in Codex sessions; it contains durable repository
 guidance, validation commands, and package boundary rules.

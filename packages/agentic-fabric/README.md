@@ -10,7 +10,7 @@ run them on CrewAI, LangGraph, Strands, or local CLI runners without changing a
 single fabric agent definition. Runtime frameworks are optional and are detected lazily
 from what is installed.
 
-[Documentation](https://jonbogaty.com/agentic-fabric/) | [Source](https://github.com/jbcom/agentic-fabric) | [Issues](https://github.com/jbcom/agentic-fabric/issues)
+[Documentation](https://agentic.coach/) | [Source](https://github.com/jbcom/agentic-fabric) | [Issues](https://github.com/jbcom/agentic-fabric/issues)
 
 ## Installation
 
@@ -235,7 +235,7 @@ Protocol behavior follows the current [A2A 1.0 specification](https://a2a-protoc
 and [MCP 2026-07-28 tool specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools).
 
 Full guides and API documentation are published at
-[jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/).
+[agentic.coach](https://agentic.coach/).
 `AGENTS.md` contains durable repository guidance for Codex sessions.
 
 ## Documentation

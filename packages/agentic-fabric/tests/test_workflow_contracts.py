@@ -64,23 +64,6 @@ def test_ci_has_a_sourcey_aware_machine_gate_and_fork_policy() -> None:
     assert "docs/sourcey.config.ts" in policy_script
 
 
-def test_sonarcloud_uses_coverage_and_never_exposes_fork_secrets() -> None:
-    """SonarCloud analysis must be coverage-aware and limited to trusted branches."""
-    workflow = load_workflow("ci.yml")
-    sonar = workflow["jobs"]["sonar"]
-    scanner = sonar["steps"][-1]
-    properties = (WORKSPACE_ROOT / "sonar-project.properties").read_text(encoding="utf-8")
-
-    assert sonar["name"] == "SonarQube Cloud"
-    assert "head.repo.full_name == github.repository" in sonar["if"]
-    assert scanner["uses"].startswith("SonarSource/sonarqube-scan-action@")
-    assert scanner["env"] == {"SONAR_TOKEN": "${{ secrets.SONAR_TOKEN }}"}
-    assert "sonar.projectKey=jbcom_agentic-fabric" in properties
-    assert "sonar.organization=jbcom" in properties
-    assert "coverage-agentic-fabric.xml,coverage-pytest-agentic-fabric.xml" in properties
-    assert "sonar" in workflow["jobs"]["gate"]["needs"]
-
-
 def test_sourcey_is_the_only_documentation_renderer() -> None:
     """Sourcey config, generated API reference, and legacy Sphinx removal stay aligned."""
     docs = WORKSPACE_ROOT / "docs"

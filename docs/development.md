@@ -22,6 +22,8 @@ tox -e build
 
 Optional framework and vendor tests should be marked and should skip cleanly when the relevant extra is not installed.
 
+SonarQube Cloud automatically analyzes the upstream default branch and pull requests through its GitHub integration. It deliberately has no repository-specific scanner workflow or token; findings remain separate from the required `CI / gate` while still reporting on the pull request.
+
 Use `pytest-agentic-fabric` fixtures for reusable runtime test setup:
 
 ``` python

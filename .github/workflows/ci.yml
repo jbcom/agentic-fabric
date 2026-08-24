@@ -12,6 +12,10 @@ jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    if: >
+      !(github.event_name == 'pull_request' &&
+        ((github.event.pull_request.user.login == 'github-actions[bot]' && startsWith(github.event.pull_request.head.ref, 'release-please--')) ||
+         (github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'minor-and-patch'))))
     permissions:
       contents: read
     strategy:
@@ -36,6 +40,10 @@ jobs:
   quality:
     name: Quality, Sourcey docs, build
     runs-on: ubuntu-latest
+    if: >
+      !(github.event_name == 'pull_request' &&
+        ((github.event.pull_request.user.login == 'github-actions[bot]' && startsWith(github.event.pull_request.head.ref, 'release-please--')) ||
+         (github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'minor-and-patch'))))
     permissions:
       contents: read
     steps:

@@ -83,7 +83,7 @@ jobs:
         with:
           script: |
             const pull = context.payload.pull_request;
-            if (pull.head.repo.full_name === context.repo.owner + "/" + context.repo.repo) {
+              if (pull.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`) {
               core.info("Same-upstream pull request; trusted branch policy applies.");
               return;
             }

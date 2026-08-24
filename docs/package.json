@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "npm run build"
+  },
+  "devDependencies": {
+    "sourcey": "3.6.5"
+  }
+}

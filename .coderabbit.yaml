@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+early_access: false
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: true
+  path_instructions:
+    - path: "packages/**"
+      instructions: "Preserve the ExtendedData -> VendorData -> AgenticData boundary; optional framework and provider imports must remain lazy."
+    - path: ".github/**"
+      instructions: "Treat workflows as a security boundary: retain least privilege, SHA-pinned actions, and fork-safe execution."
+    - path: "docs/**"
+      instructions: "Keep Sourcey as the sole production renderer; retain complete migration parity and valid subdirectory links."
+chat:
+  auto_reply: true
+knowledge_base:
+  code_guidelines:
+    enabled: true

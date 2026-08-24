@@ -1,0 +1,30 @@
+default_language_version:
+  python: python3.13
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: ruff
+        name: Ruff
+        entry: uv run ruff check
+        language: system
+        types: [python]
+      - id: api-reference
+        name: Generated public API reference is current
+        entry: python scripts/generate_api_reference.py --check
+        language: system
+        pass_filenames: false
+        files: ^(packages/.*/src/.*\.py|docs/api-reference\.md|scripts/generate_api_reference\.py)$

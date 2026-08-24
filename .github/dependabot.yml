@@ -1,5 +1,12 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+    groups:
+      sourcey:
+        patterns: ["sourcey"]
   - package-ecosystem: pip
     directory: /
     schedule:

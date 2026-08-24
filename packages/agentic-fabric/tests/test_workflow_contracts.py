@@ -16,8 +16,8 @@ def load_workflow(name: str) -> dict[str, Any]:
     return yaml.safe_load((WORKSPACE_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
 
 
-def test_automerge_uses_base_context_without_checkout_or_secrets() -> None:
-    """Automerge should match the split-package base-context workflow contract."""
+def test_automerge_uses_base_context_and_merge_commits() -> None:
+    """Automerge should use only trusted metadata and preserve commit history."""
     workflow = load_workflow("automerge.yml")
     automerge = workflow["jobs"]["automerge"]
     steps = automerge["steps"]
@@ -30,12 +30,12 @@ def test_automerge_uses_base_context_without_checkout_or_secrets() -> None:
     assert all("uses" not in step or "actions/checkout" not in step["uses"] for step in steps)
     assert steps == [
         {
-            "name": "Enable auto-merge (squash)",
+            "name": "Enable auto-merge (merge commit)",
             "env": {
                 "GH_TOKEN": "${{ github.token }}",
                 "PR_URL": "${{ github.event.pull_request.html_url }}",
             },
-            "run": 'gh pr merge --auto --squash "$PR_URL"',
+            "run": 'gh pr merge --auto --merge "$PR_URL"',
         }
     ]
 
@@ -48,3 +48,29 @@ def test_ci_and_cd_quality_run_security_audit_and_examples() -> None:
         tox_commands = [step["run"] for step in quality_steps if step.get("run", "").startswith("tox -e ")]
 
         assert tox_commands == ["tox -e lint,typecheck,audit,examples,coverage,plugin,docs,build"]
+
+
+def test_ci_has_a_sourcey_aware_machine_gate_and_fork_policy() -> None:
+    """CI should validate Sourcey and reject fork-controlled deployment inputs."""
+    workflow = load_workflow("ci.yml")
+
+    assert workflow["jobs"]["quality"]["name"] == "Quality, Sourcey docs, build"
+    assert any("actions/setup-node@" in step.get("uses", "") for step in workflow["jobs"]["quality"]["steps"])
+    assert workflow["jobs"]["dependency-review"]["name"] == "Dependency Review / gate"
+    assert workflow["jobs"]["repository-policy"]["name"] == "Repository Policy / gate"
+    assert workflow["jobs"]["gate"]["name"] == "CI / gate"
+    policy_script = workflow["jobs"]["repository-policy"]["steps"][0]["with"]["script"]
+    assert "pull.head.repo.full_name" in policy_script
+    assert "docs/sourcey.config.ts" in policy_script
+
+
+def test_sourcey_is_the_only_documentation_renderer() -> None:
+    """Sourcey config, generated API reference, and legacy Sphinx removal stay aligned."""
+    docs = WORKSPACE_ROOT / "docs"
+
+    assert (docs / "sourcey.config.ts").is_file()
+    assert (docs / "package-lock.json").is_file()
+    assert (docs / "api-reference.md").is_file()
+    assert not (docs / "conf.py").exists()
+    assert not any(docs.glob("*.rst"))
+    assert "sourcey" in (docs / "package.json").read_text(encoding="utf-8")

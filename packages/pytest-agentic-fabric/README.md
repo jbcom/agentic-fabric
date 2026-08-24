@@ -2,6 +2,18 @@
 
 Pytest fixtures for projects built on `agentic-fabric`.
 
+## Installation
+
+Install the plugin alongside the test dependencies of the project under test:
+
+```bash
+python -m pip install pytest-agentic-fabric
+```
+
+Pytest discovers the `agentic_fabric` plugin automatically through its
+`pytest11` entry point. Verify that the optional `--agentic-e2e` switch is
+available in `pytest --help` before relying on it in CI.
+
 Fixtures:
 
 - `agentic_runtime_available`: importability predicate for optional runtimes.

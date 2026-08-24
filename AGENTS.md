@@ -8,7 +8,7 @@ This repository contains the `agentic-fabric` Python workspace.
   selection, runner adapters, agent-facing tool wrappers, and `AgenticData`
 - `packages/pytest-agentic-fabric`: pytest fixtures and mocks for agentic
   runtime, tool, and framework tests
-- `docs/`: Sphinx/Furo documentation and generated API reference
+- `docs/`: Sourcey documentation, generated API reference, and Sourcey configuration
 
 ## Layer Boundaries
 
@@ -46,7 +46,7 @@ Do not set `skip_missing_interpreters = true`. Python 3.11, 3.12, 3.13, and
 
 ## Expectations
 
-- Keep README files, Sphinx docs, examples, tests, and implementation aligned.
+- Keep README files, Sourcey docs, examples, tests, and implementation aligned.
 - Keep optional framework imports lazy and registry-backed.
 - Keep provider-backed tools routed through `vendor-fabric`; do not call vendor
   SDKs directly from agent runtime code.
@@ -54,13 +54,24 @@ Do not set `skip_missing_interpreters = true`. Python 3.11, 3.12, 3.13, and
   runtime paths. CLI commands and examples may write user-facing output.
 - Prefer durable package guidance over branch-specific migration instructions.
 
+## Documentation
+
+Sourcey is the only production documentation renderer. Its configuration is
+`docs/sourcey.config.ts`; Markdown pages and the generated public API reference
+live beside it. Run `python scripts/generate_api_reference.py` after changing
+public exports, then `npm ci --prefix docs` and `npm run build --prefix docs`.
+Sourcey output is `docs/dist/` and is never committed.
+
+Use upstream topic branches, Conventional Commits, and merge commits. Do not
+rebase shared branches, force-push, squash, or hand-edit versions/tags.
+
 ## Release Flow
 
 Releases are managed by release-please:
 
 - `ci.yml` validates pull requests.
 - `release.yml` opens and maintains the release-please PR.
-- `cd.yml` publishes packages to PyPI and deploys Sphinx/Furo docs to GitHub
+- `cd.yml` publishes packages to PyPI and deploys the Sourcey site to GitHub
   Pages after releases are created.
 
 Do not hand-edit versions or tags outside release-please work.

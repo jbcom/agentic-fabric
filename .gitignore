@@ -11,8 +11,8 @@ dist/
 htmlcov/
 *.egg-info/
 *.pyc
-docs/_build/
-docs/apidocs/
+docs/dist/
+docs/node_modules/
 
 # Agent-state cache (re-derivable; directive.md and decisions.ndjson are tracked)
 .agent-state/digest.md

@@ -240,10 +240,13 @@ Full guides and API documentation are published at
 
 ## Documentation
 
-The docs are built with Sphinx, Furo, and sphinx-autodoc2:
+The docs are built with Sourcey. The public API-reference Markdown is
+deterministically generated from the two package `__all__` surfaces:
 
 ```bash
-tox -e docs
+python scripts/generate_api_reference.py --check
+npm ci --prefix docs
+npm run build --prefix docs
 ```
 
 Local validation:

@@ -1,5 +1,7 @@
 # Agentic Fabric Workspace
 
+![Woven configuration, runtime, and tool boundaries flowing through Agentic Fabric.](docs/assets/agentic-fabric-hero.jpg)
+
 This repository is the public `jbcom/agentic-fabric` workspace.
 
 Documentation: [jonbogaty.com/agentic-fabric](https://jonbogaty.com/agentic-fabric/)

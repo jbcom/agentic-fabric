@@ -46,7 +46,7 @@ dev = [
 agentic_fabric = "pytest_agentic_fabric.plugin"
 
 [project.urls]
-Documentation = "https://jonbogaty.com/agentic-fabric/"
+Documentation = "https://agentic.coach/"
 Issues = "https://github.com/jbcom/agentic-fabric/issues"
 Source = "https://github.com/jbcom/agentic-fabric"
 Changelog = "https://github.com/jbcom/agentic-fabric/blob/main/packages/pytest-agentic-fabric/CHANGELOG.md"

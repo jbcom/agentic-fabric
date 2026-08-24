@@ -73,7 +73,7 @@ agentic-fabric-vendor-mcp = "agentic_fabric.tools.vendor_mcp:main"
 agentic-fabric-vendor-a2a = "agentic_fabric.a2a:main"
 
 [project.urls]
-Documentation = "https://jonbogaty.com/agentic-fabric/"
+Documentation = "https://agentic.coach/"
 Issues = "https://github.com/jbcom/agentic-fabric/issues"
 Source = "https://github.com/jbcom/agentic-fabric"
 Changelog = "https://github.com/jbcom/agentic-fabric/blob/main/CHANGELOG.md"

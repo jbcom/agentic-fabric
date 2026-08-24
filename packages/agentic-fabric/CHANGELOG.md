@@ -2,6 +2,13 @@
 
 <!-- version list -->
 
+## [1.4.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.3.0...agentic-fabric-v1.4.0) (2026-08-24)
+
+
+### Features
+
+* **ci:** add coverage-aware sonarcloud analysis ([a737309](https://github.com/jbcom/agentic-fabric/commit/a73730976390e482dea7e8492d12a4139cb043d6))
+
 ## [1.3.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.2.3...agentic-fabric-v1.3.0) (2026-08-24)
 
 

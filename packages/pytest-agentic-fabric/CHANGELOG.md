@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.3](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.3.2...pytest-agentic-fabric-v0.3.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* **pytest-agentic-fabric:** document plugin installation ([41bb29b](https://github.com/jbcom/agentic-fabric/commit/41bb29bd96d23e9c4ffb53694c9faefd268bce16))
+* **pytest-agentic-fabric:** document plugin installation ([7552f63](https://github.com/jbcom/agentic-fabric/commit/7552f639f211187a1590910d8a6aae17c8057429))
+
 ## [0.3.2](https://github.com/jbcom/agentic-fabric/compare/pytest-agentic-fabric-v0.3.1...pytest-agentic-fabric-v0.3.2) (2026-07-27)
 
 

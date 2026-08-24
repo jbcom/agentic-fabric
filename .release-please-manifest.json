@@ -1,4 +1,4 @@
 {
-  "packages/agentic-fabric": "1.4.0",
-  "packages/pytest-agentic-fabric": "0.3.3"
+  "packages/agentic-fabric": "1.4.1",
+  "packages/pytest-agentic-fabric": "0.3.4"
 }

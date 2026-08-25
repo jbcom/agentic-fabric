@@ -178,7 +178,8 @@ class TestGetFabricAgentConfigErrors:
 
         def tracking_read_text(self: Path, *args, **kwargs) -> str:
             if self.name in {"agents.yaml", "tasks.yaml"}:
-                encodings.append(kwargs.get("encoding"))
+                encoding = args[0] if args else kwargs.get("encoding")
+                encodings.append(encoding)
             return original_read_text(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "read_text", tracking_read_text)

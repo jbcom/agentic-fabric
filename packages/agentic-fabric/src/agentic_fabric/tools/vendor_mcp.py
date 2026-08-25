@@ -118,73 +118,68 @@ def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
     }
 
 
-def _catalog_tool_adapters(vendor_fabric: Any) -> list[MCPToolAdapter]:
-    """Build credential-free adapters from public vendor catalog functions."""
-    include_unavailable_schema: dict[str, Any] = {
+def _make_schema(required: set[str], optional: dict[str, Any]) -> dict[str, Any]:
+    """Build an object schema for a catalog tool with shared defaults."""
+    properties: dict[str, Any] = {"include_unavailable": {"type": "boolean", "default": True}}
+    for name, spec in optional.items():
+        properties[name] = dict(spec)
+    return {
         "type": "object",
-        "properties": {"include_unavailable": {"type": "boolean", "default": True}},
+        "properties": properties,
+        "required": list(required),
         "additionalProperties": False,
     }
-    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "additionalProperties": False}
 
-    def named_schema(field: str) -> dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                field: {"type": "string"},
-                "include_unavailable": {"type": "boolean", "default": True},
-            },
-            "required": [field],
-            "additionalProperties": False,
-        }
 
+def _catalog_tool_adapters(vendor_fabric: Any) -> list[MCPToolAdapter]:
+    """Build credential-free adapters from public vendor catalog functions."""
     definitions = (
         (
             "fabric_vendors_list",
             "List vendors registered in the fabric catalog.",
-            include_unavailable_schema,
+            _make_schema(set(), {}),
             vendor_fabric.list_connectors,
         ),
         (
             "fabric_vendors_list_available",
             "List vendors currently available in this environment.",
-            empty_schema,
+            _make_schema(set(), {}),
             vendor_fabric.list_available_connectors,
         ),
         (
             "fabric_vendors_list_info",
             "List vendor catalog metadata.",
-            include_unavailable_schema,
+            _make_schema(set(), {}),
             vendor_fabric.list_connector_info,
         ),
         (
             "fabric_vendor_get_info",
             "Get catalog metadata for one vendor.",
-            named_schema("name"),
+            _make_schema({"name"}, {"name": {"type": "string"}}),
             vendor_fabric.get_connector_info,
         ),
         (
             "fabric_vendors_list_categories",
             "List vendor categories in the fabric catalog.",
-            include_unavailable_schema,
+            _make_schema(set(), {}),
             vendor_fabric.list_connector_categories,
         ),
         (
             "fabric_vendors_list_capabilities",
             "List vendor capabilities in the fabric catalog.",
-            include_unavailable_schema,
+            _make_schema(set(), {}),
             vendor_fabric.list_connector_capabilities,
         ),
         (
             "fabric_vendors_list_by_category",
             "List vendor catalog entries for a category.",
-            named_schema("category"),
+            _make_schema({"category"}, {"category": {"type": "string"}}),
             vendor_fabric.list_connectors_by_category,
         ),
         (
             "fabric_vendors_list_by_capability",
             "List vendor catalog entries for a capability.",
-            named_schema("capability"),
+            _make_schema({"capability"}, {"capability": {"type": "string"}}),
             vendor_fabric.list_connectors_by_capability,
         ),
     )

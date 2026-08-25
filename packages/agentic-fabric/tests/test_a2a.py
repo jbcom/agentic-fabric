@@ -435,7 +435,7 @@ def test_fabric_agent_spec_routes_agentic_data() -> None:
     assert named.skills[0].description == "Write things."
 
 
-def test_a2a_run_app_and_main(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_a2a_app_invokes_uvicorn(monkeypatch: pytest.MonkeyPatch) -> None:
     uvicorn = types.ModuleType("uvicorn")
     calls: list[Any] = []
     uvicorn.run = lambda app, *, host, port: calls.append((app, host, port))
@@ -443,19 +443,27 @@ def test_a2a_run_app_and_main(monkeypatch: pytest.MonkeyPatch) -> None:
     a2a.run_a2a_app("app", host="localhost", port=9000)
     assert calls == [("app", "localhost", 9000)]
 
+
+def test_main_uses_cli_host_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
     monkeypatch.setattr(sys, "argv", ["agentic-fabric-vendor-a2a", "--host", "0.0.0.0", "--port", "8123"])
     monkeypatch.setattr(a2a, "create_vendor_a2a_app", lambda url: f"app:{url}")
     monkeypatch.setattr(a2a, "run_a2a_app", lambda app, *, host, port: calls.append((app, host, port)))
     a2a.main()
-    assert calls[-1] == ("app:http://0.0.0.0:8123/a2a", "0.0.0.0", 8123)
+    assert calls == [("app:http://0.0.0.0:8123/a2a", "0.0.0.0", 8123)]
 
+
+def test_main_uses_cli_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
     monkeypatch.setattr(
         sys,
         "argv",
         ["agentic-fabric-vendor-a2a", "--url", "https://public.example/rpc"],
     )
+    monkeypatch.setattr(a2a, "create_vendor_a2a_app", lambda url: f"app:{url}")
+    monkeypatch.setattr(a2a, "run_a2a_app", lambda app, *, host, port: calls.append((app, host, port)))
     a2a.main()
-    assert calls[-1][0] == "app:https://public.example/rpc"
+    assert calls == [("app:https://public.example/rpc", "0.0.0.0", 8123)]
 
 
 def test_a2a_reports_missing_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:

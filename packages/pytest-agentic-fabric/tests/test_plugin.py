@@ -82,20 +82,38 @@ def test_agentic_mock_runtime_sets_runtime_entrypoints(
     assert hasattr(modules[runtime], expected_attr)
 
 
-def test_fabric_mocker_properties(fabric_mocker: FabricMocker, mocker: Any) -> None:
-    """The published mocker should expose pytest-mock helpers."""
+def test_fabric_mocker_exposes_mock_factories(fabric_mocker: FabricMocker) -> None:
+    """The published mocker should expose MagicMock and Mock factories."""
+    assert fabric_mocker.MagicMock() is not None
+    assert fabric_mocker.Mock() is not None
+
+
+def test_fabric_mocker_patch_dict(fabric_mocker: FabricMocker) -> None:
+    """The published mocker should expose patch.dict for environment mocking."""
+    patched: dict[str, bool] = {}
+    fabric_mocker.patch.dict(patched, {"patched": True})
+
+    assert patched["patched"] is True
+
+
+def test_fabric_mocker_spy(fabric_mocker: FabricMocker) -> None:
+    """The published mocker should expose pytest-mock's spy helper."""
     target = ModuleType("spy_target")
     target.func = lambda: "ok"
 
-    assert fabric_mocker.MagicMock() is not None
-    assert fabric_mocker.Mock() is not None
-    patched: dict[str, bool] = {}
-    fabric_mocker.patch.dict(patched, {"patched": True})
-    assert patched["patched"] is True
     spy = fabric_mocker.spy(target, "func")
+
     assert target.func() == "ok"
     spy.assert_called_once_with()
+
+
+def test_fabric_mocker_stub(fabric_mocker: FabricMocker) -> None:
+    """The published mocker should expose pytest-mock's stub helper."""
     assert fabric_mocker.stub(name="stub") is not None
+
+
+def test_fabric_mocker_mocker_property(fabric_mocker: FabricMocker, mocker: Any) -> None:
+    """The published mocker should surface the underlying pytest-mock fixture."""
     assert fabric_mocker.mocker is mocker
 
 

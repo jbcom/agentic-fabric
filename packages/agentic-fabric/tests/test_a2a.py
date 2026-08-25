@@ -78,19 +78,20 @@ class FakeContext:
         return self.message.text
 
 
-def install_fake_a2a(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Install the A2A 1.x modules consumed by the lazy adapter."""
-    package = types.ModuleType("a2a")
-    helpers = types.ModuleType("a2a.helpers")
-    server = types.ModuleType("a2a.server")
-    agent_execution = types.ModuleType("a2a.server.agent_execution")
-    request_handlers = types.ModuleType("a2a.server.request_handlers")
-    routes = types.ModuleType("a2a.server.routes")
-    tasks = types.ModuleType("a2a.server.tasks")
+def _install_fake_a2a_types() -> types.ModuleType:
+    """Install the A2A protocol types fake module."""
     protocol_types = types.ModuleType("a2a.types")
-    starlette = types.ModuleType("starlette")
-    starlette_apps = types.ModuleType("starlette.applications")
+    protocol_types.AgentCapabilities = Record
+    protocol_types.AgentCard = Record
+    protocol_types.AgentInterface = Record
+    protocol_types.AgentSkill = Record
+    protocol_types.TaskState = FakeTaskState
+    return protocol_types
 
+
+def _install_fake_a2a_helpers() -> types.ModuleType:
+    """Install the A2A helpers fake module."""
+    helpers = types.ModuleType("a2a.helpers")
     helpers.get_data_parts = lambda parts: [part.data for part in parts if hasattr(part, "data")]
     helpers.new_task_from_user_message = lambda message: types.SimpleNamespace(
         id=message.task_id,
@@ -100,30 +101,55 @@ def install_fake_a2a(monkeypatch: pytest.MonkeyPatch) -> None:
     helpers.new_text_status_update_event = lambda **kwargs: Record(kind="status", **kwargs)
     helpers.new_text_artifact_update_event = lambda **kwargs: Record(kind="text-artifact", **kwargs)
     helpers.new_data_artifact_update_event = lambda **kwargs: Record(kind="data-artifact", **kwargs)
+    return helpers
+
+
+def _install_fake_a2a_server() -> dict[str, types.ModuleType]:
+    """Install the A2A server fake sub-package and return its modules."""
+    package = types.ModuleType("a2a")
+    server = types.ModuleType("a2a.server")
+    agent_execution = types.ModuleType("a2a.server.agent_execution")
+    request_handlers = types.ModuleType("a2a.server.request_handlers")
+    routes = types.ModuleType("a2a.server.routes")
+    tasks = types.ModuleType("a2a.server.tasks")
+
     agent_execution.AgentExecutor = FakeAgentExecutor
     request_handlers.DefaultRequestHandler = FakeDefaultRequestHandler
     routes.create_agent_card_routes = lambda *, agent_card: [("card", agent_card)]
     routes.create_jsonrpc_routes = lambda *, request_handler, rpc_url: [("rpc", rpc_url, request_handler)]
     tasks.InMemoryTaskStore = FakeTaskStore
-    protocol_types.AgentCapabilities = Record
-    protocol_types.AgentCard = Record
-    protocol_types.AgentInterface = Record
-    protocol_types.AgentSkill = Record
-    protocol_types.TaskState = FakeTaskState
-    starlette_apps.Starlette = FakeStarlette
 
-    for name, module in {
+    return {
         "a2a": package,
-        "a2a.helpers": helpers,
         "a2a.server": server,
         "a2a.server.agent_execution": agent_execution,
         "a2a.server.request_handlers": request_handlers,
         "a2a.server.routes": routes,
         "a2a.server.tasks": tasks,
-        "a2a.types": protocol_types,
+    }
+
+
+def _install_fake_starlette() -> dict[str, types.ModuleType]:
+    """Install the starlette fake package and return its modules."""
+    starlette = types.ModuleType("starlette")
+    starlette_apps = types.ModuleType("starlette.applications")
+    starlette_apps.Starlette = FakeStarlette
+    return {
         "starlette": starlette,
         "starlette.applications": starlette_apps,
-    }.items():
+    }
+
+
+def install_fake_a2a(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Install the A2A 1.x modules consumed by the lazy adapter."""
+    modules: dict[str, types.ModuleType] = {
+        "a2a.types": _install_fake_a2a_types(),
+        "a2a.helpers": _install_fake_a2a_helpers(),
+        **_install_fake_a2a_server(),
+        **_install_fake_starlette(),
+    }
+
+    for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
 
 

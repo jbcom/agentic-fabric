@@ -12,6 +12,10 @@ jobs:
   e2e:
     name: E2E tests with local Ollama
     runs-on: ubuntu-latest
+    if: >
+      !(github.event_name == 'pull_request' &&
+        ((github.event.pull_request.user.login == 'github-actions[bot]' && startsWith(github.event.pull_request.head.ref, 'release-please--')) ||
+         (github.event.pull_request.user.login == 'dependabot[bot]' && contains(github.event.pull_request.title, 'minor-and-patch'))))
     timeout-minutes: 15
     env:
       OLLAMA_BASE_URL: http://localhost:11434

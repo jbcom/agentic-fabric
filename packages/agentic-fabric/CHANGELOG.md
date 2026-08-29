@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## [1.4.1](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.4.0...agentic-fabric-v1.4.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* move documentation to agentic.coach ([aafe2cf](https://github.com/jbcom/agentic-fabric/commit/aafe2cf7c21d22e79fc80611f9d7c0a1e64eba04))
+* move documentation to agentic.coach ([bfb5cb6](https://github.com/jbcom/agentic-fabric/commit/bfb5cb6d509f54460e0acc2ef3a904178bd89512))
+
 ## [1.4.0](https://github.com/jbcom/agentic-fabric/compare/agentic-fabric-v1.3.0...agentic-fabric-v1.4.0) (2026-08-24)
 
 

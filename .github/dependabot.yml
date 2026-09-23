@@ -12,6 +12,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
@@ -20,6 +23,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
@@ -28,6 +34,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
@@ -36,5 +45,8 @@ updates:
     schedule:
       interval: weekly
     groups:
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
       actions:
         patterns: ["*"]

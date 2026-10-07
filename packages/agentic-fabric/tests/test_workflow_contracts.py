@@ -27,12 +27,13 @@ def test_automerge_uses_base_context_and_merge_commits() -> None:
     }
     assert workflow["permissions"] == {"contents": "write", "pull-requests": "write"}
     assert "github-actions[bot]" in automerge["if"]
+    assert "minor-and-patch" in automerge["if"]
     assert all("uses" not in step or "actions/checkout" not in step["uses"] for step in steps)
     assert steps == [
         {
             "name": "Enable auto-merge (merge commit)",
             "env": {
-                "GH_TOKEN": "${{ github.token }}",
+                "GH_TOKEN": "${{ secrets.CI_GITHUB_TOKEN }}",
                 "PR_URL": "${{ github.event.pull_request.html_url }}",
             },
             "run": 'gh pr merge --auto --merge "$PR_URL"',
@@ -59,6 +60,8 @@ def test_ci_has_a_sourcey_aware_machine_gate_and_fork_policy() -> None:
     assert workflow["jobs"]["dependency-review"]["name"] == "Dependency Review / gate"
     assert workflow["jobs"]["repository-policy"]["name"] == "Repository Policy / gate"
     assert workflow["jobs"]["gate"]["name"] == "CI / gate"
+    assert "release-please--" in workflow["jobs"]["test"]["if"]
+    assert "minor-and-patch" in workflow["jobs"]["quality"]["if"]
     policy_script = workflow["jobs"]["repository-policy"]["steps"][0]["with"]["script"]
     assert "pull.head.repo.full_name" in policy_script
     assert "docs/sourcey.config.ts" in policy_script

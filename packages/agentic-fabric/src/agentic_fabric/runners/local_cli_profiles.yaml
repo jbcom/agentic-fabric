@@ -152,7 +152,7 @@ profiles:
 # ============================================
 # Summary: Non-Interactive Execution
 # ============================================
-# 
+#
 # Tool          | Non-Interactive Command
 # --------------|--------------------------------------------------
 # aider         | aider --message "task" --yes-always --no-git

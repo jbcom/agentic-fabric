@@ -25,15 +25,15 @@ class TestDiscovery:
         from agentic_fabric.core.discovery import discover_packages
 
         # Create packages with .fabric directory
-        pkg_dir = tmp_path / "packages" / "strata"
+        pkg_dir = tmp_path / "packages" / "demo"
         fabric_dir = pkg_dir / ".fabric"
         fabric_dir.mkdir(parents=True)
-        (fabric_dir / "manifest.yaml").write_text("name: strata\nfabric_agents: {}")
+        (fabric_dir / "manifest.yaml").write_text("name: demo\nfabric_agents: {}")
 
         packages = discover_packages(workspace_root=tmp_path)
 
-        assert "strata" in packages
-        assert packages["strata"].name == ".fabric"
+        assert "demo" in packages
+        assert packages["demo"].name == ".fabric"
 
     def test_discover_packages_prefers_fabric_over_crewai(self, tmp_path: Path) -> None:
         """Test that .fabric takes priority over .crewai when both exist."""

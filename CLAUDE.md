@@ -1,42 +1,36 @@
-<!-- profile: python-lib agent-state standard-repo v1 -->
-# agentic-fabric
+# Contributor guidance
 
-Framework-agnostic Python agent-fabric orchestration library: discovers YAML fabric-agent definitions, selects an installed runtime (CrewAI / LangGraph / Strands / local CLI), and runs the same fabric agent across runtimes. Workspace package; sibling `pytest-agentic-fabric` ships fixtures/mocks.
+This Python workspace contains `agentic-fabric`, a framework-agnostic agent
+orchestration library, and `pytest-agentic-fabric`, its pytest fixtures and mocks.
+Read `AGENTS.md` for package boundaries and implementation conventions.
 
-## Profiles loaded
+## Development
 
-@/Users/jbogaty/.claude/profiles/python-lib.md
-@/Users/jbogaty/.claude/profiles/agent-state.md
-@/Users/jbogaty/.claude/profiles/standard-repo.md
+Install dependencies with `uv sync --all-packages --all-extras --dev`.
+Commands are defined in `tox.ini`; use `uvx --with tox-uv tox -e <env>`
+when tox is not installed locally.
 
-## Repo-specific
+- Run `tox -e lint` for Ruff checks and formatting validation.
+- Run `tox -e typecheck` for mypy checks.
+- Run `tox -e py311,py312,py313,py314` for the supported Python versions.
+  Missing interpreters must not be skipped.
+- Run `tox -e coverage` for full coverage of both publishable packages.
+- Run `tox -e plugin,examples,audit` for fixtures, examples, and dependency checks.
+- Run `tox -e docs` for generated API validation and Sourcey documentation checks.
+- Run `tox -e build` to build source and wheel distributions for both packages.
+- Run `pre-commit run --all-files` before committing.
 
-Commands are defined in `tox.ini` and run via `tox -e <env>` (use `uvx --with tox-uv tox -e <env>` if tox isn't installed). `skip_missing_interpreters = false` — Python 3.11/3.12/3.13/3.14 all must pass.
+## Conventions
 
-- **Sync:** `uv sync --all-packages --all-extras --dev`
-- **Test:** `tox -e py311,py312,py313,py314` (all four Pythons are the release contract) · `tox -e plugin` for `pytest-agentic-fabric` tests · `tox -e examples` runs shipped example scripts
-- **Lint:** `tox -e lint` (ruff check across src/tests/examples/docs/AGENTS.md/README.md)
-- **Fmt:** `ruff format <paths>` (not a tox env; run via `uvx ruff format`)
-- **Type-check:** `tox -e typecheck` (mypy, config in `packages/agentic-fabric/pyproject.toml`)
-- **Coverage:** `tox -e coverage` — `--fail-under=100`, enforced per publishable package
-- **Audit:** `tox -e audit` (pip-audit over all optional/test/typing extras)
-- **Docs build:** `tox -e docs` (`sphinx-build -W -E -b html docs docs/_build/html`, Sphinx/Furo, autodoc2)
-- **Build:** `tox -e build` (`uv build --package` for both packages → `dist/<pkg>/`)
+Keep optional framework imports lazy and registry-backed. Route provider tools
+through `vendor-fabric` capabilities. Use logging, warnings, or exceptions in
+library runtime code; CLI commands and examples may print user-facing output.
+Keep implementation, tests, examples, README files, and Sourcey pages aligned.
 
-## AGENTS.md
+Documentation lives in Markdown under `docs/`, with configuration in
+`docs/sourcey.config.ts`. After changing public exports, regenerate the API
+reference with `python scripts/generate_api_reference.py`. Do not commit
+generated `docs/dist/` output.
 
-Extended operating protocols, package/layer boundaries, preferred commands, and release flow live in `AGENTS.md` — read it before non-trivial work. This CLAUDE.md deliberately does not restate that content (DRY). Topics `AGENTS.md` covers:
-
-- Workspace scope: `packages/agentic-fabric` + `packages/pytest-agentic-fabric` + Sphinx `docs/`
-- Layer boundaries: `extended-data` (data primitives) → `vendor-fabric` (vendor connectors, SecretSync facade, provider dispatch) → `agentic-fabric` (runtime discovery, runner adapters, A2A/MCP surfaces, agent tool wrappers). `AgenticData extends VendorData extends ExtendedData`; agent code must not call vendor SDKs directly.
-- Preferred tox/uv commands and the "no `skip_missing_interpreters`, all four Pythons" rule.
-- Expectations: README/docs/examples/tests stay aligned, optional framework imports stay lazy + registry-backed, vendor tools routed through `vendor-fabric` capabilities, library runtime uses logging (CLI/examples may write user-facing output).
-- Release flow: release-please owns versions via `ci.yml` / `release.yml` / `cd.yml` (PyPI publish + GitHub Pages Sphinx deploy); do not hand-edit versions/tags.
-
-## Notes
-
-- **Pillars** (see `docs/pillars.rst`): Declare Once · Data And Context Move Together (`AgenticData` carries data + provider + runtime + logging + tool registry) · Lazy by Default · Capabilities Over Boilerplate (decorators + `__init_subclass__`, no custom dunders) · Clear Boundaries · Testable Adapters · Frameworks Are Optional, Contracts Are Not.
-- **Architecture source of truth:** `docs/architecture.rst` — runtime selection precedence, capability registry (`agentic_fabric.capabilities`), `vendor://provider/operation` lazy tool references.
-- Docs are Sphinx `.rst` under `docs/` (Furo theme); toctree in `docs/index.rst` covers getting-started, architecture, agentic-workflows, protocols, vendor-fabric, pillars, development, api/index. Docs build is treated as warnings-fatal (`-W -E`).
-- Optional extras are install-gated: `[langgraph]`, `[strands]`, `[a2a]`, `[mcp]`, `[scraping]`, and named provider passthrough extras; CrewAI stays lazy (upstream ChromaDB advisory). Base `vendor-fabric` is required while provider SDK imports remain lazy.
-- Coverage is 100% enforced per package — write tests in the same change as any public behavior.
+Use topic branches, Conventional Commits, and merge commits. Release-please
+manages package versions and tags; do not edit them manually.

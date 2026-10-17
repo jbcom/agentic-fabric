@@ -1,0 +1,15 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Agentic Fabric",
+  "description": "Framework-agnostic discovery, runtime selection, and orchestration for YAML-defined agent fabrics.",
+  "branch": "main",
+  "folders": ["docs", "packages/agentic-fabric", "packages/pytest-agentic-fabric"],
+  "excludeFolders": [".agent-state", "**/tests", "**/__pycache__", "docs/dist", "docs/node_modules"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": [
+    "Keep the ownership chain ExtendedData -> VendorData -> AgenticData; agentic-fabric must not bypass vendor-fabric provider dispatch.",
+    "Keep optional framework imports lazy and registry-backed.",
+    "Route provider-backed tools through vendor-fabric capabilities rather than vendor SDKs or the Go binding directly.",
+    "Keep public documentation, package READMEs, examples, tests, and implementation aligned."
+  ]
+}
